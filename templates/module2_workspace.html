@@ -1,0 +1,356 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<style>
+    .grid-info-header {
+        background: #171A21;
+        border-bottom: 2px solid var(--cyber-teal);
+        padding: 15px;
+        margin-bottom: 30px;
+        border-radius: 4px;
+        font-size: 14px;
+    }
+
+    .bridge-builder-chasm {
+        display: flex;
+        align-items: center;
+        gap: 15px;
+        overflow-x: auto;
+        padding: 25px;
+        background: var(--bg-dark);
+        border: 1px dashed var(--text-muted);
+        border-radius: 8px;
+        margin-bottom: 40px;
+        min-height: 200px;
+    }
+
+    .starting-node, .terminal-yield-node {
+        background: var(--bg-slate);
+        border: 2px solid var(--text-muted);
+        padding: 15px;
+        border-radius: 6px;
+        text-align: center;
+        min-width: 120px;
+    }
+
+    .terminal-yield-node {
+        border-color: var(--constant-gold);
+        display: none; /* Hidden until the final step is verified */
+    }
+
+    /* Step Operator Signs */
+    .operator-sign {
+        font-size: 24px;
+        color: var(--text-muted);
+        font-weight: bold;
+    }
+
+    /* Fractional Calculation Nodes */
+    .fraction-card {
+        background: var(--bg-slate);
+        border: 2px solid var(--text-muted);
+        padding: 15px;
+        border-radius: 6px;
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+        box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+        transition: all 0.3s ease;
+    }
+
+    .fraction-card.active-link {
+        border-color: var(--cyber-teal);
+        box-shadow: 0 0 12px rgba(0, 240, 255, 0.2);
+    }
+
+    .fraction-card.locked-link {
+        opacity: 0.25;
+        pointer-events: none;
+    }
+
+    .slot-container {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+
+    .slot-input {
+        background: var(--bg-dark);
+        border: 1px solid #2A303C;
+        color: #FFF;
+        padding: 6px;
+        text-align: center;
+        border-radius: 4px;
+        width: 80px;
+        font-size: 14px;
+    }
+
+    .slot-input:disabled {
+        color: #A0AEC0;
+        background: #1A202C;
+    }
+
+    .unit-select {
+        background: #252A36;
+        border: 1px solid var(--text-muted);
+        color: var(--cyber-teal);
+        font-size: 13px;
+        padding: 5px;
+        border-radius: 4px;
+        width: 120px;
+    }
+
+    .unit-select:disabled {
+        color: var(--text-muted);
+    }
+
+    .fraction-divider {
+        height: 2px;
+        background: var(--text-muted);
+        width: 100%;
+        margin: 3px 0;
+    }
+
+    .fraction-card.active-link .fraction-divider {
+        background: var(--cyber-teal);
+    }
+
+    .btn-verify-node {
+        background: transparent;
+        border: 1px solid var(--cyber-teal);
+        color: var(--cyber-teal);
+        font-size: 12px;
+        padding: 6px;
+        cursor: pointer;
+        border-radius: 4px;
+        font-weight: bold;
+        transition: all 0.2s ease;
+    }
+
+    .btn-verify-node:hover {
+        background: var(--cyber-teal);
+        color: var(--bg-dark);
+    }
+
+    /* Module Navigation Options */
+    .module-actions-bar {
+        display: none;
+        justify-content: flex-end;
+        margin-top: 20px;
+    }
+</style>
+
+<div class="grid-info-header">
+    <span style="color: var(--cyber-teal); font-weight: bold; letter-spacing: 1px;">PHASE 2 // STEP-GRID WORKSPACE</span>
+    <p style="margin: 5px 0 0 0; color: var(--text-light);"><strong>Objective:</strong> Connect fractional conversion elements sequentially to cancel intermediate variables and compute the system's product yield boundaries.</p>
+</div>
+
+<div class="bridge-builder-chasm">
+    
+    <div class="starting-node">
+        <span style="font-size: 20px; font-weight: bold; display: block;">15.0 g</span>
+        <span style="color: var(--text-muted); font-size: 13px;">H₂ (Given Input)</span>
+    </div>
+
+    <span class="operator-sign">✖</span>
+    <div class="fraction-card active-link" id="node_1">
+        <div class="slot-container">
+            <input type="number" class="slot-input" id="num_1" placeholder="Value">
+            <select class="unit-select" id="num_unit_1">
+                <option value="">-- Select Unit --</option>
+                <option value="g_h2">g H₂</option>
+                <option value="mol_h2">mol H₂</option>
+                <option value="mol_h2o">mol H₂O</option>
+                <option value="g_h2o">g H₂O</option>
+            </select>
+        </div>
+        <div class="fraction-divider"></div>
+        <div class="slot-container">
+            <input type="number" class="slot-input" id="den_1" placeholder="Value">
+            <select class="unit-select" id="den_unit_1">
+                <option value="">-- Select Unit --</option>
+                <option value="g_h2">g H₂</option>
+                <option value="mol_h2">mol H₂</option>
+                <option value="mol_h2o">mol H₂O</option>
+                <option value="g_h2o">g H₂O</option>
+            </select>
+        </div>
+        <button class="btn-verify-node" id="btn_1" onclick="checkStepOne()">Validate Link 1</button>
+    </div>
+
+    <span class="operator-sign" id="op_2" style="display: none;">✖</span>
+    <div class="fraction-card locked-link" id="node_2" style="display: none;">
+        <div class="slot-container">
+            <input type="number" class="slot-input" id="num_2" placeholder="Value">
+            <select class="unit-select" id="num_unit_2">
+                <option value="">-- Select Unit --</option>
+                <option value="g_h2">g H₂</option>
+                <option value="mol_h2">mol H₂</option>
+                <option value="mol_h2o">mol H₂O</option>
+                <option value="g_h2o">g H₂O</option>
+            </select>
+        </div>
+        <div class="fraction-divider"></div>
+        <div class="slot-container">
+            <input type="number" class="slot-input" id="den_2" placeholder="Value">
+            <select class="unit-select" id="den_unit_2">
+                <option value="">-- Select Unit --</option>
+                <option value="g_h2">g H₂</option>
+                <option value="mol_h2">mol H₂</option>
+                <option value="mol_h2o">mol H₂O</option>
+                <option value="g_h2o">g H₂O</option>
+            </select>
+        </div>
+        <button class="btn-verify-node" id="btn_2" onclick="checkStepTwo()">Validate Link 2</button>
+    </div>
+
+    <span class="operator-sign" id="op_3" style="display: none;">✖</span>
+    <div class="fraction-card locked-link" id="node_3" style="display: none;">
+        <div class="slot-container">
+            <input type="number" class="slot-input" id="num_3" placeholder="Value">
+            <select class="unit-select" id="num_unit_3">
+                <option value="">-- Select Unit --</option>
+                <option value="g_h2">g H₂</option>
+                <option value="mol_h2">mol H₂</option>
+                <option value="mol_h2o">mol H₂O</option>
+                <option value="g_h2o">g H₂O</option>
+            </select>
+        </div>
+        <div class="fraction-divider"></div>
+        <div class="slot-container">
+            <input type="number" class="slot-input" id="den_3" placeholder="Value">
+            <select class="unit-select" id="den_unit_3">
+                <option value="">-- Select Unit --</option>
+                <option value="g_h2">g H₂</option>
+                <option value="mol_h2">mol H₂</option>
+                <option value="mol_h2o">mol H₂O</option>
+                <option value="g_h2o">g H₂O</option>
+            </select>
+        </div>
+        <button class="btn-verify-node" id="btn_3" onclick="checkStepThree()">Validate Link 3</button>
+    </div>
+
+    <span class="operator-sign" id="op_eq" style="display: none;">＝</span>
+    <div class="terminal-yield-node" id="yieldNode">
+        <span style="font-size: 20px; font-weight: bold; display: block; color: var(--constant-gold);" id="yieldValue">0.0g</span>
+        <span style="color: var(--text-muted); font-size: 13px;">Theoretical H₂O Yield</span>
+    </div>
+
+</div>
+
+<div class="module-actions-bar" id="actionsBar">
+    <button class="btn-verify-node" style="border-color: var(--constant-gold); color: var(--constant-gold); padding: 12px 24px;"
+            onclick="window.location.href='/limiting-workspace/{{ problem_id }}/'">
+        Initialize Module 3 Analytics ──>
+    </button>
+</div>
+
+<script>
+    // Pull the canned configuration parameters straight from your database definitions
+    const reactantMass = parseFloat("{{ reactant_mass }}"); // 2.016
+    const productMass = parseFloat("{{ product_mass }}");   // 18.015
+
+    // HELPER FUNCTION: Locks down inputs permanently on a card once it passes step-loop verification
+    function lockCardInputs(nodeIndex) {
+        document.getElementById(`num_${nodeIndex}`).disabled = true;
+        document.getElementById(`num_unit_${nodeIndex}`).disabled = true;
+        document.getElementById(`den_${nodeIndex}`).disabled = true;
+        document.getElementById(`den_unit_${nodeIndex}`).disabled = true;
+        document.getElementById(`btn_${nodeIndex}`).style.display = "none";
+    }
+
+    // STEP 1 CHECK: Mass H2 -> Moles H2 (Target: 1 mol H2 / 2.016 g H2)
+    function checkStepOne() {
+        const nv = document.getElementById('num_1').value;
+        const nu = document.getElementById('num_unit_1').value;
+        const dv = document.getElementById('den_1').value;
+        const du = document.getElementById('den_unit_1').value;
+
+        if (nv == "1" && nu == "mol_h2" && Math.abs(parseFloat(dv) - reactantMass) < 0.01 && du == "g_h2") {
+            // Adjust visual design states to confirm success
+            const card = document.getElementById('node_1');
+            card.style.borderColor = "var(--combo-green)";
+            card.style.boxShadow = "0 0 15px rgba(0, 230, 118, 0.3)";
+            lockCardInputs(1);
+
+            // DYNAMICALLY UNLOCK NODE 2 LAYOUT
+            document.getElementById('op_2').style.display = "inline";
+            const node2 = document.getElementById('node_2');
+            node2.style.display = "flex";
+            setTimeout(() => {
+                node2.classList.remove('locked-link');
+                node2.classList.add('active-link');
+            }, 50);
+
+            alert("Link 1 Connected! Gram units canceled out. Molar conversion bridge built.");
+        } else {
+            applyErrorFlash(1);
+            alert("Connection Broken! Check that your units match across the diagonal boundary.");
+        }
+    }
+
+    // STEP 2 CHECK: Moles H2 -> Moles H2O via Molar Ratio (Target: 2 mol H2O / 2 'excess' mol H2 from our 2,1,2 layout)
+    function checkStepTwo() {
+        const nv = document.getElementById('num_2').value;
+        const nu = document.getElementById('num_unit_2').value;
+        const dv = document.getElementById('den_2').value;
+        const du = document.getElementById('den_unit_2').value;
+
+        if (nv == "2" && nu == "mol_h2o" && dv == "2" && du == "mol_h2") {
+            const card = document.getElementById('node_2');
+            card.style.borderColor = "var(--combo-green)";
+            card.style.boxShadow = "0 0 15px rgba(0, 230, 118, 0.3)";
+            lockCardInputs(2);
+
+            // DYNAMICALLY UNLOCK NODE 3 LAYOUT
+            document.getElementById('op_3').style.display = "inline";
+            const node3 = document.getElementById('node_3');
+            node3.style.display = "flex";
+            setTimeout(() => {
+                node3.classList.remove('locked-link');
+                node3.classList.add('active-link');
+            }, 50);
+
+            alert("Link 2 Connected! Molar reactant ratio verified. Core stoichiometry locked.");
+        } else {
+            applyErrorFlash(2);
+            alert("Molar Ratio Conflict! Check your equation coefficients from the preparation ledger.");
+        }
+    }
+
+    // STEP 3 CHECK: Moles H2O -> Grams H2O (Target: 18.015 g H2O / 1 mol H2O)
+    function checkStepThree() {
+        const nv = document.getElementById('num_3').value;
+        const nu = document.getElementById('num_unit_3').value;
+        const dv = document.getElementById('den_3').value;
+        const du = document.getElementById('den_unit_3').value;
+
+        if (Math.abs(parseFloat(nv) - productMass) < 0.01 && nu == "g_h2o" && dv == "1" && du == "mol_h2o") {
+            const card = document.getElementById('node_3');
+            card.style.borderColor = "var(--combo-green)";
+            card.style.boxShadow = "0 0 15px rgba(0, 230, 118, 0.3)";
+            lockCardInputs(3);
+
+            // REVEAL COMPUTED YIELD VALUE & FOOTER SUBMIT COMPONENT
+            document.getElementById('op_eq').style.display = "inline";
+            document.getElementById('yieldNode').style.display = "block";
+            
+            // Calculate final value: (15.0 / 2.016) * (2 / 2) * 18.015 = 134.04g
+            const finalCalculatedYield = ((15.0 / reactantMass) * (2 / 2) * productMass).toFixed(2);
+            document.getElementById('yieldValue').innerText = finalCalculatedYield + " g";
+            
+            document.getElementById('actionsBar').style.display = "flex";
+            alert("Mass-to-Mass Chain Complete! Theoretical yield boundary established successfully.");
+        } else {
+            applyErrorFlash(3);
+            alert("Terminal Mass Error! Convert product moles back into exact physical mass units.");
+        }
+    }
+
+    function applyErrorFlash(nodeIndex) {
+        const card = document.getElementById(`node_${nodeIndex}`);
+        card.style.borderColor = "var(--coral-red)";
+        card.style.boxShadow = "0 0 15px rgba(255, 61, 0, 0.4)";
+    }
+</script>
+{% endblock content %}

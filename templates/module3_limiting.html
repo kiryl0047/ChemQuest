@@ -1,0 +1,298 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<style>
+    .grid-info-header {
+        background: #171A21;
+        border-bottom: 2px solid var(--coral-red);
+        padding: 15px;
+        margin-bottom: 30px;
+        border-radius: 4px;
+        font-size: 14px;
+    }
+
+    .lane-title {
+        font-weight: bold;
+        font-size: 14px;
+        letter-spacing: 1px;
+        margin-bottom: 10px;
+        display: flex;
+        justify-content: space-between;
+    }
+
+    .lane-status {
+        font-size: 12px;
+        padding: 2px 8px;
+        border-radius: 3px;
+    }
+
+    .parallel-track-chasm {
+        background: var(--bg-dark);
+        border: 1px solid #2A303C;
+        padding: 20px;
+        border-radius: 8px;
+        margin-bottom: 25px;
+    }
+
+    .row-layout {
+        display: flex;
+        align-items: center;
+        gap: 15px;
+    }
+
+    .static-node {
+        background: var(--bg-slate);
+        border: 1px solid var(--text-muted);
+        padding: 10px;
+        border-radius: 4px;
+        text-align: center;
+        min-width: 100px;
+        font-size: 14px;
+    }
+
+    .mini-fraction {
+        background: var(--bg-slate);
+        border: 1px solid var(--cyber-teal);
+        padding: 10px;
+        border-radius: 4px;
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+    }
+
+    .mini-input {
+        background: var(--bg-dark);
+        border: 1px solid #333;
+        color: #FFF;
+        width: 60px;
+        text-align: center;
+        font-size: 12px;
+        padding: 3px;
+    }
+
+    .mini-unit {
+        color: var(--text-muted);
+        font-size: 11px;
+        font-weight: bold;
+    }
+
+    .divider-line {
+        height: 1px;
+        background: var(--cyber-teal);
+        width: 100%;
+    }
+
+    .btn-lane-trigger {
+        background: transparent;
+        border: 1px solid var(--cyber-teal);
+        color: var(--cyber-teal);
+        padding: 8px;
+        font-size: 12px;
+        font-weight: bold;
+        cursor: pointer;
+        border-radius: 4px;
+    }
+
+    /* Deduction Card View Blueprint Styles */
+    .deduction-card {
+        background: #171A21;
+        border: 2px solid var(--text-muted);
+        border-radius: 6px;
+        padding: 25px;
+        margin-top: 40px;
+        display: none; /* Hidden until both lanes match successfully */
+    }
+
+    .deduction-card.active-deduction {
+        border-color: var(--constant-gold);
+        display: block;
+        animation: pulseBorder 2s infinite alternate;
+    }
+
+    .radio-group {
+        display: flex;
+        gap: 30px;
+        margin: 20px 0;
+    }
+
+    .radio-label {
+        font-size: 18px;
+        font-weight: bold;
+        cursor: pointer;
+        color: var(--text-light);
+    }
+
+    .yield-final-input {
+        background: var(--bg-dark);
+        border: 2px solid var(--constant-gold);
+        color: #FFF;
+        font-size: 20px;
+        padding: 10px;
+        width: 150px;
+        border-radius: 4px;
+        text-align: center;
+    }
+</style>
+
+<div class="grid-info-header">
+    <span style="color: var(--coral-red); font-weight: bold; letter-spacing: 1px;">PHASE 3 // ADVANCED LIMITING WORKSPACE</span>
+    <p style="margin: 5px 0 0 0; color: var(--text-light);">{{ prompt }}</p>
+</div>
+
+<div class="parallel-track-chasm" id="chasm_A">
+    <div class="lane-title">
+        <span style="color: var(--cyber-teal);">TRACK A // REAGENT: HYDROGEN (H₂)</span>
+        <span class="lane-status" id="status_A" style="background: #2D3748; color: #A0AEC0;">PROCESSING...</span>
+    </div>
+    <div class="row-layout">
+        <div class="static-node"><strong>15.0 g</strong><br><span style="font-size:11px;">H₂ Input</span></div>
+        <span style="color:var(--text-muted);">✖</span>
+        <div class="mini-fraction">
+            <div style="display:flex; gap:5px;"><input type="number" class="mini-input" id="a_num_1" placeholder="Val"><span class="mini-unit">mol H₂</span></div>
+            <div class="divider-line"></div>
+            <div style="display:flex; gap:5px;"><input type="number" class="mini-input" id="a_den_1" placeholder="Val"><span class="mini-unit">g H₂</span></div>
+        </div>
+        <span style="color:var(--text-muted);">✖</span>
+        <div class="mini-fraction">
+            <div style="display:flex; gap:5px;"><input type="number" class="mini-input" id="a_num_2" placeholder="Val"><span class="mini-unit">mol H₂O</span></div>
+            <div class="divider-line"></div>
+            <div style="display:flex; gap:5px;"><input type="number" class="mini-input" id="a_den_2" placeholder="Val"><span class="mini-unit">mol H₂</span></div>
+        </div>
+        <span style="color:var(--text-muted);">✖</span>
+        <div class="mini-fraction">
+            <div style="display:flex; gap:5px;"><input type="number" class="mini-input" id="a_num_3" placeholder="Val"><span class="mini-unit">g H₂O</span></div>
+            <div class="divider-line"></div>
+            <div style="display:flex; gap:5px;"><input type="number" class="mini-input" id="a_den_3" placeholder="Val"><span class="mini-unit">mol H₂O</span></div>
+        </div>
+        <button class="btn-lane-trigger" style="margin-left:auto;" id="btn_lane_A" onclick="evaluateLaneA()">Evaluate Track A</button>
+    </div>
+</div>
+
+<div class="parallel-track-chasm" id="chasm_B">
+    <div class="lane-title">
+        <span style="color: var(--cyber-teal);">TRACK B // REAGENT: OXYGEN (O₂)</span>
+        <span class="lane-status" id="status_B" style="background: #2D3748; color: #A0AEC0;">PROCESSING...</span>
+    </div>
+    <div class="row-layout">
+        <div class="static-node"><strong>40.0 g</strong><br><span style="font-size:11px;">O₂ Input</span></div>
+        <span style="color:var(--text-muted);">✖</span>
+        <div class="mini-fraction">
+            <div style="display:flex; gap:5px;"><input type="number" class="mini-input" id="b_num_1" placeholder="Val"><span class="mini-unit">mol O₂</span></div>
+            <div class="divider-line"></div>
+            <div style="display:flex; gap:5px;"><input type="number" class="mini-input" id="b_den_1" placeholder="Val"><span class="mini-unit">g O₂</span></div>
+        </div>
+        <span style="color:var(--text-muted);">✖</span>
+        <div class="mini-fraction">
+            <div style="display:flex; gap:5px;"><input type="number" class="mini-input" id="b_num_2" placeholder="Val"><span class="mini-unit">mol H₂O</span></div>
+            <div class="divider-line"></div>
+            <div style="display:flex; gap:5px;"><input type="number" class="mini-input" id="b_den_2" placeholder="Val"><span class="mini-unit">mol O₂</span></div>
+        </div>
+        <span style="color:var(--text-muted);">✖</span>
+        <div class="mini-fraction">
+            <div style="display:flex; gap:5px;"><input type="number" class="mini-input" id="b_num_3" placeholder="Val"><span class="mini-unit">g H₂O</span></div>
+            <div class="divider-line"></div>
+            <div style="display:flex; gap:5px;"><input type="number" class="mini-input" id="b_den_3" placeholder="Val"><span class="mini-unit">mol H₂O</span></div>
+        </div>
+        <button class="btn-lane-trigger" style="margin-left:auto;" id="btn_lane_B" onclick="evaluateLaneB()">Evaluate Track B</button>
+    </div>
+</div>
+
+<div class="deduction-card" id="deductionCard">
+    <h3 style="color: var(--constant-gold); margin-top: 0;">🎯 Command Center Deduction Matrix</h3>
+    <p>Analyze both completed conversion parameters. Identify which reactant limits system metrics and enter its final theoretical capacity weight output.</p>
+    
+    <span style="font-weight: bold; color: var(--cyber-teal); font-size: 14px;">1. SELECT SYSTEM LIMITING REAGENT PROFILE</span>
+    <div class="radio-group">
+        <label class="radio-label"><input type="radio" name="reagent_pick" value="H2"> Hydrogen (H₂)</label>
+        <label class="radio-label"><input type="radio" name="reagent_pick" value="O2"> Oxygen (O₂)</label>
+    </div>
+
+    <span style="font-weight: bold; color: var(--cyber-teal); font-size: 14px; display: block; margin-bottom: 10px;">2. ENTER TRUE SYSTEM THEORETICAL YIELD MAXIMUM BOUNDARY</span>
+    <div style="display: flex; align-items: center; gap: 15px;">
+        <input type="number" step="0.01" class="yield-final-input" id="finalYieldInput" placeholder="0.00">
+        <span style="font-size: 18px; font-weight: bold; color: var(--text-muted);">g H₂O</span>
+        
+        <button class="btn-lane-trigger" style="border-color: var(--constant-gold); color: var(--constant-gold); padding: 12px 24px; margin-left: auto;" 
+                onclick="verifySystemDeduction()">
+            Submit Core Resolution
+        </button>
+    </div>
+</div>
+
+<script>
+    let laneACleared = false;
+    let laneBCleared = false;
+
+    // Database numeric conversions cached references
+    const h2Mass = parseFloat("{{ reactant_a_mass }}"); // 2.016
+    const o2Mass = parseFloat("{{ reactant_b_mass }}"); // 31.998
+    const h2oMass = parseFloat("{{ product_mass }}");   // 18.015
+
+    // Track A Eval (Target: 1/2.016 -> 2/2 -> 18.015/1 = 134.04g Yield)
+    function evaluateLaneA() {
+        const n1 = document.getElementById('a_num_1').value;
+        const d1 = document.getElementById('a_den_1').value;
+        const n2 = document.getElementById('a_num_2').value;
+        const d2 = document.getElementById('a_den_2').value;
+        const n3 = document.getElementById('a_num_3').value;
+        const d3 = document.getElementById('a_den_3').value;
+
+        if (n1 == "1" && Math.abs(parseFloat(d1) - h2Mass) < 0.01 && n2 == "2" && d2 == "2" && Math.abs(parseFloat(n3) - h2oMass) < 0.01 && d3 == "1") {
+            laneACleared = true;
+            document.getElementById('chasm_A').style.borderColor = "var(--combo-green)";
+            document.getElementById('status_A').innerText = "STABILIZED // 134.04g";
+            document.getElementById('status_A').style.background = "#065F46";
+            document.getElementById('status_A').style.color = "#A7F3D0";
+            document.getElementById('btn_lane_A').style.display = "none";
+            checkTrackSynchronization();
+        } else {
+            document.getElementById('chasm_A').style.borderColor = "var(--coral-red)";
+            alert("Track A Error Vector! Double check structural molecular fractions.");
+        }
+    }
+
+    // Track B Eval (Target: 1/31.998 -> 2/1 -> 18.015/1 = 45.04g Yield)
+    function evaluateLaneB() {
+        const n1 = document.getElementById('b_num_1').value;
+        const d1 = document.getElementById('b_den_1').value;
+        const n2 = document.getElementById('b_num_2').value;
+        const d2 = document.getElementById('b_den_2').value;
+        const n3 = document.getElementById('b_num_3').value;
+        const d3 = document.getElementById('b_den_3').value;
+
+        if (n1 == "1" && Math.abs(parseFloat(d1) - o2Mass) < 0.01 && n2 == "2" && d2 == "1" && Math.abs(parseFloat(n3) - h2oMass) < 0.01 && d3 == "1") {
+            laneBCleared = true;
+            document.getElementById('chasm_B').style.borderColor = "var(--combo-green)";
+            document.getElementById('status_B').innerText = "STABILIZED // 45.04g";
+            document.getElementById('status_B').style.background = "#065F46";
+            document.getElementById('status_B').style.color = "#A7F3D0";
+            document.getElementById('btn_lane_B').style.display = "none";
+            checkTrackSynchronization();
+        } else {
+            document.getElementById('chasm_B').style.borderColor = "var(--coral-red)";
+            alert("Track B Error Vector! Check the product/reactant molar ratio from the ledger.");
+        }
+    }
+
+    // Checks if both parallel paths have completed calculation pipelines before surfacing the Terminal Deduction Card
+    function checkTrackSynchronization() {
+        if (laneACleared && laneBCleared) {
+            document.getElementById('deductionCard').classList.add('active-deduction');
+        }
+    }
+
+    // Compares choice arrays against lower product yield limits (Oxygen yields 45.04g, making it the Limiting Reagent)
+    function verifySystemDeduction() {
+        const selectedReagent = document.querySelector('input[name="reagent_pick"]:checked')?.value;
+        const enteredYield = parseFloat(document.getElementById('finalYieldInput').value);
+
+        if (selectedReagent === "O2" && Math.abs(enteredYield - 45.04) < 0.5) {
+            alert("EXCELLENT STRATEGY RESOLUTION! Oxygen is completely consumed at 45.04 grams of water yield, halting the reaction. +500 XP Milestone Unlocked!");
+            // Redirect to Module 4 dashboard telemetry overview
+            window.location.href = '/';
+        } else {
+            alert("SYSTEM ANOMALY! The chosen reactant parameters do not represent the absolute systemic calculation ceiling. Recalculate side-by-side totals.");
+        }
+    }
+</script>
+{% endblock content %}

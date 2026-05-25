@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ChemQuest | Stoichiometric Workspace</title>
+    <style>
+        /* Base Palette - Modern Sci-Fi Lab Theme */
+        :root {
+            --bg-dark: #0F1115;
+            --bg-slate: #1E222B;
+            --cyber-teal: #00F0FF;
+            --combo-green: #00E676;
+            --coral-red: #FF3D00;
+            --constant-gold: #FFD600;
+            --text-light: #E2E8F0;
+            --text-muted: #64748B;
+        }
+
+        body {
+            background-color: var(--bg-dark);
+            color: var(--text-light);
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+        }
+
+        header {
+            background-color: var(--bg-slate);
+            border-bottom: 2px solid var(--cyber-teal);
+            padding: 15px 30px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        header h1 {
+            margin: 0;
+            font-size: 24px;
+            color: var(--cyber-teal);
+            letter-spacing: 1px;
+        }
+
+        .user-status {
+            display: flex;
+            gap: 20px;
+            font-weight: bold;
+        }
+
+        .xp-display {
+            color: var(--constant-gold);
+        }
+
+        main {
+            flex: 1;
+            padding: 30px;
+            display: flex;
+            justify-content: center;
+        }
+
+        .workspace-container {
+            background-color: var(--bg-slate);
+            border-radius: 8px;
+            width: 100%;
+            max-width: 1200px;
+            padding: 25px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+        }
+
+        footer {
+            text-align: center;
+            padding: 15px;
+            color: var(--text-muted);
+            font-size: 12px;
+            background-color: var(--bg-slate);
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <h1>CHEMQUEST //</h1>
+        <div class="user-status">
+            <span>LVL 1</span>
+            <span class="xp-display">XP: 0</span>
+        </div>
+    </header>
+
+    <main>
+        <div class="workspace-container">
+            {% block content %}
+            <p style="color: var(--text-muted);">Workspace loading...</p>
+            {% endblock content %}
+        </div>
+    </main>
+
+    <footer>
+        &copy; 2026 ChemQuest Framework - Procedural Assessment Engine
+    </footer>
+
+</body>
+</html>
