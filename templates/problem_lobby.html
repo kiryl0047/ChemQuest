@@ -147,7 +147,15 @@
     <div class="problem-card">
         <div class="problem-card-header">
             <div>
-                <p class="problem-title">{{ problem.title }}</p>
+                <p class="problem-title">
+                    {{ problem.title }}
+                    {% if problem.is_limiting_problem %}
+                    <span style="font-size:11px; font-weight:bold; padding:3px 8px;
+                                 border-radius:3px; border:1px solid var(--coral-red);
+                                 color:var(--coral-red); margin-left:8px; vertical-align:middle;
+                                 letter-spacing:1px;">LIMITING</span>
+                    {% endif %}
+                </p>
                 <p class="problem-prompt-preview">{{ problem.prompt }}</p>
             </div>
             <span class="problem-id-badge">{{ problem.problem_id }}</span>

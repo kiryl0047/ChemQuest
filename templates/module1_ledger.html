@@ -169,7 +169,7 @@
 <!-- ── Ledger Header ── -->
 <div class="ledger-card">
     <span style="color: var(--constant-gold); font-weight: bold; font-size: 11px; letter-spacing: 2px;">
-        PHASE 1 // THE PREPARATION LEDGER &nbsp;·&nbsp; {{ problem_id }}
+        THE PREPARATION LEDGER &nbsp;·&nbsp; {{ problem_id }}
     </span>
     <p class="problem-prompt" style="margin-top: 10px;">{{ prompt }}</p>
 </div>
@@ -264,13 +264,81 @@
 // Config injected from Django
 // ─────────────────────────────────────────────────────────────────────────────
 const PROBLEM_ID       = "{{ problem_id }}";
-const FIRST_PART_LABEL = "{{ first_part_label }}";
+const NEXT_URL         = "{{ next_url }}";
 const CORRECT_COEFFS   = "{{ correct_coefficients }}".split(',');  // ['2','1','2']
 
 // Reactant/product formulas in order (matches coefficient inputs)
 const REACTANT_FORMULAS = [{% for r in reactants %}"{{ r.formula }}"{% if not forloop.last %},{% endif %}{% endfor %}];
 const PRODUCT_FORMULAS  = [{% for p in products %}"{{ p.formula }}"{% if not forloop.last %},{% endif %}{% endfor %}];
 const ALL_FORMULAS      = [...REACTANT_FORMULAS, ...PRODUCT_FORMULAS];
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Persistence helpers  (localStorage, keyed per problem)
+// ─────────────────────────────────────────────────────────────────────────────
+const STORE_KEY = `cq_m1_${PROBLEM_ID}`;
+
+function saveState() {
+    const state = { coeffs: {}, masses: {}, balancingCleared };
+    REACTANT_FORMULAS.forEach((_, i) => {
+        const el = document.getElementById(`coeff_r${i}`);
+        if (el) state.coeffs[`r${i}`] = el.value;
+    });
+    PRODUCT_FORMULAS.forEach((_, i) => {
+        const el = document.getElementById(`coeff_p${i}`);
+        if (el) state.coeffs[`p${i}`] = el.value;
+    });
+    document.querySelectorAll('.mass-input').forEach(el => {
+        state.masses[el.dataset.formula] = el.value;
+    });
+    try { localStorage.setItem(STORE_KEY, JSON.stringify(state)); } catch(e) {}
+}
+
+function restoreState() {
+    let state;
+    try { state = JSON.parse(localStorage.getItem(STORE_KEY)); } catch(e) {}
+    if (!state) return;
+
+    // Restore coefficient values
+    Object.entries(state.coeffs || {}).forEach(([key, val]) => {
+        const el = document.getElementById(`coeff_${key}`);
+        if (el && val) el.value = val;
+    });
+
+    // If balancing was already cleared, re-apply the locked/unlocked visual state
+    if (state.balancingCleared) {
+        balancingCleared = true;
+        const statusEl = document.getElementById('balanceStatus');
+        statusEl.textContent = 'STABILIZED';
+        statusEl.className   = 'balance-status ok';
+        REACTANT_FORMULAS.forEach((_, i) => {
+            const el = document.getElementById(`coeff_r${i}`);
+            if (el) { el.disabled = true; el.style.color = 'var(--combo-green)'; }
+        });
+        PRODUCT_FORMULAS.forEach((_, i) => {
+            const el = document.getElementById(`coeff_p${i}`);
+            if (el) { el.disabled = true; el.style.color = 'var(--combo-green)'; }
+        });
+        document.getElementById('btnBalance').style.display = 'none';
+        document.getElementById('massSection').classList.add('unlocked');
+
+        // Restore molar mass values
+        Object.entries(state.masses || {}).forEach(([formula, val]) => {
+            const input    = document.getElementById(`mass_${formula}`);
+            const statusEl = document.getElementById(`massStatus_${formula}`);
+            if (!input || !val) return;
+            input.value = val;
+            const expected = computeMolarMass(formula);
+            if (expected !== null && Math.abs(parseFloat(val) - expected) <= MASS_TOLERANCE) {
+                input.className      = 'mass-input correct';
+                input.disabled       = true;
+                statusEl.textContent = `✓ ${expected.toFixed(3)}`;
+                statusEl.className   = 'balance-status ok';
+            } else if (val) {
+                input.value = val;  // restore partial entry without locking
+            }
+        });
+    }
+}
 
 // IUPAC standard atomic masses (reference subset)
 const IUPAC_MASSES = {
@@ -300,6 +368,14 @@ const CORRECT_MASSES = {
 // ─────────────────────────────────────────────────────────────────────────────
 // Render periodic databank buttons
 // ─────────────────────────────────────────────────────────────────────────────
+// Auto-save coefficients and masses on every keystroke
+document.addEventListener('input', e => {
+    if (e.target.classList.contains('coeff-input') ||
+        e.target.classList.contains('mass-input')) {
+        saveState();
+    }
+});
+
 (function buildPeriodicGrid() {
     const grid = document.getElementById('periodicGrid');
     Object.entries(IUPAC_MASSES).forEach(([sym, mass]) => {
@@ -360,6 +436,7 @@ async function checkBalancing() {
 
         // Unlock mass section
         document.getElementById('massSection').classList.add('unlocked');
+        saveState();
         showToast(data.message, 'ok');
     } else {
         statusEl.textContent = 'IMBALANCED';
@@ -439,9 +516,12 @@ function lockAndProceed() {
     });
 
     if (allOk) {
-        showToast('Constants locked! Launching Step-Grid Workspace…', 'ok');
+        saveState();
+        const dest = "{{ is_limiting_problem }}" === "True"
+            ? 'Limiting Reagent Workspace' : 'Step-Grid Workspace';
+        showToast(`Constants locked! Launching ${dest}…`, 'ok');
         setTimeout(() => {
-            window.location.href = `/workspace/${PROBLEM_ID}/${FIRST_PART_LABEL}/`;
+            window.location.href = NEXT_URL;
         }, 900);
     } else {
         showToast('Correct the highlighted molar masses before proceeding.', 'err');
@@ -462,6 +542,9 @@ function flashError(elementId) {
         el.style.borderColor = '';
     }, 1400);
 }
+
+// Restore on page load (must run after DOM is fully built above)
+restoreState();
 
 let _toastTimeout;
 function showToast(msg, type = 'info') {

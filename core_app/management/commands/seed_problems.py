@@ -224,6 +224,63 @@ PROBLEMS = [
         ],
     },
 
+    # -----------------------------------------------------------------------
+    # PROB_501  –  Al + Cl2 → AlCl3 (Full Multi-Module Capstone Challenge)
+    # 2 Al + 3 Cl₂ → 2 AlCl₃
+    # -----------------------------------------------------------------------
+    {
+        'problem_id':  'PROB_501',
+        'title':       'Chamber Synthesis Boundary',
+        'prompt':      (
+            'Solid Aluminum (Al) reacts with Chlorine gas (Cl₂) to form Aluminum Chloride (AlCl₃). '
+            'If 35.0 g of Al are mixed with 45.0 g of Cl₂ inside a sealed reactor chamber, '
+            'evaluate both structural reaction tracks side-by-side to determine the true '
+            'limiting factor, maximum yield, and the mass of remaining unreacted excess reagent.'
+        ),
+        'reactants_str':       '2:Al,3:Cl2',
+        'products_str':        '2:AlCl3',
+        'correct_coefficients':'2,3,2',
+        'is_limiting_problem': True,  
+        'parts': [
+            {
+                # MODULE 3 - TRACK A: Label set to 'a' to satisfy the view's query lookup
+                'part_label':      'a',
+                'part_prompt':     'Track A (Al): Calculate the theoretical mass of AlCl₃ produced if Aluminum is completely consumed.',
+                'given_formula':   'Al',
+                'given_quantity':  35.0,
+                'given_unit':      'g',
+                'target_formula':  'AlCl3',
+                'target_unit':     'g',
+                'conversion_type': CONVERSION_G_TO_G,
+                'correct_answer':  172.9673,
+            },
+            {
+                # MODULE 3 - TRACK B: Label set to 'b' to satisfy the view's query lookup
+                'part_label':      'b',
+                'part_prompt':     'Track B (Cl₂): Calculate the theoretical mass of AlCl₃ produced if Chlorine gas is completely consumed.',
+                'given_formula':   'Cl2',
+                'given_quantity':  45.0,
+                'given_unit':      'g',
+                'target_formula':  'AlCl3',
+                'target_unit':     'g',
+                'conversion_type': CONVERSION_G_TO_G,
+                'correct_answer':  56.4154,
+            },
+            {
+                # MODULE 2 - LEFTOVER TRACK: Label set to 'c'
+                'part_label':      'c',
+                'part_prompt':     'Excess Analytics: Use the limiting mass (45.0 g Cl₂) to calculate exactly how many grams of Aluminum were consumed.',
+                'given_formula':   'Cl2',
+                'given_quantity':  45.0,
+                'given_unit':      'g',
+                'target_formula':  'Al',
+                'target_unit':     'g',
+                'conversion_type': CONVERSION_G_TO_G,
+                'correct_answer':  11.4116,
+            },
+        ],
+    },
+
 ]
 
 
@@ -256,16 +313,23 @@ class Command(BaseCommand):
             for order_idx, part_data in enumerate(parts_data):
                 given_formula  = part_data.pop('given_formula')
                 target_formula = part_data.pop('target_formula')
+                limiting_qtys  = part_data.pop('limiting_given_quantities', {})
 
                 ProblemPart.objects.update_or_create(
                     problem=prob,
                     part_label=part_data['part_label'],
                     defaults={
                         **part_data,
-                        'given_substance':  substance_map[given_formula],
-                        'target_substance': substance_map[target_formula],
-                        'order': order_idx,
+                        'given_substance':           substance_map[given_formula],
+                        'target_substance':          substance_map[target_formula],
+                        'order':                     order_idx,
+                        'limiting_given_quantities': limiting_qtys,
                     },
+                )
+                self.stdout.write(
+                    f'    Part {part_data["part_label"]}: '
+                    f'{given_formula} → {target_formula} '
+                    f'({part_data["conversion_type"]})'
                 )
                 self.stdout.write(
                     f'    Part {part_data["part_label"]}: '

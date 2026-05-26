@@ -111,6 +111,10 @@ class ProblemPart(models.Model):
     # For limiting reagent problems: flag this part as the limiting analysis part
     is_limiting_part = models.BooleanField(default=False)
 
+    # For limiting-reagent parts: per-reactant starting quantities
+    # e.g. {"Al": 35.0, "Cl2": 45.0}
+    limiting_given_quantities = models.JSONField(default=dict, blank=True)
+
     order = models.PositiveSmallIntegerField(default=0)
 
     class Meta:

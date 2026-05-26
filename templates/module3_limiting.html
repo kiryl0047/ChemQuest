@@ -183,15 +183,15 @@
 <div class="grid-info-header">
     <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;">
         <span style="color:var(--coral-red); font-weight:bold; letter-spacing:1px;">
-            PHASE 3 // LIMITING REAGENT WORKSPACE &nbsp;·&nbsp; {{ problem_id }} &nbsp;·&nbsp; PART {{ part_label|upper }}
+            LIMITING REAGENT WORKSPACE &nbsp;·&nbsp; {{ problem_id }}
         </span>
-        <a href="{% url 'step_grid_workspace' problem_id part_label %}"
-           style="color:var(--text-muted); font-size:12px; text-decoration:none;">
-            ← Back to Workspace
+        <a href="{% url 'preparation_ledger' problem_id %}"
+            style="color:var(--text-muted); font-size:12px; text-decoration:none;">
+            ← Back to Ledger
         </a>
     </div>
     <p style="margin:6px 0 0 0; color:var(--text-light);">
-        <strong>{{ part_prompt }}</strong>
+        <strong>{{ prompt }}</strong>
     </p>
 </div>
 
@@ -220,7 +220,7 @@
         <input type="number" step="0.01" class="yield-final-input"
                id="finalYieldInput" placeholder="0.00">
         <span style="font-size:16px; font-weight:bold; color:var(--text-muted);" id="yieldUnitLabel">
-            g {{ target_formula }}
+            g product
         </span>
 
         <button class="btn-lane-trigger"
@@ -245,13 +245,95 @@
 // Data injected by Django
 // ─────────────────────────────────────────────────────────────────────────────
 const PROBLEM_ID    = "{{ problem_id }}";
-const PART_LABEL    = "{{ part_label }}";
-const TARGET_FORMULA = "{{ target_formula }}";
-const TARGET_UNIT   = "{{ target_unit }}";
 
 // tracks = [{formula, display_name, molar_mass, given_quantity,
 //            coeff_given, coeff_target, target_formula, target_molar_mass}, ...]
 const TRACKS = {{ tracks_json|safe }};
+
+// TARGET_FORMULA and TARGET_UNIT are derived from TRACKS[0] at runtime
+const TARGET_FORMULA = TRACKS.length > 0 ? TRACKS[0].target_formula : '';
+const TARGET_UNIT    = 'g';  // limiting workspace is always g_to_g
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Persistence helpers
+// ─────────────────────────────────────────────────────────────────────────────
+const STORE_KEY = `cq_m3_${PROBLEM_ID}`;
+
+function saveState() {
+    const state = { inputs: {}, clearedTracks: [] };
+    TRACKS.forEach((track, tIdx) => {
+        [0, 1, 2].forEach(nIdx => {
+            const nEl = document.getElementById(`n_${tIdx}_${nIdx}`);
+            const dEl = document.getElementById(`d_${tIdx}_${nIdx}`);
+            if (nEl) state.inputs[`n_${tIdx}_${nIdx}`] = nEl.value;
+            if (dEl) state.inputs[`d_${tIdx}_${nIdx}`] = dEl.value;
+        });
+        const chasm = document.getElementById(`chasm_${tIdx}`);
+        if (chasm && chasm.style.borderColor === 'var(--combo-green)') {
+            state.clearedTracks.push(tIdx);
+        }
+    });
+    const sel = document.querySelector('input[name="reagent_pick"]:checked');
+    state.reagentPick  = sel ? sel.value : null;
+    state.yieldEntry   = document.getElementById('finalYieldInput')?.value || '';
+    state.deductionOpen = document.getElementById('deductionCard')
+                              .classList.contains('active-deduction');
+    try { localStorage.setItem(STORE_KEY, JSON.stringify(state)); } catch(e) {}
+}
+
+function restoreState() {
+    let state;
+    try { state = JSON.parse(localStorage.getItem(STORE_KEY)); } catch(e) {}
+    if (!state) return;
+
+    // Restore input values
+    Object.entries(state.inputs || {}).forEach(([id, val]) => {
+        const el = document.getElementById(id);
+        if (el && val !== undefined) el.value = val;
+    });
+
+    // Re-apply cleared track visual state
+    (state.clearedTracks || []).forEach(tIdx => {
+        const track  = TRACKS[tIdx];
+        const chasm  = document.getElementById(`chasm_${tIdx}`);
+        const status = document.getElementById(`status_${tIdx}`);
+        const btn    = document.getElementById(`btn_track_${tIdx}`);
+        if (!chasm) return;
+
+        const yield_val = computeTrackYield(track);
+        trackResults[track.formula] = yield_val;
+        chasm.style.borderColor = 'var(--combo-green)';
+        status.textContent = `STABILIZED // ${yield_val.toFixed(2)} ${TARGET_UNIT === 'g' ? 'g' : 'mol'}`;
+        status.style.background = '#065F46';
+        status.style.color      = '#A7F3D0';
+        if (btn) btn.style.display = 'none';
+
+        // Lock inputs for this track
+        [0, 1, 2].forEach(nIdx => {
+            const nEl = document.getElementById(`n_${tIdx}_${nIdx}`);
+            const dEl = document.getElementById(`d_${tIdx}_${nIdx}`);
+            if (nEl) nEl.disabled = true;
+            if (dEl) dEl.disabled = true;
+        });
+
+        clearedTracks++;
+    });
+
+    // If both tracks were cleared, rebuild deduction card
+    if (clearedTracks === TRACKS.length) {
+        buildDeductionCard();
+    }
+
+    // Restore deduction card selections
+    if (state.reagentPick) {
+        const radio = document.querySelector(`input[name="reagent_pick"][value="${state.reagentPick}"]`);
+        if (radio) radio.checked = true;
+    }
+    if (state.yieldEntry) {
+        const yInput = document.getElementById('finalYieldInput');
+        if (yInput) yInput.value = state.yieldEntry;
+    }
+}
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Build parallel track UI
@@ -331,6 +413,18 @@ TRACKS.forEach((track, tIdx) => {
     tracksContainer.appendChild(chasm);
 });
 
+// Restore saved state after track DOM is built
+restoreState();
+
+// Auto-save on every input change
+document.addEventListener('input', e => {
+    if (e.target.classList.contains('mini-input') ||
+        e.target.classList.contains('yield-final-input')) saveState();
+});
+document.addEventListener('change', e => {
+    if (e.target.name === 'reagent_pick') saveState();
+});
+
 // ─────────────────────────────────────────────────────────────────────────────
 // Evaluate a track
 // ─────────────────────────────────────────────────────────────────────────────
@@ -366,6 +460,7 @@ function evaluateTrack(tIdx) {
         document.getElementById(`btn_track_${tIdx}`).style.display = 'none';
 
         clearedTracks++;
+        saveState();
         if (clearedTracks === TRACKS.length) {
             buildDeductionCard();
         }
@@ -381,6 +476,11 @@ function evaluateTrack(tIdx) {
 // Build deduction card radio buttons once both tracks pass
 // ─────────────────────────────────────────────────────────────────────────────
 function buildDeductionCard() {
+    // Update yield unit label with actual target formula
+    const unitLabel = document.getElementById('yieldUnitLabel');
+    if (unitLabel && TRACKS.length > 0) {
+        unitLabel.textContent = `g ${TRACKS[0].target_formula}`;
+    }
     const rg = document.getElementById('reagentRadioGroup');
     rg.innerHTML = '';
     TRACKS.forEach(track => {
@@ -426,7 +526,7 @@ function verifyDeduction() {
     if (reagentOk && yieldOk) {
         showToast(`Correct! ${correctFormula} is the limiting reagent. Yield = ${correctYield.toFixed(2)} — Resolution unlocked!`, 'ok');
         document.getElementById('deductionCard').style.borderColor = 'var(--combo-green)';
-        setTimeout(() => { window.location.href = '/'; }, 2000);
+        setTimeout(() => { window.location.href = '{% url "problem_lobby" %}'; }, 2000);
     } else {
         deductionAttempts++;
         const msgs = [];

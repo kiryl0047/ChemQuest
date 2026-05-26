@@ -13,7 +13,8 @@ urlpatterns = [
     path('workspace/<str:prob_id>/<str:part_label>/', views.step_grid_workspace, name='step_grid_workspace'),
 
     # Module 3 — Limiting Reagent Workspace
-    path('limiting-workspace/<str:prob_id>/<str:part_label>/', views.limiting_workspace, name='limiting_workspace'),
+    path('limiting-workspace/<str:prob_id>/',                    views.limiting_workspace, name='limiting_workspace'),
+    path('limiting-workspace/<str:prob_id>/<str:part_label>/',   views.limiting_workspace, name='limiting_workspace_part'),
 
     # API endpoints
     path('api/verify-balancing/',  views.verify_balancing_backend, name='verify_balancing'),

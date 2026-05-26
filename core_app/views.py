@@ -57,10 +57,10 @@ def _part_context(part: ProblemPart):
         'part_prompt':      part.part_prompt,
     }
 
-
 def _navigation_context(problem: StoichiometryProblem, current_part: ProblemPart):
     """
-    Returns prev_part / next_part / all_parts for the module navigation bar.
+    Returns prev_part / next_part / all_parts for the module navigation bar
+    along with dynamic routing targets.
     """
     all_parts = list(problem.parts.all())
     idx = next((i for i, p in enumerate(all_parts) if p.pk == current_part.pk), 0)
@@ -68,7 +68,17 @@ def _navigation_context(problem: StoichiometryProblem, current_part: ProblemPart
     prev_part = all_parts[idx - 1] if idx > 0 else None
     next_part = all_parts[idx + 1] if idx < len(all_parts) - 1 else None
 
-    # Next problem (for after last part)
+    # Calculate exactly where the next part button should take the student
+    next_part_url = None
+    if next_part:
+        if problem.is_limiting_problem and next_part.part_label in ['a', 'b', 'lane_a', 'lane_b']:
+            # Parallel tracks (A and B) stay in Module 3 Limiting Workspace
+            next_part_url = f'/limiting-workspace/{problem.problem_id}/{next_part.part_label}/'
+        else:
+            # Excess analytics (Part C) or any non-limiting part goes to Module 2 Step-Grid Workspace
+            next_part_url = f'/workspace/{problem.problem_id}/{next_part.part_label}/'
+
+    # Next problem boundaries (for after last part)
     all_problems = list(_all_problems())
     prob_idx = next((i for i, p in enumerate(all_problems) if p.pk == problem.pk), 0)
     next_problem = all_problems[prob_idx + 1] if prob_idx < len(all_problems) - 1 else None
@@ -81,12 +91,12 @@ def _navigation_context(problem: StoichiometryProblem, current_part: ProblemPart
         'current_part_idx':       idx,
         'prev_part':              prev_part,
         'next_part':              next_part,
+        'next_part_url':          next_part_url,  # Injected cleanly into templates
         'next_problem':           next_problem,
         'next_problem_first_part': next_problem_first_part,
         'is_last_part':           next_part is None,
         'is_last_problem':        next_problem is None,
     }
-
 
 # ---------------------------------------------------------------------------
 # View: problem selection lobby
@@ -127,6 +137,17 @@ def preparation_ledger(request, prob_id=None):
     # First part (used in breadcrumb only)
     first_part = problem.parts.first()
 
+    # Determine where "Lock & Proceed" sends the student dynamically
+    if first_part:
+        if first_part.part_label in ['lane_a', 'lane_b', 'a', 'b'] and problem.is_limiting_problem:
+            # If it's a limiting reactant problem starting with its tracks, go to Module 3
+            next_url = f'/limiting-workspace/{problem.problem_id}/{first_part.part_label}/'
+        else:
+            # Otherwise, go to the Module 2 Step-Grid Workspace
+            next_url = f'/workspace/{problem.problem_id}/{first_part.part_label}/'
+    else:
+        next_url = f'/workspace/{problem.problem_id}/a/'
+
     context = {
         'problem_id':            problem.problem_id,
         'problem_title':         problem.title,
@@ -136,6 +157,8 @@ def preparation_ledger(request, prob_id=None):
         'target_substances':     unique_formulas,
         'correct_coefficients':  problem.correct_coefficients,
         'first_part_label':      first_part.part_label if first_part else 'a',
+        'next_url':              next_url,
+        'is_limiting_problem':   problem.is_limiting_problem,
         'all_problems':          list(_all_problems()),
         'user_lvl': 1,
         'user_xp':  320,
@@ -177,10 +200,12 @@ def limiting_workspace(request, prob_id, part_label='a'):
 
     part = get_object_or_404(ProblemPart, problem=problem, part_label=part_label)
 
-    # For limiting workspace we need both reactants from the balanced equation
-    reactants = problem.reactants   # [{'coeff': N, 'formula': 'X'}, ...]
+    reactants = problem.reactants  # [{'coeff': N, 'formula': 'X'}, ...]
 
-    # Build per-reactant track contexts
+    # Per-reactant given quantities stored on the part (limiting problems only).
+    # Fall back to part.given_quantity for every reactant if not set.
+    lq = part.limiting_given_quantities or {}
+
     tracks = []
     from .models import Substance, _get_coeff
     for rxn_entry in reactants:
@@ -190,8 +215,6 @@ def limiting_workspace(request, prob_id, part_label='a'):
         except Substance.DoesNotExist:
             continue
 
-        # For each reactant track compute the expected moles-of-product yield
-        # using the FIRST product in the balanced equation as the target
         first_product_formula = problem.products[0]['formula']
         try:
             target_sub = Substance.objects.get(formula=first_product_formula)
@@ -201,14 +224,17 @@ def limiting_workspace(request, prob_id, part_label='a'):
         coeff_given  = rxn_entry['coeff']
         coeff_target = _get_coeff(problem, first_product_formula)
 
+        # Use per-reactant quantity if available, otherwise fall back
+        given_qty = float(lq.get(formula, part.given_quantity))
+
         tracks.append({
-            'formula':       formula,
-            'display_name':  substance.display_name,
-            'molar_mass':    float(substance.molar_mass),
-            'given_quantity': float(part.given_quantity),
-            'coeff_given':   coeff_given,
-            'coeff_target':  coeff_target,
-            'target_formula':   first_product_formula,
+            'formula':           formula,
+            'display_name':      substance.display_name,
+            'molar_mass':        float(substance.molar_mass),
+            'given_quantity':    given_qty,
+            'coeff_given':       coeff_given,
+            'coeff_target':      coeff_target,
+            'target_formula':    first_product_formula,
             'target_molar_mass': float(target_sub.molar_mass),
         })
 
@@ -302,10 +328,20 @@ def validate_step_node(request):
     expected = nodes[node_idx]
     TOLERANCE = 0.01
 
-    num_ok  = abs(float(data.get('num_value', -999)) - expected['num_value']) < TOLERANCE
-    num_u   = data.get('num_unit', '').strip() == expected['num_unit']
-    den_ok  = abs(float(data.get('den_value', -999)) - expected['den_value']) < TOLERANCE
-    den_u   = data.get('den_unit', '').strip() == expected['den_unit']
+    # Guard: return early if inputs are null/NaN (empty form submission)
+    try:
+        num_val = float(data.get('num_value'))
+        den_val = float(data.get('den_value'))
+    except (TypeError, ValueError):
+        return JsonResponse({
+            'success': False,
+            'message': 'Empty or invalid input — fill in both fields before submitting.',
+        })
+
+    num_ok = abs(num_val - expected['num_value']) < TOLERANCE
+    num_u  = data.get('num_unit', '').strip() == expected['num_unit']
+    den_ok = abs(den_val - expected['den_value']) < TOLERANCE
+    den_u  = data.get('den_unit', '').strip() == expected['den_unit']
 
     is_correct = num_ok and num_u and den_ok and den_u
 

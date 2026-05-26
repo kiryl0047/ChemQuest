@@ -179,7 +179,7 @@
 <div class="grid-info-header">
     <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;">
         <span style="color:var(--cyber-teal); font-weight:bold; letter-spacing:1px;">
-            PHASE 2 // STEP-GRID WORKSPACE &nbsp;·&nbsp; {{ problem_id }} &nbsp;·&nbsp; PART {{ part_label|upper }}
+            STEP-GRID WORKSPACE &nbsp;·&nbsp; {{ problem_id }} &nbsp;·&nbsp; PART {{ part_label|upper }}
         </span>
         <a href="{% url 'preparation_ledger' problem_id %}"
            style="color:var(--text-muted); font-size:12px; text-decoration:none;">
@@ -249,14 +249,9 @@
        href="{% url 'step_grid_workspace' problem_id next_part.part_label %}">
         Next: Part {{ next_part.part_label|upper }} ──>
     </a>
-    {% elif next_problem_first_part %}
-    <a class="nav-btn primary"
-       href="{% url 'preparation_ledger' next_problem.problem_id %}">
-        Next Problem: {{ next_problem.title }} ──>
-    </a>
     {% else %}
     <a class="nav-btn primary" href="{% url 'problem_lobby' %}">
-        ✓ All Problems Complete — Return to Lobby
+        ✓ Problem Complete — Return to Lobby
     </a>
     {% endif %}
 </div>
@@ -277,6 +272,68 @@ const TARGET_FORMULA  = "{{ target_formula }}";
 
 // Full node spec: [{num_value, num_unit, den_value, den_unit}, ...]
 const NODES_SPEC = {{ nodes_json|safe }};
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Persistence helpers
+// ─────────────────────────────────────────────────────────────────────────────
+const STORE_KEY = `cq_m2_${PROBLEM_ID}_${PART_LABEL}`;
+
+function saveState() {
+    const state = { inputs: {}, verified: [] };
+    NODES_SPEC.forEach((_, idx) => {
+        const nEl = document.getElementById(`num_${idx}`);
+        const dEl = document.getElementById(`den_${idx}`);
+        if (nEl) state.inputs[`num_${idx}`] = nEl.value;
+        if (dEl) state.inputs[`den_${idx}`] = dEl.value;
+        const card = document.getElementById(`node_${idx}`);
+        if (card && card.classList.contains('verified-link')) {
+            state.verified.push(idx);
+        }
+    });
+    state.yieldRevealed = document.getElementById('yieldNode').style.display !== 'none';
+    try { localStorage.setItem(STORE_KEY, JSON.stringify(state)); } catch(e) {}
+}
+
+function restoreState() {
+    let state;
+    try { state = JSON.parse(localStorage.getItem(STORE_KEY)); } catch(e) {}
+    if (!state) return;
+
+    // Restore values into already-built input elements
+    Object.entries(state.inputs || {}).forEach(([id, val]) => {
+        const el = document.getElementById(id);
+        if (el && val !== undefined) el.value = val;
+    });
+
+    // Re-apply verified state for each completed node
+    (state.verified || []).forEach(idx => {
+        const card  = document.getElementById(`node_${idx}`);
+        const nEl   = document.getElementById(`num_${idx}`);
+        const dEl   = document.getElementById(`den_${idx}`);
+        const btnEl = document.getElementById(`btn_${idx}`);
+        if (!card) return;
+        card.classList.remove('active-link', 'locked-link', 'error-link');
+        card.classList.add('verified-link');
+        if (nEl)   nEl.disabled  = true;
+        if (dEl)   dEl.disabled  = true;
+        if (btnEl) btnEl.style.display = 'none';
+        verifiedCount++;
+
+        // Ensure the next node and its operator are visible/unlocked
+        const nextOp   = document.getElementById(`op_${idx + 1}`);
+        const nextCard = document.getElementById(`node_${idx + 1}`);
+        if (nextOp)   nextOp.style.display = 'inline';
+        if (nextCard) {
+            nextCard.style.display = 'flex';
+            nextCard.classList.remove('locked-link');
+            nextCard.classList.add('active-link');
+        }
+    });
+
+    if (state.yieldRevealed) {
+        revealFinalYield();
+    }
+}
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Build fraction-card nodes dynamically
@@ -325,28 +382,40 @@ NODES_SPEC.forEach((spec, idx) => {
     container.appendChild(card);
 });
 
+// Restore saved state after DOM nodes are built
+restoreState();
+
+// Auto-save on every input keystroke
+document.addEventListener('input', e => {
+    if (e.target.classList.contains('slot-input')) saveState();
+});
+
 // ─────────────────────────────────────────────────────────────────────────────
 // Verify a single node against backend
 // ─────────────────────────────────────────────────────────────────────────────
 async function verifyNode(idx) {
-    const numVal  = document.getElementById(`num_${idx}`).value;
-    const denVal  = document.getElementById(`den_${idx}`).value;
-    const spec    = NODES_SPEC[idx];
+    const numVal = document.getElementById(`num_${idx}`).value.trim();
+    const denVal = document.getElementById(`den_${idx}`).value.trim();
+    const spec   = NODES_SPEC[idx];
 
-    // Build unit token: "1.0 mol_SO2 / 64.064 g_SO2"
-    const payload = {
-        problem_id:  PROBLEM_ID,
-        part_label:  PART_LABEL,
-        node_index:  idx,
-        num_value:   parseFloat(numVal),
-        num_unit:    spec.num_unit,        // pre-filled; student enters the value only
-        den_value:   parseFloat(denVal),
-        den_unit:    spec.den_unit,
-    };
+    // Guard: reject empty inputs immediately, no backend call
+    if (numVal === '' || denVal === '') {
+        showToast('Fill in both numerator and denominator before validating.', 'err');
+        return;
+    }
+
+    const numFloat = parseFloat(numVal);
+    const denFloat = parseFloat(denVal);
+
+    // Guard: reject non-numeric inputs
+    if (isNaN(numFloat) || isNaN(denFloat)) {
+        showToast('Numeric values only — no letters or symbols.', 'err');
+        return;
+    }
 
     // ── Client-side fast-path (0.3s target, no round-trip needed for value check)
-    const numOk = Math.abs(parseFloat(numVal) - spec.num_value) < 0.01;
-    const denOk = Math.abs(parseFloat(denVal) - spec.den_value) < 0.01;
+    const numOk = Math.abs(numFloat - spec.num_value) < 0.01;
+    const denOk = Math.abs(denFloat - spec.den_value) < 0.01;
     const isOk  = numOk && denOk;
 
     const card = document.getElementById(`node_${idx}`);
@@ -361,6 +430,7 @@ async function verifyNode(idx) {
         card.classList.add('verified-link');
 
         verifiedCount++;
+        saveState();
 
         // Unlock next node if exists
         if (idx + 1 < NODES_SPEC.length) {
@@ -389,17 +459,26 @@ async function verifyNode(idx) {
             card.classList.add('active-link');
         }, 1200);
 
-        const hints = [];
-        if (!numOk) hints.push(`Numerator should be ${spec.num_value}`);
-        if (!denOk) hints.push(`Denominator should be ${spec.den_value}`);
-        showToast(`Node ${idx + 1} error: ${hints.join(' · ')}`, 'err');
+        const wrongFields = [];
+        if (!numOk) wrongFields.push('numerator');
+        if (!denOk) wrongFields.push('denominator');
+        showToast(`Node ${idx + 1}: incorrect ${wrongFields.join(' and ')} — check your conversion factor.`, 'err');
     }
 
-    // Also POST to backend for telemetry (non-blocking, fire-and-forget)
+    // POST to backend for telemetry (non-blocking, fire-and-forget)
+    // Only fires after input validation passes above, so num/den are always valid floats
     fetch('/api/validate-step-node/', {
         method:  'POST',
         headers: { 'Content-Type': 'application/json' },
-        body:    JSON.stringify(payload),
+        body:    JSON.stringify({
+            problem_id:  PROBLEM_ID,
+            part_label:  PART_LABEL,
+            node_index:  idx,
+            num_value:   numFloat,
+            num_unit:    spec.num_unit,
+            den_value:   denFloat,
+            den_unit:    spec.den_unit,
+        }),
     }).catch(() => {});
 }
 
