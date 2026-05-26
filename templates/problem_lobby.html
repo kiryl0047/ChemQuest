@@ -1,0 +1,179 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<style>
+    .lobby-header {
+        border-left: 4px solid var(--cyber-teal);
+        padding: 15px 20px;
+        background: #171A21;
+        border-radius: 4px;
+        margin-bottom: 30px;
+    }
+
+    .problem-grid {
+        display: flex;
+        flex-direction: column;
+        gap: 20px;
+    }
+
+    .problem-card {
+        background: #171A21;
+        border: 1px solid #2A303C;
+        border-radius: 8px;
+        padding: 20px 25px;
+        transition: border-color 0.2s ease, box-shadow 0.2s ease;
+    }
+
+    .problem-card:hover {
+        border-color: var(--cyber-teal);
+        box-shadow: 0 0 14px rgba(0, 240, 255, 0.12);
+    }
+
+    .problem-card-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        margin-bottom: 10px;
+    }
+
+    .problem-id-badge {
+        font-size: 11px;
+        font-weight: bold;
+        letter-spacing: 1.5px;
+        color: var(--text-muted);
+        background: var(--bg-dark);
+        padding: 3px 8px;
+        border-radius: 3px;
+        border: 1px solid #2A303C;
+    }
+
+    .problem-title {
+        font-size: 18px;
+        font-weight: bold;
+        color: var(--cyber-teal);
+        margin: 0 0 6px 0;
+    }
+
+    .problem-prompt-preview {
+        color: var(--text-light);
+        font-size: 14px;
+        line-height: 1.6;
+        margin-bottom: 15px;
+    }
+
+    .parts-strip {
+        display: flex;
+        gap: 8px;
+        flex-wrap: wrap;
+        margin-bottom: 18px;
+    }
+
+    .part-chip {
+        font-size: 12px;
+        font-weight: bold;
+        padding: 4px 10px;
+        border-radius: 3px;
+        border: 1px solid #2A303C;
+        color: var(--text-muted);
+        background: var(--bg-dark);
+        letter-spacing: 0.5px;
+    }
+
+    .part-chip.mol-to-mol { border-color: #4A90D9; color: #4A90D9; }
+    .part-chip.mol-to-g   { border-color: var(--combo-green); color: var(--combo-green); }
+    .part-chip.g-to-mol   { border-color: var(--constant-gold); color: var(--constant-gold); }
+    .part-chip.g-to-g     { border-color: var(--cyber-teal); color: var(--cyber-teal); }
+
+    .btn-start {
+        background: transparent;
+        border: 2px solid var(--cyber-teal);
+        color: var(--cyber-teal);
+        padding: 9px 22px;
+        font-weight: bold;
+        font-size: 13px;
+        border-radius: 4px;
+        cursor: pointer;
+        letter-spacing: 0.5px;
+        transition: all 0.2s ease;
+        text-decoration: none;
+        display: inline-block;
+    }
+
+    .btn-start:hover {
+        background: var(--cyber-teal);
+        color: var(--bg-dark);
+        box-shadow: 0 0 10px rgba(0, 240, 255, 0.4);
+    }
+
+    .conversion-legend {
+        display: flex;
+        gap: 15px;
+        flex-wrap: wrap;
+        margin-bottom: 25px;
+        font-size: 12px;
+    }
+
+    .legend-item {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        color: var(--text-muted);
+    }
+
+    .legend-dot {
+        width: 10px;
+        height: 10px;
+        border-radius: 50%;
+    }
+</style>
+
+<div class="lobby-header">
+    <span style="color: var(--cyber-teal); font-weight: bold; font-size: 12px; letter-spacing: 2px;">CHEMQUEST // PROBLEM SELECTION LOBBY</span>
+    <p style="margin: 6px 0 0 0; color: var(--text-light); font-size: 14px;">
+        Select a reaction set to begin. Each problem contains sequenced sub-parts requiring dimensional analysis chain-building.
+    </p>
+</div>
+
+<div class="conversion-legend">
+    <span style="color: var(--text-muted); font-weight: bold; font-size: 11px; letter-spacing: 1px; align-self: center;">CONVERSION TYPES:</span>
+    <span class="legend-item"><span class="legend-dot" style="background:#4A90D9;"></span> mol → mol</span>
+    <span class="legend-item"><span class="legend-dot" style="background:var(--combo-green);"></span> mol → g</span>
+    <span class="legend-item"><span class="legend-dot" style="background:var(--constant-gold);"></span> g → mol</span>
+    <span class="legend-item"><span class="legend-dot" style="background:var(--cyber-teal);"></span> g → g</span>
+</div>
+
+<div class="problem-grid">
+    {% for problem in problems %}
+    <div class="problem-card">
+        <div class="problem-card-header">
+            <div>
+                <p class="problem-title">{{ problem.title }}</p>
+                <p class="problem-prompt-preview">{{ problem.prompt }}</p>
+            </div>
+            <span class="problem-id-badge">{{ problem.problem_id }}</span>
+        </div>
+
+        <div class="parts-strip">
+            {% for part in problem.parts.all %}
+            <span class="part-chip {% if part.conversion_type == 'mol_to_mol' %}mol-to-mol{% elif part.conversion_type == 'mol_to_g' %}mol-to-g{% elif part.conversion_type == 'g_to_mol' %}g-to-mol{% else %}g-to-g{% endif %}">
+                Part {{ part.part_label|upper }}
+                &nbsp;·&nbsp;
+                {% if part.conversion_type == 'mol_to_mol' %}mol→mol
+                {% elif part.conversion_type == 'mol_to_g' %}mol→g
+                {% elif part.conversion_type == 'g_to_mol' %}g→mol
+                {% else %}g→g{% endif %}
+            </span>
+            {% endfor %}
+        </div>
+
+        <a class="btn-start" href="{% url 'preparation_ledger' problem.problem_id %}">
+            Begin Preparation Ledger ──>
+        </a>
+    </div>
+    {% empty %}
+    <p style="color: var(--text-muted); font-size: 15px;">
+        No problems found. Run <code>python manage.py seed_problems</code> to populate the database.
+    </p>
+    {% endfor %}
+</div>
+{% endblock content %}

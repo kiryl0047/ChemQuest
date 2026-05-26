@@ -11,40 +11,42 @@
     }
 
     .problem-prompt {
-        font-size: 18px;
-        line-height: 1.6;
-        margin-bottom: 20px;
+        font-size: 16px;
+        line-height: 1.7;
+        margin-bottom: 0;
         color: var(--text-light);
     }
 
+    /* ── Equation Builder ── */
     .equation-builder {
         display: flex;
         align-items: center;
-        gap: 15px;
-        font-size: 22px;
+        gap: 12px;
+        font-size: 20px;
         font-weight: bold;
         background: var(--bg-dark);
-        padding: 20px;
+        padding: 18px 20px;
         border-radius: 6px;
         border: 1px solid #2A303C;
         margin-bottom: 30px;
+        flex-wrap: wrap;
     }
 
     .coeff-input {
-        width: 50px;
+        width: 48px;
         background: var(--bg-slate);
         border: 2px solid var(--text-muted);
         color: #FFF;
         font-size: 20px;
         text-align: center;
         border-radius: 4px;
-        padding: 5px;
+        padding: 4px;
+        transition: border-color 0.2s;
     }
+    .coeff-input:focus { border-color: var(--cyber-teal); outline: none; }
 
-    .coeff-input:focus {
-        border-color: var(--cyber-teal);
-        outline: none;
-    }
+    .eq-arrow { color: var(--coral-red); font-size: 22px; padding: 0 6px; }
+    .eq-plus  { color: var(--text-muted); }
 
     .btn-action {
         background: transparent;
@@ -55,21 +57,20 @@
         border-radius: 4px;
         cursor: pointer;
         transition: all 0.2s ease;
+        font-size: 14px;
     }
-
     .btn-action:hover {
         background: var(--cyber-teal);
         color: var(--bg-dark);
         box-shadow: 0 0 10px rgba(0, 240, 255, 0.5);
     }
 
-    /* Molar Mass Section Locked View */
+    /* ── Molar Mass Section ── */
     .mass-section {
-        opacity: 0.4;
+        opacity: 0.35;
         pointer-events: none;
-        transition: opacity 0.3s ease;
+        transition: opacity 0.35s ease;
     }
-
     .mass-section.unlocked {
         opacity: 1;
         pointer-events: auto;
@@ -78,8 +79,8 @@
     .mass-row {
         display: flex;
         align-items: center;
-        gap: 20px;
-        margin-bottom: 15px;
+        gap: 15px;
+        margin-bottom: 14px;
     }
 
     .mass-input {
@@ -90,9 +91,13 @@
         font-size: 16px;
         padding: 8px;
         border-radius: 4px;
+        transition: border-color 0.2s;
     }
+    .mass-input:focus { outline: none; border-color: var(--constant-gold); }
+    .mass-input.correct { border-color: var(--combo-green); }
+    .mass-input.incorrect { border-color: var(--coral-red); }
 
-    /* Micro Periodic Tool Layout */
+    /* ── Periodic Databank ── */
     .periodic-popover {
         background: var(--bg-dark);
         border: 1px solid #2A303C;
@@ -104,96 +109,384 @@
     .periodic-grid {
         display: flex;
         gap: 10px;
+        flex-wrap: wrap;
     }
 
     .element-node {
         background: var(--bg-slate);
         border: 1px solid var(--text-muted);
-        padding: 8px;
+        padding: 8px 10px;
         text-align: center;
         cursor: pointer;
         border-radius: 4px;
-        min-width: 45px;
+        min-width: 48px;
+        transition: border-color 0.15s;
+        user-select: none;
+    }
+    .element-node:hover { border-color: var(--constant-gold); background: #252A36; }
+    .element-node:active { transform: scale(0.95); }
+
+    .element-symbol { font-weight: bold; display: block; color: var(--cyber-teal); font-size: 15px; }
+    .element-weight { font-size: 11px; color: var(--text-muted); display: block; }
+
+    /* ── Part Navigation ── */
+    .parts-nav {
+        display: flex;
+        gap: 10px;
+        flex-wrap: wrap;
+        margin-bottom: 20px;
     }
 
-    .element-node:hover {
-        border-color: var(--constant-gold);
-        background: #252A36;
-    }
-
-    .element-symbol {
-        font-weight: bold;
-        display: block;
-        color: var(--cyber-teal);
-    }
-
-    .element-weight {
-        font-size: 11px;
+    .part-nav-btn {
+        background: var(--bg-dark);
+        border: 1px solid #2A303C;
         color: var(--text-muted);
+        padding: 6px 14px;
+        border-radius: 4px;
+        font-size: 13px;
+        font-weight: bold;
+        cursor: default;
+        letter-spacing: 0.5px;
     }
+
+    /* ── Status badge ── */
+    .balance-status {
+        display: inline-block;
+        margin-left: 12px;
+        font-size: 13px;
+        font-weight: bold;
+        padding: 4px 10px;
+        border-radius: 3px;
+        background: #2D3748;
+        color: var(--text-muted);
+        vertical-align: middle;
+        transition: all 0.3s;
+    }
+    .balance-status.ok  { background: #065F46; color: #A7F3D0; }
+    .balance-status.err { background: #7F1D1D; color: #FCA5A5; }
 </style>
 
+<!-- ── Ledger Header ── -->
 <div class="ledger-card">
-    <span style="color: var(--constant-gold); font-weight: bold; font-size: 12px; letter-spacing: 2px;">PHASE 1 // THE PREPARATION LEDGER</span>
-    <p class="problem-prompt">{{ prompt }}</p>
+    <span style="color: var(--constant-gold); font-weight: bold; font-size: 11px; letter-spacing: 2px;">
+        PHASE 1 // THE PREPARATION LEDGER &nbsp;·&nbsp; {{ problem_id }}
+    </span>
+    <p class="problem-prompt" style="margin-top: 10px;">{{ prompt }}</p>
 </div>
 
-<h3 style="color: var(--cyber-teal);">1. Stabilize the Chemical Chamber (Balance Reaction)</h3>
-<div class="equation-builder">
-    <input type="number" class="coeff-input" id="reactant_0" min="1" placeholder="?"> <span>H₂</span>
-    <span>+</span>
-    <input type="number" class="coeff-input" id="reactant_1" min="1" placeholder="?"> <span>O₂</span>
-    <span style="color: var(--coral-red);">───></span>
-    <input type="number" class="coeff-input" id="product_0" min="1" placeholder="?"> <span>H₂O</span>
-    
-    <button class="btn-action" style="margin-left: auto;" onclick="checkBalancing()">Verify Chamber</button>
+<!-- ── Sub-part breadcrumb ── -->
+{% with parts=problem.parts.all %}
+{% if parts.count > 1 %}
+<div class="parts-nav">
+    <span style="font-size: 12px; color: var(--text-muted); font-weight: bold; align-self: center; letter-spacing: 1px;">PARTS:</span>
+    {% for p in parts %}
+    <span class="part-nav-btn">
+        Part {{ p.part_label|upper }}
+        &nbsp;·&nbsp;
+        {% if p.conversion_type == 'mol_to_mol' %}mol→mol
+        {% elif p.conversion_type == 'mol_to_g' %}mol→g
+        {% elif p.conversion_type == 'g_to_mol' %}g→mol
+        {% else %}g→g{% endif %}
+    </span>
+    {% endfor %}
+</div>
+{% endif %}
+{% endwith %}
+
+<!-- ── Step 1: Balance ── -->
+<h3 style="color: var(--cyber-teal); margin-bottom: 12px;">
+    1. Stabilize the Chemical Chamber
+    <span class="balance-status" id="balanceStatus">PENDING</span>
+</h3>
+
+<div class="equation-builder" id="equationBuilder">
+    {% for r in reactants %}
+        {% if not forloop.first %}<span class="eq-plus">+</span>{% endif %}
+        <input type="number" class="coeff-input" id="coeff_r{{ forloop.counter0 }}"
+               min="1" max="20" placeholder="?">
+        <span>{{ r.formula }}</span>
+    {% endfor %}
+
+    <span class="eq-arrow">───></span>
+
+    {% for p in products %}
+        {% if not forloop.first %}<span class="eq-plus">+</span>{% endif %}
+        <input type="number" class="coeff-input" id="coeff_p{{ forloop.counter0 }}"
+               min="1" max="20" placeholder="?">
+        <span>{{ p.formula }}</span>
+    {% endfor %}
+
+    <button class="btn-action" style="margin-left: auto;" id="btnBalance" onclick="checkBalancing()">
+        Verify Chamber
+    </button>
 </div>
 
+<!-- ── Step 2: Molar Masses (locked until balanced) ── -->
 <div class="mass-section" id="massSection">
-    <h3 style="color: var(--constant-gold);">2. Harvest Canned Constants (Isolate Molar Masses)</h3>
-    <p style="color: var(--text-muted); margin-top: -10px; font-size: 14px;">Use the atomic databank below to compute and catalog compound masses.</p>
-    
-    {% for sub in target_substances %}
+    <h3 style="color: var(--constant-gold);">2. Harvest Canned Constants (Molar Masses)</h3>
+    <p style="color: var(--text-muted); margin-top: -10px; font-size: 14px;">
+        Use the atomic databank to compute each compound mass, then press Lock.
+    </p>
+
+    {% for formula in target_substances %}
     <div class="mass-row">
-        <span style="width: 60px; font-weight: bold; font-size: 18px;">{{ sub }}:</span>
-        <input type="number" step="0.001" class="mass-input" placeholder="0.000"> <span style="color: var(--text-muted);">g/mol</span>
+        <span style="min-width: 65px; font-weight: bold; font-size: 18px; color: var(--text-light);">
+            {{ formula }}:
+        </span>
+        <input type="number" step="0.001" class="mass-input"
+               id="mass_{{ formula }}"
+               data-formula="{{ formula }}"
+               placeholder="0.000">
+        <span style="color: var(--text-muted);">g/mol</span>
+        <span class="balance-status" id="massStatus_{{ formula }}">—</span>
     </div>
     {% endfor %}
 
+    <!-- Atomic Databank -->
     <div class="periodic-popover">
-        <span style="font-size: 12px; color: var(--text-muted); display: block; margin-bottom: 10px; font-weight: bold;">ATOMIC DATABANK REFERENCE</span>
-        <div class="periodic-grid">
-            <div class="element-node" onclick="alert('Copied H weight')">
-                <span class="element-symbol">H</span>
-                <span class="element-weight">1.008</span>
-            </div>
-            <div class="element-node" onclick="alert('Copied O weight')">
-                <span class="element-symbol">O</span>
-                <span class="element-weight">16.00</span>
-            </div>
+        <span style="font-size: 11px; color: var(--text-muted); display: block; margin-bottom: 10px;
+                     font-weight: bold; letter-spacing: 1px;">ATOMIC DATABANK REFERENCE</span>
+        <div class="periodic-grid" id="periodicGrid">
+            <!-- Populated by JS from IUPAC_MASSES below -->
         </div>
     </div>
 
-    <button class="btn-action" style="margin-top: 20px; border-color: var(--constant-gold); color: var(--constant-gold);" 
-            onclick="window.location.href='/workspace/{{ problem_id }}/'">
-        Lock Constants & Proceed
+    <button class="btn-action"
+            style="margin-top: 20px; border-color: var(--constant-gold); color: var(--constant-gold);"
+            id="btnLockConstants"
+            onclick="lockAndProceed()">
+        Lock Constants &amp; Proceed to Workspace ──>
     </button>
 </div>
 
 <script>
-    // Frontend mock simulation interaction logic
-    function checkBalancing() {
-        const r0 = document.getElementById('reactant_0').value;
-        const r1 = document.getElementById('reactant_1').value;
-        const p0 = document.getElementById('product_0').value;
+// ─────────────────────────────────────────────────────────────────────────────
+// Config injected from Django
+// ─────────────────────────────────────────────────────────────────────────────
+const PROBLEM_ID       = "{{ problem_id }}";
+const FIRST_PART_LABEL = "{{ first_part_label }}";
+const CORRECT_COEFFS   = "{{ correct_coefficients }}".split(',');  // ['2','1','2']
 
-        // Correct parameters: 2 H2 + 1 O2 ---> 2 H2O
-        if (r0 == '2' && r1 == '1' && p0 == '2') {
-            alert('Chamber Stabilized! Molar Mass fields unlocked.');
-            document.getElementById('massSection').classList.add('unlocked');
-        } else {
-            alert('Reaction Imbalance Detected! Recalculate conservation vectors.');
-        }
+// Reactant/product formulas in order (matches coefficient inputs)
+const REACTANT_FORMULAS = [{% for r in reactants %}"{{ r.formula }}"{% if not forloop.last %},{% endif %}{% endfor %}];
+const PRODUCT_FORMULAS  = [{% for p in products %}"{{ p.formula }}"{% if not forloop.last %},{% endif %}{% endfor %}];
+const ALL_FORMULAS      = [...REACTANT_FORMULAS, ...PRODUCT_FORMULAS];
+
+// IUPAC standard atomic masses (reference subset)
+const IUPAC_MASSES = {
+    H:  1.008,  He: 4.003,
+    Li: 6.941,  Be: 9.012,
+    B: 10.811,  C: 12.011,
+    N: 14.007,  O: 15.999,
+    F: 18.998,  Ne: 20.180,
+    Na: 22.990, Mg: 24.305,
+    Al: 26.982, Si: 28.086,
+    P: 30.974,  S: 32.065,
+    Cl: 35.453, Ar: 39.948,
+    K: 39.098,  Ca: 40.078,
+    Fe: 55.845, Cu: 63.546,
+    Zn: 65.38,  Br: 79.904,
+    Ag: 107.868,I: 126.904,
+};
+
+// Correct molar masses for each formula (computed from seed data via server)
+// These are used client-side only for instant feedback; server is source of truth.
+const CORRECT_MASSES = {
+    {% for formula in target_substances %}
+    "{{ formula }}": null,   // populated after balancing via a lightweight lookup
+    {% endfor %}
+};
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Render periodic databank buttons
+// ─────────────────────────────────────────────────────────────────────────────
+(function buildPeriodicGrid() {
+    const grid = document.getElementById('periodicGrid');
+    Object.entries(IUPAC_MASSES).forEach(([sym, mass]) => {
+        const btn = document.createElement('div');
+        btn.className = 'element-node';
+        btn.innerHTML = `<span class="element-symbol">${sym}</span><span class="element-weight">${mass}</span>`;
+        btn.title = `Click to copy ${sym} mass (${mass})`;
+        btn.onclick = () => {
+            navigator.clipboard?.writeText(String(mass)).catch(() => {});
+            showToast(`${sym}: ${mass} g/mol copied`);
+        };
+        grid.appendChild(btn);
+    });
+})();
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Step 1: Verify Balancing via backend API
+// ─────────────────────────────────────────────────────────────────────────────
+let balancingCleared = false;
+
+async function checkBalancing() {
+    // Collect all coefficients in reactant-then-product order
+    const submitted = [];
+    REACTANT_FORMULAS.forEach((_, i) => {
+        submitted.push(document.getElementById(`coeff_r${i}`)?.value?.trim() || '');
+    });
+    PRODUCT_FORMULAS.forEach((_, i) => {
+        submitted.push(document.getElementById(`coeff_p${i}`)?.value?.trim() || '');
+    });
+
+    const resp = await fetch('/api/verify-balancing/', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ problem_id: PROBLEM_ID, coefficients: submitted }),
+    });
+    const data = await resp.json();
+
+    const statusEl = document.getElementById('balanceStatus');
+
+    if (data.success) {
+        balancingCleared = true;
+        statusEl.textContent = 'STABILIZED';
+        statusEl.className   = 'balance-status ok';
+
+        // Lock coefficient inputs
+        ALL_FORMULAS.forEach((_, i) => {
+            const el = document.getElementById(`coeff_r${i}`) || document.getElementById(`coeff_p${i}`);
+        });
+        REACTANT_FORMULAS.forEach((_, i) => {
+            const el = document.getElementById(`coeff_r${i}`);
+            if (el) { el.disabled = true; el.style.color = 'var(--combo-green)'; }
+        });
+        PRODUCT_FORMULAS.forEach((_, i) => {
+            const el = document.getElementById(`coeff_p${i}`);
+            if (el) { el.disabled = true; el.style.color = 'var(--combo-green)'; }
+        });
+        document.getElementById('btnBalance').style.display = 'none';
+
+        // Unlock mass section
+        document.getElementById('massSection').classList.add('unlocked');
+        showToast(data.message, 'ok');
+    } else {
+        statusEl.textContent = 'IMBALANCED';
+        statusEl.className   = 'balance-status err';
+        flashError('equationBuilder');
+        showToast(data.message, 'err');
     }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Step 2: Validate molar masses and proceed
+// ─────────────────────────────────────────────────────────────────────────────
+
+// Tolerance for molar mass entry (±0.05 g/mol)
+const MASS_TOLERANCE = 0.05;
+
+// We validate client-side against computed values.
+// The server stores correct masses; here we derive them from atomic masses.
+const FORMULA_ATOM_MAP = {
+    'H2':    { H: 2 },
+    'O2':    { O: 2 },
+    'H2O':   { H: 2, O: 1 },
+    'SO2':   { S: 1, O: 2 },
+    'SO3':   { S: 1, O: 3 },
+    'C3H8':  { C: 3, H: 8 },
+    'CO2':   { C: 1, O: 2 },
+    'Al':    { Al: 1 },
+    'Cl2':   { Cl: 2 },
+    'AlCl3': { Al: 1, Cl: 3 },
+};
+
+// Extend IUPAC with element S for completeness
+IUPAC_MASSES['S'] = 32.065;
+
+function computeMolarMass(formula) {
+    const atoms = FORMULA_ATOM_MAP[formula];
+    if (!atoms) return null;
+    return Object.entries(atoms).reduce((sum, [el, count]) => {
+        return sum + (IUPAC_MASSES[el] || 0) * count;
+    }, 0);
+}
+
+function lockAndProceed() {
+    if (!balancingCleared) {
+        showToast('Stabilize the chemical chamber first!', 'err');
+        return;
+    }
+
+    const formulas = [{% for formula in target_substances %}"{{ formula }}"{% if not forloop.last %}, {% endif %}{% endfor %}];
+    let allOk = true;
+
+    formulas.forEach(formula => {
+        const input     = document.getElementById(`mass_${formula}`);
+        const statusEl  = document.getElementById(`massStatus_${formula}`);
+        const entered   = parseFloat(input.value);
+        const expected  = computeMolarMass(formula);
+
+        if (isNaN(entered) || expected === null) {
+            input.className   = 'mass-input incorrect';
+            statusEl.textContent = 'MISSING';
+            statusEl.className   = 'balance-status err';
+            allOk = false;
+            return;
+        }
+
+        if (Math.abs(entered - expected) <= MASS_TOLERANCE) {
+            input.className      = 'mass-input correct';
+            input.disabled       = true;
+            statusEl.textContent = `✓ ${expected.toFixed(3)}`;
+            statusEl.className   = 'balance-status ok';
+        } else {
+            input.className      = 'mass-input incorrect';
+            statusEl.textContent = `✗ (Expected ~${expected.toFixed(3)})`;
+            statusEl.className   = 'balance-status err';
+            allOk = false;
+        }
+    });
+
+    if (allOk) {
+        showToast('Constants locked! Launching Step-Grid Workspace…', 'ok');
+        setTimeout(() => {
+            window.location.href = `/workspace/${PROBLEM_ID}/${FIRST_PART_LABEL}/`;
+        }, 900);
+    } else {
+        showToast('Correct the highlighted molar masses before proceeding.', 'err');
+    }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// UI helpers
+// ─────────────────────────────────────────────────────────────────────────────
+function flashError(elementId) {
+    const el = document.getElementById(elementId);
+    if (!el) return;
+    const original = el.style.boxShadow;
+    el.style.boxShadow = '0 0 18px rgba(255,61,0,0.55)';
+    el.style.borderColor = 'var(--coral-red)';
+    setTimeout(() => {
+        el.style.boxShadow   = original;
+        el.style.borderColor = '';
+    }, 1400);
+}
+
+let _toastTimeout;
+function showToast(msg, type = 'info') {
+    let toast = document.getElementById('_cq_toast');
+    if (!toast) {
+        toast = document.createElement('div');
+        toast.id = '_cq_toast';
+        toast.style.cssText = `
+            position:fixed; bottom:28px; left:50%; transform:translateX(-50%);
+            padding:10px 22px; border-radius:5px; font-size:14px; font-weight:bold;
+            z-index:9999; transition:opacity 0.3s; pointer-events:none;
+            box-shadow: 0 4px 16px rgba(0,0,0,0.5);
+        `;
+        document.body.appendChild(toast);
+    }
+    toast.textContent = msg;
+    toast.style.opacity = '1';
+    toast.style.background = type === 'ok'  ? '#065F46' :
+                              type === 'err' ? '#7F1D1D' : '#1E222B';
+    toast.style.color      = type === 'ok'  ? '#A7F3D0' :
+                              type === 'err' ? '#FCA5A5' : '#E2E8F0';
+    toast.style.border     = `1px solid ${type === 'ok' ? 'var(--combo-green)' : type === 'err' ? 'var(--coral-red)' : '#2A303C'}`;
+
+    clearTimeout(_toastTimeout);
+    _toastTimeout = setTimeout(() => { toast.style.opacity = '0'; }, 3000);
+}
 </script>
 {% endblock content %}
