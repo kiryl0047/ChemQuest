@@ -240,332 +240,393 @@
     </div>
 </div>
 
+{% endblock content %}
+
+
+
+
+
+
+
+
+
+
+
+
 <script>
-// ─────────────────────────────────────────────────────────────────────────────
-// Data injected by Django
-// ─────────────────────────────────────────────────────────────────────────────
-const PROBLEM_ID    = "{{ problem_id }}";
+    // ─────────────────────────────────────────────────────────────────────────────
+    // Data injected by Django
+    // ─────────────────────────────────────────────────────────────────────────────
+    const PROBLEM_ID    = "{{ problem_id }}";
 
-// tracks = [{formula, display_name, molar_mass, given_quantity,
-//            coeff_given, coeff_target, target_formula, target_molar_mass}, ...]
-const TRACKS = {{ tracks_json|safe }};
+    // tracks = [{formula, display_name, molar_mass, given_quantity,
+    //            coeff_given, coeff_target, target_formula, target_molar_mass}, ...]
+    const TRACKS = {{ tracks_json|safe }};
 
-// TARGET_FORMULA and TARGET_UNIT are derived from TRACKS[0] at runtime
-const TARGET_FORMULA = TRACKS.length > 0 ? TRACKS[0].target_formula : '';
-const TARGET_UNIT    = 'g';  // limiting workspace is always g_to_g
+    // TARGET_FORMULA and TARGET_UNIT are derived from TRACKS[0] at runtime
+    const TARGET_FORMULA = TRACKS.length > 0 ? TRACKS[0].target_formula : '';
+    const TARGET_UNIT    = 'g';  // limiting workspace is always g_to_g
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Persistence helpers
-// ─────────────────────────────────────────────────────────────────────────────
-const STORE_KEY = `cq_m3_${PROBLEM_ID}`;
+    // ─────────────────────────────────────────────────────────────────────────────
+    // Persistence helpers
+    // ─────────────────────────────────────────────────────────────────────────────
+    const STORE_KEY = `cq_m3_${PROBLEM_ID}`;
 
-function saveState() {
-    const state = { inputs: {}, clearedTracks: [] };
-    TRACKS.forEach((track, tIdx) => {
-        [0, 1, 2].forEach(nIdx => {
-            const nEl = document.getElementById(`n_${tIdx}_${nIdx}`);
-            const dEl = document.getElementById(`d_${tIdx}_${nIdx}`);
-            if (nEl) state.inputs[`n_${tIdx}_${nIdx}`] = nEl.value;
-            if (dEl) state.inputs[`d_${tIdx}_${nIdx}`] = dEl.value;
+    function saveState() {
+        const state = { inputs: {}, clearedTracks: [] };
+        TRACKS.forEach((track, tIdx) => {
+            [0, 1, 2].forEach(nIdx => {
+                const nEl = document.getElementById(`n_${tIdx}_${nIdx}`);
+                const dEl = document.getElementById(`d_${tIdx}_${nIdx}`);
+                if (nEl) state.inputs[`n_${tIdx}_${nIdx}`] = nEl.value;
+                if (dEl) state.inputs[`d_${tIdx}_${nIdx}`] = dEl.value;
+            });
+            const chasm = document.getElementById(`chasm_${tIdx}`);
+            if (chasm && chasm.style.borderColor === 'var(--combo-green)') {
+                state.clearedTracks.push(tIdx);
+            }
         });
-        const chasm = document.getElementById(`chasm_${tIdx}`);
-        if (chasm && chasm.style.borderColor === 'var(--combo-green)') {
-            state.clearedTracks.push(tIdx);
-        }
-    });
-    const sel = document.querySelector('input[name="reagent_pick"]:checked');
-    state.reagentPick  = sel ? sel.value : null;
-    state.yieldEntry   = document.getElementById('finalYieldInput')?.value || '';
-    state.deductionOpen = document.getElementById('deductionCard')
-                              .classList.contains('active-deduction');
-    try { localStorage.setItem(STORE_KEY, JSON.stringify(state)); } catch(e) {}
-}
-
-function restoreState() {
-    let state;
-    try { state = JSON.parse(localStorage.getItem(STORE_KEY)); } catch(e) {}
-    if (!state) return;
-
-    // Restore input values
-    Object.entries(state.inputs || {}).forEach(([id, val]) => {
-        const el = document.getElementById(id);
-        if (el && val !== undefined) el.value = val;
-    });
-
-    // Re-apply cleared track visual state
-    (state.clearedTracks || []).forEach(tIdx => {
-        const track  = TRACKS[tIdx];
-        const chasm  = document.getElementById(`chasm_${tIdx}`);
-        const status = document.getElementById(`status_${tIdx}`);
-        const btn    = document.getElementById(`btn_track_${tIdx}`);
-        if (!chasm) return;
-
-        const yield_val = computeTrackYield(track);
-        trackResults[track.formula] = yield_val;
-        chasm.style.borderColor = 'var(--combo-green)';
-        status.textContent = `STABILIZED // ${yield_val.toFixed(2)} ${TARGET_UNIT === 'g' ? 'g' : 'mol'}`;
-        status.style.background = '#065F46';
-        status.style.color      = '#A7F3D0';
-        if (btn) btn.style.display = 'none';
-
-        // Lock inputs for this track
-        [0, 1, 2].forEach(nIdx => {
-            const nEl = document.getElementById(`n_${tIdx}_${nIdx}`);
-            const dEl = document.getElementById(`d_${tIdx}_${nIdx}`);
-            if (nEl) nEl.disabled = true;
-            if (dEl) dEl.disabled = true;
-        });
-
-        clearedTracks++;
-    });
-
-    // If both tracks were cleared, rebuild deduction card
-    if (clearedTracks === TRACKS.length) {
-        buildDeductionCard();
+        const sel = document.querySelector('input[name="reagent_pick"]:checked');
+        state.reagentPick  = sel ? sel.value : null;
+        state.yieldEntry   = document.getElementById('finalYieldInput')?.value || '';
+        state.deductionOpen = document.getElementById('deductionCard')
+                                  .classList.contains('active-deduction');
+        try { localStorage.setItem(STORE_KEY, JSON.stringify(state)); } catch(e) {}
     }
 
-    // Restore deduction card selections
-    if (state.reagentPick) {
-        const radio = document.querySelector(`input[name="reagent_pick"][value="${state.reagentPick}"]`);
-        if (radio) radio.checked = true;
-    }
-    if (state.yieldEntry) {
-        const yInput = document.getElementById('finalYieldInput');
-        if (yInput) yInput.value = state.yieldEntry;
-    }
-}
+    function restoreState() {
+        let state;
+        try { state = JSON.parse(localStorage.getItem(STORE_KEY)); } catch(e) {}
+        if (!state) return;
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Build parallel track UI
-// ─────────────────────────────────────────────────────────────────────────────
-const tracksContainer = document.getElementById('tracksContainer');
-let clearedTracks = 0;
-const trackResults = {};   // formula → computed yield
-
-// Pre-compute expected yields for each track  (g_to_g: 3 nodes)
-function computeTrackYield(track) {
-    // g_to_g:   (given_g / molar_mass_given) × (coeff_target / coeff_given) × molar_mass_target
-    return (track.given_quantity / track.molar_mass)
-         * (track.coeff_target / track.coeff_given)
-         * track.target_molar_mass;
-}
-
-function buildTrackNodes(track) {
-    // Returns array of {num_value, num_unit_display, den_value, den_unit_display}
-    const gf = track.formula;
-    const tf = track.target_formula;
-    const mm_given  = track.molar_mass;
-    const mm_target = track.target_molar_mass;
-    const cg = track.coeff_given;
-    const ct = track.coeff_target;
-
-    return [
-        { nv: 1,      nu: `mol ${gf}`,  dv: mm_given,  du: `g ${gf}` },
-        { nv: ct,     nu: `mol ${tf}`,  dv: cg,        du: `mol ${gf}` },
-        { nv: mm_target, nu: `g ${tf}`, dv: 1,         du: `mol ${tf}` },
-    ];
-}
-
-TRACKS.forEach((track, tIdx) => {
-    const nodes     = buildTrackNodes(track);
-    const yield_val = computeTrackYield(track);
-    trackResults[track.formula] = yield_val;
-
-    const chasm = document.createElement('div');
-    chasm.className = 'parallel-track-chasm';
-    chasm.id        = `chasm_${tIdx}`;
-
-    const letters = ['A','B','C','D'];
-    const trackLetter = letters[tIdx] || String(tIdx + 1);
-
-    chasm.innerHTML = `
-        <div class="lane-title">
-            <span style="color:var(--cyber-teal);">
-                TRACK ${trackLetter} // REAGENT: ${track.display_name.toUpperCase()} (${track.formula})
-            </span>
-            <span class="lane-status" id="status_${tIdx}">PROCESSING…</span>
-        </div>
-        <div class="row-layout" id="row_${tIdx}">
-            <div class="static-node">
-                <strong>${track.given_quantity} g</strong><br>
-                <span style="font-size:11px;">${track.formula} Input</span>
-            </div>
-            ${nodes.map((n, nIdx) => `
-                <span class="op-sign">✖</span>
-                <div class="mini-fraction" id="mf_${tIdx}_${nIdx}">
-                    <div class="mini-row">
-                        <input type="number" class="mini-input" id="n_${tIdx}_${nIdx}" placeholder="Val" step="any">
-                        <span class="mini-unit">${n.nu}</span>
-                    </div>
-                    <div class="divider-line"></div>
-                    <div class="mini-row">
-                        <input type="number" class="mini-input" id="d_${tIdx}_${nIdx}" placeholder="Val" step="any">
-                        <span class="mini-unit">${n.du}</span>
-                    </div>
-                </div>
-            `).join('')}
-            <button class="btn-lane-trigger" id="btn_track_${tIdx}"
-                    onclick="evaluateTrack(${tIdx})">
-                Evaluate Track ${trackLetter}
-            </button>
-        </div>
-    `;
-    tracksContainer.appendChild(chasm);
-});
-
-// Restore saved state after track DOM is built
-restoreState();
-
-// Auto-save on every input change
-document.addEventListener('input', e => {
-    if (e.target.classList.contains('mini-input') ||
-        e.target.classList.contains('yield-final-input')) saveState();
-});
-document.addEventListener('change', e => {
-    if (e.target.name === 'reagent_pick') saveState();
-});
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Evaluate a track
-// ─────────────────────────────────────────────────────────────────────────────
-function evaluateTrack(tIdx) {
-    const track = TRACKS[tIdx];
-    const nodes = buildTrackNodes(track);
-    const TOLS  = 0.01;
-
-    let allOk = true;
-    nodes.forEach((n, nIdx) => {
-        const nv = parseFloat(document.getElementById(`n_${tIdx}_${nIdx}`).value);
-        const dv = parseFloat(document.getElementById(`d_${tIdx}_${nIdx}`).value);
-        if (Math.abs(nv - n.nv) > TOLS || Math.abs(dv - n.dv) > TOLS) {
-            allOk = false;
-        }
-    });
-
-    const chasm  = document.getElementById(`chasm_${tIdx}`);
-    const status = document.getElementById(`status_${tIdx}`);
-    const yield_val = trackResults[track.formula];
-
-    if (allOk) {
-        chasm.style.borderColor = 'var(--combo-green)';
-        status.textContent = `STABILIZED // ${yield_val.toFixed(2)} ${TARGET_UNIT === 'g' ? 'g' : 'mol'}`;
-        status.style.background = '#065F46';
-        status.style.color      = '#A7F3D0';
-
-        // Lock inputs
-        nodes.forEach((_, nIdx) => {
-            document.getElementById(`n_${tIdx}_${nIdx}`).disabled = true;
-            document.getElementById(`d_${tIdx}_${nIdx}`).disabled = true;
+        // Restore input values
+        Object.entries(state.inputs || {}).forEach(([id, val]) => {
+            const el = document.getElementById(id);
+            if (el && val !== undefined) el.value = val;
         });
-        document.getElementById(`btn_track_${tIdx}`).style.display = 'none';
 
-        clearedTracks++;
-        saveState();
+        // Re-apply cleared track visual state
+        (state.clearedTracks || []).forEach(tIdx => {
+            const track  = TRACKS[tIdx];
+            const chasm  = document.getElementById(`chasm_${tIdx}`);
+            const status = document.getElementById(`status_${tIdx}`);
+            const btn    = document.getElementById(`btn_track_${tIdx}`);
+            if (!chasm) return;
+
+            const yield_val = computeTrackYield(track);
+            trackResults[track.formula] = yield_val;
+            chasm.style.borderColor = 'var(--combo-green)';
+            status.textContent = `STABILIZED // ${yield_val.toFixed(2)} ${TARGET_UNIT === 'g' ? 'g' : 'mol'}`;
+            status.style.background = '#065F46';
+            status.style.color      = '#A7F3D0';
+            if (btn) btn.style.display = 'none';
+
+            // Lock inputs for this track
+            [0, 1, 2].forEach(nIdx => {
+                const nEl = document.getElementById(`n_${tIdx}_${nIdx}`);
+                const dEl = document.getElementById(`d_${tIdx}_${nIdx}`);
+                if (nEl) nEl.disabled = true;
+                if (dEl) dEl.disabled = true;
+            });
+
+            clearedTracks++;
+        });
+
+        // If both tracks were cleared, rebuild deduction card
         if (clearedTracks === TRACKS.length) {
             buildDeductionCard();
         }
 
-        showToast(`Track ${['A','B','C','D'][tIdx]} verified: ${yield_val.toFixed(4)} ${TARGET_UNIT === 'g' ? 'g' : 'mol'} ${track.target_formula}`, 'ok');
-    } else {
-        chasm.style.borderColor = 'var(--coral-red)';
-        showToast(`Track ${['A','B','C','D'][tIdx]} error — check values against stoichiometric fractions.`, 'err');
-    }
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Build deduction card radio buttons once both tracks pass
-// ─────────────────────────────────────────────────────────────────────────────
-function buildDeductionCard() {
-    // Update yield unit label with actual target formula
-    const unitLabel = document.getElementById('yieldUnitLabel');
-    if (unitLabel && TRACKS.length > 0) {
-        unitLabel.textContent = `g ${TRACKS[0].target_formula}`;
-    }
-    const rg = document.getElementById('reagentRadioGroup');
-    rg.innerHTML = '';
-    TRACKS.forEach(track => {
-        const lbl = document.createElement('label');
-        lbl.className = 'radio-label';
-        lbl.innerHTML = `
-            <input type="radio" name="reagent_pick" value="${track.formula}">
-            ${track.display_name} (${track.formula})
-            &nbsp;<span style="color:var(--text-muted); font-size:13px;">
-                — ${trackResults[track.formula].toFixed(2)} ${TARGET_UNIT === 'g' ? 'g' : 'mol'} ${track.target_formula}
-            </span>
-        `;
-        rg.appendChild(lbl);
-    });
-
-    document.getElementById('deductionCard').classList.add('active-deduction');
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Verify final deduction
-// ─────────────────────────────────────────────────────────────────────────────
-let deductionAttempts = 0;
-
-function verifyDeduction() {
-    const selected    = document.querySelector('input[name="reagent_pick"]:checked')?.value;
-    const enteredYield = parseFloat(document.getElementById('finalYieldInput').value);
-
-    if (!selected) {
-        showToast('Select a limiting reagent first.', 'err');
-        return;
-    }
-
-    // Correct limiting reagent = reactant with minimum yield
-    const yields      = TRACKS.map(t => ({ formula: t.formula, y: trackResults[t.formula] }));
-    const minEntry    = yields.reduce((a, b) => a.y <= b.y ? a : b);
-    const correctFormula = minEntry.formula;
-    const correctYield   = minEntry.y;
-    const YIELD_TOL      = 0.5;
-
-    const reagentOk = selected === correctFormula;
-    const yieldOk   = Math.abs(enteredYield - correctYield) <= YIELD_TOL;
-
-    if (reagentOk && yieldOk) {
-        showToast(`Correct! ${correctFormula} is the limiting reagent. Yield = ${correctYield.toFixed(2)} — Resolution unlocked!`, 'ok');
-        document.getElementById('deductionCard').style.borderColor = 'var(--combo-green)';
-        setTimeout(() => { window.location.href = '{% url "problem_lobby" %}'; }, 2000);
-    } else {
-        deductionAttempts++;
-        const msgs = [];
-        if (!reagentOk) msgs.push(`${selected} is not the limiting reagent`);
-        if (!yieldOk)   msgs.push(`Yield entry is off (expected ~${correctYield.toFixed(2)})`);
-        showToast(`System anomaly: ${msgs.join(' · ')}`, 'err');
-
-        if (deductionAttempts >= 3) {
-            document.getElementById('hintBlock').classList.add('visible');
+        // Restore deduction card selections
+        if (state.reagentPick) {
+            const radio = document.querySelector(`input[name="reagent_pick"][value="${state.reagentPick}"]`);
+            if (radio) radio.checked = true;
+        }
+        if (state.yieldEntry) {
+            const yInput = document.getElementById('finalYieldInput');
+            if (yInput) yInput.value = state.yieldEntry;
         }
     }
-}
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Toast
-// ─────────────────────────────────────────────────────────────────────────────
-let _toastTimeout;
-function showToast(msg, type = 'info') {
-    let toast = document.getElementById('_cq_toast');
-    if (!toast) {
-        toast = document.createElement('div');
-        toast.id = '_cq_toast';
-        toast.style.cssText = `
-            position:fixed; bottom:28px; left:50%; transform:translateX(-50%);
-            padding:10px 22px; border-radius:5px; font-size:14px; font-weight:bold;
-            z-index:9999; transition:opacity 0.3s; pointer-events:none;
-            box-shadow:0 4px 16px rgba(0,0,0,0.5); max-width:520px; text-align:center;
-        `;
-        document.body.appendChild(toast);
+    // ─────────────────────────────────────────────────────────────────────────────
+    // Build parallel track UI
+    // ─────────────────────────────────────────────────────────────────────────────
+    const tracksContainer = document.getElementById('tracksContainer');
+    let clearedTracks = 0;
+    const trackResults = {};   // formula → computed yield
+
+    // Pre-compute expected yields for each track  (g_to_g: 3 nodes)
+    function computeTrackYield(track) {
+        // g_to_g:   (given_g / molar_mass_given) × (coeff_target / coeff_given) × molar_mass_target
+        return (track.given_quantity / track.molar_mass)
+             * (track.coeff_target / track.coeff_given)
+             * track.target_molar_mass;
     }
-    toast.textContent = msg;
-    toast.style.opacity = '1';
-    toast.style.background = type === 'ok'  ? '#065F46' :
-                              type === 'err' ? '#7F1D1D' : '#1E222B';
-    toast.style.color      = type === 'ok'  ? '#A7F3D0' :
-                              type === 'err' ? '#FCA5A5' : '#E2E8F0';
-    toast.style.border     = `1px solid ${type === 'ok' ? 'var(--combo-green)' : type === 'err' ? 'var(--coral-red)' : '#2A303C'}`;
-    clearTimeout(_toastTimeout);
-    _toastTimeout = setTimeout(() => { toast.style.opacity = '0'; }, 3500);
-}
+
+    function buildTrackNodes(track) {
+        // Returns array of {num_value, num_unit_display, den_value, den_unit_display}
+        const gf = track.formula;
+        const tf = track.target_formula;
+        const mm_given  = track.molar_mass;
+        const mm_target = track.target_molar_mass;
+        const cg = track.coeff_given;
+        const ct = track.coeff_target;
+
+        return [
+            { nv: 1,      nu: `mol ${gf}`,  dv: mm_given,  du: `g ${gf}` },
+            { nv: ct,     nu: `mol ${tf}`,  dv: cg,        du: `mol ${gf}` },
+            { nv: mm_target, nu: `g ${tf}`, dv: 1,         du: `mol ${tf}` },
+        ];
+    }
+
+    TRACKS.forEach((track, tIdx) => {
+        const nodes     = buildTrackNodes(track);
+        const yield_val = computeTrackYield(track);
+        trackResults[track.formula] = yield_val;
+
+        const chasm = document.createElement('div');
+        chasm.className = 'parallel-track-chasm';
+        chasm.id        = `chasm_${tIdx}`;
+
+        const letters = ['A','B','C','D'];
+        const trackLetter = letters[tIdx] || String(tIdx + 1);
+
+        chasm.innerHTML = `
+            <div class="lane-title">
+                <span style="color:var(--cyber-teal);">
+                    TRACK ${trackLetter} // REAGENT: ${track.display_name.toUpperCase()} (${track.formula})
+                </span>
+                <span class="lane-status" id="status_${tIdx}">PROCESSING…</span>
+            </div>
+            <div class="row-layout" id="row_${tIdx}">
+                <div class="static-node">
+                    <strong>${track.given_quantity} g</strong><br>
+                    <span style="font-size:11px;">${track.formula} Input</span>
+                </div>
+                ${nodes.map((n, nIdx) => `
+                    <span class="op-sign">✖</span>
+                    <div class="mini-fraction" id="mf_${tIdx}_${nIdx}">
+                        <div class="mini-row">
+                            <input type="number" class="mini-input" id="n_${tIdx}_${nIdx}" placeholder="Val" step="any">
+                            <span class="mini-unit">${n.nu}</span>
+                        </div>
+                        <div class="divider-line"></div>
+                        <div class="mini-row">
+                            <input type="number" class="mini-input" id="d_${tIdx}_${nIdx}" placeholder="Val" step="any">
+                            <span class="mini-unit">${n.du}</span>
+                        </div>
+                    </div>
+                `).join('')}
+                <button class="btn-lane-trigger" id="btn_track_${tIdx}"
+                        onclick="evaluateTrack(${tIdx})">
+                    Evaluate Track ${trackLetter}
+                </button>
+            </div>
+        `;
+        tracksContainer.appendChild(chasm);
+    });
+
+    // Restore saved state after track DOM is built
+    restoreState();
+
+    // Auto-save on every input change
+    document.addEventListener('input', e => {
+        if (e.target.classList.contains('mini-input') ||
+            e.target.classList.contains('yield-final-input')) saveState();
+    });
+    document.addEventListener('change', e => {
+        if (e.target.name === 'reagent_pick') saveState();
+    });
+
+    // ─────────────────────────────────────────────────────────────────────────────
+    // Evaluate a track
+    // ─────────────────────────────────────────────────────────────────────────────
+    function evaluateTrack(tIdx) {
+        const track = TRACKS[tIdx];
+        const nodes = buildTrackNodes(track);
+        const TOLS  = 0.01;
+
+        let allOk = true;
+        nodes.forEach((n, nIdx) => {
+            const nv = parseFloat(document.getElementById(`n_${tIdx}_${nIdx}`).value);
+            const dv = parseFloat(document.getElementById(`d_${tIdx}_${nIdx}`).value);
+            if (Math.abs(nv - n.nv) > TOLS || Math.abs(dv - n.dv) > TOLS) {
+                allOk = false;
+            }
+        });
+
+        const chasm  = document.getElementById(`chasm_${tIdx}`);
+        const status = document.getElementById(`status_${tIdx}`);
+        const yield_val = trackResults[track.formula];
+
+        if (allOk) {
+            chasm.style.borderColor = 'var(--combo-green)';
+            status.textContent = `STABILIZED // ${yield_val.toFixed(2)} ${TARGET_UNIT === 'g' ? 'g' : 'mol'}`;
+            status.style.background = '#065F46';
+            status.style.color      = '#A7F3D0';
+
+            // Lock inputs
+            nodes.forEach((_, nIdx) => {
+                document.getElementById(`n_${tIdx}_${nIdx}`).disabled = true;
+                document.getElementById(`d_${tIdx}_${nIdx}`).disabled = true;
+            });
+            document.getElementById(`btn_track_${tIdx}`).style.display = 'none';
+
+            clearedTracks++;
+            saveState();
+            if (clearedTracks === TRACKS.length) {
+                buildDeductionCard();
+            }
+
+            showToast(`Track ${['A','B','C','D'][tIdx]} verified: ${yield_val.toFixed(4)} ${TARGET_UNIT === 'g' ? 'g' : 'mol'} ${track.target_formula}`, 'ok');
+        } else {
+            chasm.style.borderColor = 'var(--coral-red)';
+            showToast(`Track ${['A','B','C','D'][tIdx]} error — check values against stoichiometric fractions.`, 'err');
+        }
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────────
+    // Build deduction card radio buttons once both tracks pass
+    // ─────────────────────────────────────────────────────────────────────────────
+    function buildDeductionCard() {
+        // Update yield unit label with actual target formula
+        const unitLabel = document.getElementById('yieldUnitLabel');
+        if (unitLabel && TRACKS.length > 0) {
+            unitLabel.textContent = `g ${TRACKS[0].target_formula}`;
+        }
+        const rg = document.getElementById('reagentRadioGroup');
+        rg.innerHTML = '';
+        TRACKS.forEach(track => {
+            const lbl = document.createElement('label');
+            lbl.className = 'radio-label';
+            lbl.innerHTML = `
+                <input type="radio" name="reagent_pick" value="${track.formula}">
+                ${track.display_name} (${track.formula})
+                &nbsp;<span style="color:var(--text-muted); font-size:13px;">
+                    — ${trackResults[track.formula].toFixed(2)} ${TARGET_UNIT === 'g' ? 'g' : 'mol'} ${track.target_formula}
+                </span>
+            `;
+            rg.appendChild(lbl);
+        });
+
+        document.getElementById('deductionCard').classList.add('active-deduction');
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────────
+    // Verify final deduction
+    // ─────────────────────────────────────────────────────────────────────────────
+    let deductionAttempts = 0;
+
+    function verifyDeduction() {
+        const selected    = document.querySelector('input[name="reagent_pick"]:checked')?.value;
+        const enteredYield = parseFloat(document.getElementById('finalYieldInput').value);
+
+        if (!selected) {
+            showToast('Select a limiting reagent first.', 'err');
+            return;
+        }
+
+        // Correct limiting reagent = reactant with minimum yield
+        const yields      = TRACKS.map(t => ({ formula: t.formula, y: trackResults[t.formula] }));
+        const minEntry    = yields.reduce((a, b) => a.y <= b.y ? a : b);
+        const correctFormula = minEntry.formula;
+        const correctYield   = minEntry.y;
+        const YIELD_TOL      = 0.5;
+
+        const reagentOk = selected === correctFormula;
+        const yieldOk   = Math.abs(enteredYield - correctYield) <= YIELD_TOL;
+
+        if (reagentOk && yieldOk) {
+            showToast(`Correct! ${correctFormula} is the limiting reagent. Yield = ${correctYield.toFixed(2)} — Resolution unlocked!`, 'ok');
+            document.getElementById('deductionCard').style.borderColor = 'var(--combo-green)';
+            setTimeout(() => { window.location.href = '{% url "problem_lobby" %}'; }, 2000);
+        } else {
+            deductionAttempts++;
+            const msgs = [];
+            if (!reagentOk) msgs.push(`${selected} is not the limiting reagent`);
+            if (!yieldOk)   msgs.push(`Yield entry is off (expected ~${correctYield.toFixed(2)})`);
+            showToast(`System anomaly: ${msgs.join(' · ')}`, 'err');
+
+            if (deductionAttempts >= 3) {
+                document.getElementById('hintBlock').classList.add('visible');
+            }
+        }
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────────
+    // XP Grant Helper (add once to module2_workspace.html <script>)
+    // ─────────────────────────────────────────────────────────────────────────────
+
+    function updateHeaderXP(data) {
+        const levelEl = document.querySelector('.user-status span:first-child');
+        const xpEl    = document.querySelector('.xp-display');
+        const barEl   = document.querySelector('.xp-bar-fill');
+
+        if (levelEl) levelEl.textContent = `LVL ${data.level}`;
+        if (xpEl)    xpEl.textContent    = `XP: ${data.total_xp}`;
+        if (barEl)   barEl.style.width   = `${data.level_progress_pct}%`;
+    }
+
+    async function grantCompletionXP() {
+        console.log(`[XP] Firing Module 3 completion bonus, problem {{ problem_id }}`);
+        try {
+            const res = await fetch('/award-xp/', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    problem_id: '{{ problem_id }}',
+                    module: 3,
+                    node_index: 0
+                })
+            });
+
+            console.log(`[XP] Response status: ${res.status}`);
+
+            if (!res.ok) {
+                console.error(`[XP] Server rejected request: ${res.status} ${res.statusText}`);
+                return;
+            }
+
+            const data = await res.json();
+            console.log('[XP] Server response:', data);
+
+            if (data.success) {
+                updateHeaderXP(data);
+                const toast = data.leveled_up
+                    ? `⬆ LEVEL UP! Now LVL ${data.level} — +${data.xp_awarded} XP Milestone!`
+                    : `+${data.xp_awarded} XP // Module 3 Complete!`;
+                alert(toast);
+            }
+        } catch (err) {
+            console.error('[XP] Fetch threw an exception:', err);
+        }
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────────
+    // Toast
+    // ─────────────────────────────────────────────────────────────────────────────
+    let _toastTimeout;
+    function showToast(msg, type = 'info') {
+        let toast = document.getElementById('_cq_toast');
+        if (!toast) {
+            toast = document.createElement('div');
+            toast.id = '_cq_toast';
+            toast.style.cssText = `
+                position:fixed; bottom:28px; left:50%; transform:translateX(-50%);
+                padding:10px 22px; border-radius:5px; font-size:14px; font-weight:bold;
+                z-index:9999; transition:opacity 0.3s; pointer-events:none;
+                box-shadow:0 4px 16px rgba(0,0,0,0.5); max-width:520px; text-align:center;
+            `;
+            document.body.appendChild(toast);
+        }
+        toast.textContent = msg;
+        toast.style.opacity = '1';
+        toast.style.background = type === 'ok'  ? '#065F46' :
+                                  type === 'err' ? '#7F1D1D' : '#1E222B';
+        toast.style.color      = type === 'ok'  ? '#A7F3D0' :
+                                  type === 'err' ? '#FCA5A5' : '#E2E8F0';
+        toast.style.border     = `1px solid ${type === 'ok' ? 'var(--combo-green)' : type === 'err' ? 'var(--coral-red)' : '#2A303C'}`;
+        clearTimeout(_toastTimeout);
+        _toastTimeout = setTimeout(() => { toast.style.opacity = '0'; }, 3500);
+    }
 </script>
-{% endblock content %}

@@ -1,6 +1,107 @@
 from django.db import models
 from django.contrib.auth.models import User
+from django.db.models.signals import post_save
+from django.dispatch import receiver
 
+# ─────────────────────────────────────────────
+#  XP / LEVEL FORMULA (single source of truth)
+#  Level  = (total_xp // 100) + 1
+#  Progress % toward next level = (total_xp % 100)
+# ─────────────────────────────────────────────
+XP_PER_LEVEL = 100
+MODULE2_NODE_XP = 15      # Per verified node in Step-Grid Workspace
+MODULE3_COMPLETE_XP = 50  # Limiting reagent final validation bonus
+
+
+class UserProfile(models.Model):
+    """
+    One-to-one extension of Django's built-in User model.
+    Stores cumulative XP and derives Level + progress dynamically
+    via properties — no redundant stored columns that can drift.
+    """
+    user = models.OneToOneField(
+        User,
+        on_delete=models.CASCADE,
+        related_name='profile'
+    )
+    total_xp = models.PositiveIntegerField(default=0)
+
+    # ── Derived Properties ────────────────────────────────────────
+    @property
+    def level(self) -> int:
+        """Returns current level based on XP threshold formula."""
+        return (self.total_xp // XP_PER_LEVEL) + 1
+
+    @property
+    def xp_into_current_level(self) -> int:
+        """XP accumulated since the start of the current level."""
+        return self.total_xp % XP_PER_LEVEL
+
+    @property
+    def level_progress_pct(self) -> int:
+        """Integer percentage (0–99) toward the next level threshold."""
+        return self.xp_into_current_level  # xp_per_level == 100, so 1 XP == 1 %
+
+    # ── XP Grant Helper ───────────────────────────────────────────
+    def award_xp(self, amount: int) -> dict:
+        """
+        Atomically adds XP and returns a summary dict for the
+        JSON response pipeline. Returns level-up flag so the
+        front-end can trigger a level-up animation.
+        """
+        level_before = self.level
+        self.total_xp += amount
+        self.save(update_fields=['total_xp'])
+        level_after = self.level
+
+        return {
+            'xp_awarded': amount,
+            'total_xp': self.total_xp,
+            'level': level_after,
+            'leveled_up': level_after > level_before,
+            'level_progress_pct': self.level_progress_pct,
+        }
+
+    def __str__(self):
+        return f"{self.user.username} — LVL {self.level} ({self.total_xp} XP)"
+
+
+# ── Auto-create a UserProfile whenever a new User is saved ────────
+@receiver(post_save, sender=User)
+def create_user_profile(sender, instance, created, **kwargs):
+    if created:
+        UserProfile.objects.create(user=instance)
+
+@receiver(post_save, sender=User)
+def save_user_profile(sender, instance, **kwargs):
+    # Guard: migrate-safe in case the profile doesn't exist yet
+    UserProfile.objects.get_or_create(user=instance)
+
+
+# ─────────────────────────────────────────────
+#  Existing models — unchanged
+# ─────────────────────────────────────────────
+class StoichiometryProblem(models.Model):
+    problem_id = models.CharField(max_length=50, unique=True)
+    prompt = models.TextField()
+    correct_coefficients = models.CharField(max_length=20)
+    reactant_a_mass = models.DecimalField(max_digits=10, decimal_places=4)
+    product_mass = models.DecimalField(max_digits=10, decimal_places=4)
+
+    def __str__(self):
+        return self.problem_id
+
+
+class StudentTelemetryLog(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE, null=True, blank=True)
+    problem_id = models.CharField(max_length=50)
+    module_phase = models.IntegerField(default=1)
+    is_correct = models.BooleanField(default=False)
+    attempts_count = models.IntegerField(default=0)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"Telemetry-{self.problem_id}"
 
 # ---------------------------------------------------------------------------
 # Conversion type constants

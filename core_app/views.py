@@ -3,12 +3,61 @@ from django.shortcuts import render, get_object_or_404
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.db.models import Sum, Avg, Count, Q
+from django.contrib.auth.decorators import login_required
+
+from django.contrib.auth import authenticate, login, logout
+from django.contrib.auth.forms import AuthenticationForm
+from django.shortcuts import redirect
 
 from .models import (
     StoichiometryProblem, ProblemPart, StudentTelemetryLog,
-    NODE_COUNT,
+    NODE_COUNT, UserProfile, MODULE2_NODE_XP, MODULE3_COMPLETE_XP
 )
 
+def global_user_status(request):
+    """
+    Global context processor ensuring user level and XP parameters
+    are dynamically mapped across all template layout interfaces.
+    """
+    if request.user and request.user.is_authenticated:
+        # Fetch or automatically generate a profile row for the logged-in user
+        profile, _ = UserProfile.objects.get_or_create(user=request.user)
+        return {
+            'user_total_xp': profile.total_xp,
+            'user_level': profile.level,
+            'user_xp_into_level': profile.xp_into_current_level,
+            'user_level_progress_pct': profile.level_progress_pct,
+        }
+
+    # Static fallbacks if the user lands on an unauthenticated entry view
+    return {
+        'user_total_xp': 0,
+        'user_level': 1,
+        'user_xp_into_level': 0,
+        'user_level_progress_pct': 0,
+    }
+
+def student_login(request):
+    """Handles authentication checks and redirects users to the dashboard lobby."""
+    if request.method == 'POST':
+        form = AuthenticationForm(request, data=request.POST)
+        if form.is_valid():
+            username = form.cleaned_data.get('username')
+            password = form.cleaned_data.get('password')
+            user = authenticate(username=username, password=password)
+            if user is not None:
+                login(request, user)
+                return redirect('problem_lobby')  # Takes them to the main menu
+    else:
+        form = AuthenticationForm()
+
+    return render(request, 'login.html', {'form': form})
+
+
+def student_logout(request):
+    """Clears user session credentials and drops back to login."""
+    logout(request)
+    return redirect('student_login')
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -186,6 +235,7 @@ def step_grid_workspace(request, prob_id, part_label='a'):
         **_navigation_context(problem, part),
         'user_lvl': 1,
         'user_xp':  370,
+        'module2_node_xp': MODULE2_NODE_XP,
     }
     return render(request, 'module2_workspace.html', context)
 
@@ -248,12 +298,14 @@ def limiting_workspace(request, prob_id, part_label='a'):
         **_navigation_context(problem, part),
         'user_lvl': 1,
         'user_xp':  470,
+        'module3_complete_xp': MODULE3_COMPLETE_XP,
     }
     return render(request, 'module3_limiting.html', context)
 
-"""
-Module 4: Student-Facing Telemetry Analytics & Performance Dashboard
-"""
+# ---------------------------------------------------------------------------
+# Module 4: Student-Facing Telemetry Analytics & Performance Dashboard
+# ---------------------------------------------------------------------------
+
 def student_dashboard(request):
     # Fetch all logs for calculations
     logs = StudentTelemetryLog.objects.all()
@@ -314,6 +366,60 @@ def student_dashboard(request):
     }
     return render(request, 'module4_dashboard.html', context)
 
+@csrf_exempt
+def award_node_xp(request):
+    """
+    API Endpoint called by your frontend workspaces when a node matches expected parameters.
+    Saves cumulative experience points securely to the UserProfile table.
+    """
+    if not request.user.is_authenticated:
+        return JsonResponse({'success': False, 'error': 'Unauthenticated user session.'}, status=401)
+
+    if request.method != 'POST':
+        return JsonResponse({'success': False, 'error': 'Invalid request method.'}, status=400)
+
+    try:
+        data = json.loads(request.body or '{}')
+        xp_amount = int(data.get('xp', 0))
+    except (json.JSONDecodeError, ValueError):
+        return JsonResponse({'success': False, 'error': 'Malformed parameters.'}, status=400)
+
+    if xp_amount <= 0:
+        return JsonResponse({'success': False, 'error': 'XP must be greater than zero.'}, status=400)
+
+    # Automatically retrieves or establishes the UserProfile table link row
+    profile, _ = UserProfile.objects.get_or_create(user=request.user)
+
+    old_level = profile.level
+    profile.total_xp += xp_amount
+    profile.save()
+    new_level = profile.level
+
+    return JsonResponse({
+        'success': True,
+        'total_xp': profile.total_xp,
+        'current_level': new_level,
+        'leveled_up': (new_level > old_level),
+        'xp_into_level': profile.xp_into_current_level,
+        'progress_pct': profile.level_progress_pct
+    })
+
+
+def xp_debug(request):
+    """Temporary diagnostic panel to quickly add testing points."""
+    if not request.user.is_authenticated:
+        return JsonResponse({'error': 'Please log in first.'}, status=401)
+
+    profile, _ = UserProfile.objects.get_or_create(user=request.user)
+    profile.total_xp += 35
+    profile.save()
+
+    return JsonResponse({
+        'message': 'Successfully injected 35 testing points into your account!',
+        'total_xp': profile.total_xp,
+        'level': profile.level
+    })
+
 # ---------------------------------------------------------------------------
 # API: Verify balancing (called from Module 1 JS via fetch)
 # ---------------------------------------------------------------------------
@@ -343,6 +449,10 @@ def verify_balancing_backend(request):
         )
         log.attempts_count += 1
         log.is_correct = is_correct
+        log.save()
+
+        if request.user.is_authenticated:
+            log.user = request.user
         log.save()
 
         return JsonResponse({

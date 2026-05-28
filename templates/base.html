@@ -54,6 +54,25 @@
             color: var(--constant-gold);
         }
 
+        /* XP Progress Bar — add to base.html <style> block */
+        .xp-bar-shell {
+            width: 120px;
+            height: 8px;
+            background: #2A303C;
+            border-radius: 4px;
+            overflow: hidden;
+            align-self: center;
+            border: 1px solid var(--text-muted);
+        }
+
+        .xp-bar-fill {
+            height: 100%;
+            background: linear-gradient(90deg, var(--cyber-teal), var(--combo-green));
+            border-radius: 4px;
+            transition: width 0.6s ease;
+            min-width: 2px; /* Always visible even at 0% */
+        }
+
         main {
             flex: 1;
             padding: 30px;
@@ -85,8 +104,16 @@
         <a href="{% url 'problem_lobby' %}" style="color: var(--cyber-teal); text-decoration: none; font-weight: bold; margin-right: 15px;">CHEMQUEST</a>
         <div class="user-status">
             <a href="{% url 'student_dashboard' %}" style="color: var(--cyber-teal); text-decoration: none; font-weight: bold; margin-right: 15px;">📊 MY TELEMETRY</a>
-            <span>LVL 1</span>
-            <span class="xp-display">XP: 0</span>
+            <div class="user-status">
+                <span>LVL {{ user_level }}</span>
+
+                <!-- XP bar: filled width driven by level_progress_pct (0–99) -->
+                <div class="xp-bar-shell" title="{{ user_xp_into_level }} / 100 XP to next level">
+                    <div class="xp-bar-fill" style="width: {{ user_level_progress_pct }}%;"></div>
+                </div>
+
+                <span class="xp-display">XP: {{ user_total_xp }}</span>
+            </div>
         </div>
     </header>
 

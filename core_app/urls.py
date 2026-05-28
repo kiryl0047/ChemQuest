@@ -2,8 +2,12 @@ from django.urls import path
 from . import views
 
 urlpatterns = [
+    # Authentication Framework
+    path('', views.student_login, name='student_login'),
+    path('logout/', views.student_logout, name='student_logout'),
+
     # Lobby — problem selection
-    path('', views.problem_lobby, name='problem_lobby'),
+    path('problem_lobby/', views.problem_lobby, name='problem_lobby'),
 
     # Module 1 — Preparation Ledger
     path('ledger/',                          views.preparation_ledger, name='preparation_ledger_default'),
@@ -18,6 +22,10 @@ urlpatterns = [
 
     # Module 4 — Student Self-Optimization Dashboard
     path('dashboard/', views.student_dashboard, name='student_dashboard'),
+
+    # ── XP award endpoint (called from Module 2 & 3 JS) ──────────
+    path('award-xp/', views.award_node_xp, name='award_node_xp'),
+    path('xp-debug/', views.xp_debug, name='xp_debug'),  # ← temporary
 
     # API endpoints
     path('api/verify-balancing/',  views.verify_balancing_backend, name='verify_balancing'),

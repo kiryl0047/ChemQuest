@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ChemQuest | Terminal Access Authorization</title>
+    <style>
+        :root {
+            --bg-dark: #0F1115;
+            --bg-slate: #1E222B;
+            --cyber-teal: #00F0FF;
+            --text-light: #E2E8F0;
+            --text-muted: #64748B;
+        }
+        body {
+            background-color: var(--bg-dark);
+            color: var(--text-light);
+            font-family: 'Segoe UI', sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+        }
+        .login-card {
+            background: var(--bg-slate);
+            border: 1px solid #2A303C;
+            border-top: 4px solid var(--cyber-teal);
+            padding: 30px 40px;
+            border-radius: 8px;
+            width: 100%;
+            max-width: 400px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+        }
+        h2 {
+            margin: 0 0 8px 0;
+            color: #FFF;
+            letter-spacing: 1px;
+        }
+        p {
+            color: var(--text-muted);
+            font-size: 14px;
+            margin: 0 0 24px 0;
+        }
+        .form-group {
+            margin-bottom: 20px;
+        }
+        label {
+            display: block;
+            font-size: 12px;
+            font-weight: bold;
+            text-transform: uppercase;
+            margin-bottom: 6px;
+            color: var(--cyber-teal);
+            letter-spacing: 0.5px;
+        }
+        input[type="text"], input[type="password"] {
+            width: 100%;
+            padding: 10px;
+            background: var(--bg-dark);
+            border: 1px solid #2A303C;
+            border-radius: 4px;
+            color: #FFF;
+            font-size: 16px;
+            box-sizing: border-box;
+            transition: border-color 0.2s;
+        }
+        input:focus {
+            border-color: var(--cyber-teal);
+            outline: none;
+        }
+        .btn-submit {
+            width: 100%;
+            padding: 12px;
+            background: rgba(0, 240, 255, 0.1);
+            border: 1px solid var(--cyber-teal);
+            color: var(--cyber-teal);
+            font-weight: bold;
+            font-size: 14px;
+            border-radius: 4px;
+            cursor: pointer;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+            transition: background 0.2s, color 0.2s;
+            margin-top: 10px;
+        }
+        .btn-submit:hover {
+            background: var(--cyber-teal);
+            color: var(--bg-dark);
+        }
+    </style>
+</head>
+<body>
+
+<div class="login-card">
+    <h2>CHEMQUEST //</h2>
+    <p>Terminal Access Authorization Required</p>
+
+    <form method="POST">
+        {% csrf_token %}
+        <div class="form-group">
+            <label>Student Username</label>
+            <input type="text" name="username" required autocomplete="off">
+        </div>
+        <div class="form-group">
+            <label>Security Crypt Key (Password)</label>
+            <input type="password" name="password" required>
+        </div>
+        <button type="submit" class="btn-submit">Initialize Connection ──></button>
+    </form>
+</div>
+
+</body>
+</html>
