@@ -16,6 +16,9 @@ urlpatterns = [
     path('limiting-workspace/<str:prob_id>/',                    views.limiting_workspace, name='limiting_workspace'),
     path('limiting-workspace/<str:prob_id>/<str:part_label>/',   views.limiting_workspace, name='limiting_workspace_part'),
 
+    # Module 4 — Student Self-Optimization Dashboard
+    path('dashboard/', views.student_dashboard, name='student_dashboard'),
+
     # API endpoints
     path('api/verify-balancing/',  views.verify_balancing_backend, name='verify_balancing'),
     path('api/validate-step-node/', views.validate_step_node,      name='validate_step_node'),

@@ -82,8 +82,9 @@
 <body>
 
     <header>
-        <h1>CHEMQUEST //</h1>
+        <a href="{% url 'problem_lobby' %}" style="color: var(--cyber-teal); text-decoration: none; font-weight: bold; margin-right: 15px;">CHEMQUEST</a>
         <div class="user-status">
+            <a href="{% url 'student_dashboard' %}" style="color: var(--cyber-teal); text-decoration: none; font-weight: bold; margin-right: 15px;">📊 MY TELEMETRY</a>
             <span>LVL 1</span>
             <span class="xp-display">XP: 0</span>
         </div>

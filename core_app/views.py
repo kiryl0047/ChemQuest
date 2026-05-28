@@ -2,6 +2,7 @@ import json
 from django.shortcuts import render, get_object_or_404
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
+from django.db.models import Sum, Avg, Count, Q
 
 from .models import (
     StoichiometryProblem, ProblemPart, StudentTelemetryLog,
@@ -250,6 +251,68 @@ def limiting_workspace(request, prob_id, part_label='a'):
     }
     return render(request, 'module3_limiting.html', context)
 
+"""
+Module 4: Student-Facing Telemetry Analytics & Performance Dashboard
+"""
+def student_dashboard(request):
+    # Fetch all logs for calculations
+    logs = StudentTelemetryLog.objects.all()
+    total_attempts = logs.aggregate(total=Sum('attempts_count'))['total'] or 0
+    total_verified = logs.filter(is_correct=True).count()
+    
+    # Calculate general master accuracy
+    accuracy = 0
+    if total_attempts + total_verified > 0:
+        accuracy = round((total_verified / (total_attempts + total_verified)) * 100, 1)
+
+    # Conceptual Diagnostic: Map failure rates by Conversion Type
+    conversion_types = ['mol_to_mol', 'mol_to_g', 'g_to_mol', 'g_to_g']
+    concept_metrics = {}
+    
+    for c_type in conversion_types:
+        # Find all parts corresponding to this conversion strategy flag
+        matching_parts = ProblemPart.objects.filter(conversion_type=c_type)
+        part_labels = matching_parts.values_list('part_label', flat=True)
+        prob_ids = matching_parts.values_list('problem__problem_id', flat=True)
+        
+        # Aggregate logs matching these parts
+        type_logs = logs.filter(problem_id__in=prob_ids, part_label__in=part_labels)
+        failures = type_logs.aggregate(total=Sum('attempts_count'))['total'] or 0
+        successes = type_logs.filter(is_correct=True).count()
+        
+        concept_metrics[c_type] = {
+            'label': c_type.replace('_', ' ').upper(),
+            'failures': failures,
+            'successes': successes,
+            'score': round((successes / (failures + successes)) * 100, 1) if (failures + successes) > 0 else None
+        }
+
+    # Identify the weakest concept category based on scores
+    weakest_concept = None
+    lowest_score = 101
+    for c_type, data in concept_metrics.items():
+        if data['score'] is not None and data['score'] < lowest_score:
+            lowest_score = data['score']
+            weakest_concept = data['label']
+
+    # Target Re-Entry Queue: Find problem IDs where failures are high (> 2 attempts)
+    trouble_ids = logs.filter(attempts_count__gte=2).values_list('problem_id', flat=True).distinct()
+    recommended_problems = StoichiometryProblem.objects.filter(problem_id__in=trouble_ids)[:3]
+
+    # If the student is doing perfectly, suggest unattempted or master challenges
+    if not recommended_problems.exists():
+        attempted_ids = logs.values_list('problem_id', flat=True).distinct()
+        recommended_problems = StoichiometryProblem.objects.exclude(problem_id__in=attempted_ids)[:3]
+
+    context = {
+        'total_attempts': total_attempts,
+        'total_verified': total_verified,
+        'accuracy': accuracy,
+        'concept_metrics': concept_metrics,
+        'weakest_concept': weakest_concept or 'None (All Clear!)',
+        'recommended_problems': recommended_problems,
+    }
+    return render(request, 'module4_dashboard.html', context)
 
 # ---------------------------------------------------------------------------
 # API: Verify balancing (called from Module 1 JS via fetch)
