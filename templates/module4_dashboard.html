@@ -139,7 +139,14 @@
     {% endfor %}
 </div>
 
-<h3 class="queue-title">Strategic Optimization Targets (Recommended Re-Entry)</h3>
+<h3 class="queue-title">
+    {% if has_history %}
+        Strategic Optimization Targets (Recommended Re-Entry)
+    {% else %}
+        Foundational Launch targets (Recommended Onboarding)
+    {% endif %}
+</h3>
+
 <div class="problem-strip">
     {% for problem in recommended_problems %}
     <div class="reentry-card">
@@ -148,7 +155,11 @@
             <p style="margin: 0; font-size: 13px; color: var(--text-muted);">{{ problem.prompt|truncatechars:120 }}</p>
         </div>
         <a href="{% url 'preparation_ledger' problem.problem_id %}" class="btn-reenter">
-            Launch Remediate Phase ──>
+            {% if has_history %}
+                Launch Remediate Phase ──>
+            {% else %}
+                Begin Initialization ──>
+            {% endif %}
         </a>
     </div>
     {% empty %}

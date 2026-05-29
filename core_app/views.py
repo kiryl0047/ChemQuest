@@ -1,53 +1,64 @@
 import json
-from django.shortcuts import render, get_object_or_404
+from django.shortcuts import render, redirect, get_object_or_404
+from django.contrib.auth import authenticate, login, logout
+from django.contrib.auth.decorators import login_required
+from django.contrib.auth.forms import AuthenticationForm
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
+from django.views.decorators.http import require_POST
 from django.db.models import Sum, Avg, Count, Q
-from django.contrib.auth.decorators import login_required
-
-from django.contrib.auth import authenticate, login, logout
-from django.contrib.auth.forms import AuthenticationForm
-from django.shortcuts import redirect
 
 from .models import (
     StoichiometryProblem, ProblemPart, StudentTelemetryLog,
-    NODE_COUNT, UserProfile, MODULE2_NODE_XP, MODULE3_COMPLETE_XP
+    UserProfile, NODE_COUNT,
+    XP_PER_NODE_CORRECT, XP_PER_PART_COMPLETE,
+    XP_PER_BALANCE, XP_PER_LIMITING_TRACK, XP_PER_DEDUCTION,
 )
+
+
+# ===========================================================================
+# Context Processor — injects XP/level into every template automatically
+# ===========================================================================
 
 def global_user_status(request):
     """
-    Global context processor ensuring user level and XP parameters
-    are dynamically mapped across all template layout interfaces.
+    Registered in settings.py TEMPLATES context_processors.
+    Provides user level and XP data to every template without
+    requiring each view to pass them manually.
     """
-    if request.user and request.user.is_authenticated:
-        # Fetch or automatically generate a profile row for the logged-in user
+    if request.user.is_authenticated:
         profile, _ = UserProfile.objects.get_or_create(user=request.user)
         return {
-            'user_total_xp': profile.total_xp,
-            'user_level': profile.level,
-            'user_xp_into_level': profile.xp_into_current_level,
+            'user_level':            profile.level,
+            'user_total_xp':         profile.total_xp,
+            'user_xp_into_level':    profile.xp_into_current_level,
             'user_level_progress_pct': profile.level_progress_pct,
         }
-
-    # Static fallbacks if the user lands on an unauthenticated entry view
+    # Anonymous fallback — safe zero values
     return {
-        'user_total_xp': 0,
-        'user_level': 1,
-        'user_xp_into_level': 0,
+        'user_level':              1,
+        'user_total_xp':           0,
+        'user_xp_into_level':      0,
         'user_level_progress_pct': 0,
     }
 
+
+# ===========================================================================
+# Auth views
+# ===========================================================================
+
 def student_login(request):
-    """Handles authentication checks and redirects users to the dashboard lobby."""
+    if request.user.is_authenticated:
+        return redirect('problem_lobby')
+
     if request.method == 'POST':
         form = AuthenticationForm(request, data=request.POST)
         if form.is_valid():
-            username = form.cleaned_data.get('username')
-            password = form.cleaned_data.get('password')
-            user = authenticate(username=username, password=password)
-            if user is not None:
-                login(request, user)
-                return redirect('problem_lobby')  # Takes them to the main menu
+            user = form.get_user()
+            login(request, user)
+            # Ensure a profile exists for this user
+            UserProfile.objects.get_or_create(user=user)
+            return redirect('problem_lobby')
     else:
         form = AuthenticationForm()
 
@@ -55,16 +66,16 @@ def student_login(request):
 
 
 def student_logout(request):
-    """Clears user session credentials and drops back to login."""
     logout(request)
     return redirect('student_login')
 
-# ---------------------------------------------------------------------------
-# Helpers
-# ---------------------------------------------------------------------------
+
+# ===========================================================================
+# Internal helpers
+# ===========================================================================
 
 def _all_problems():
-    """Return all problems with their first part pre-fetched, ordered by id."""
+    """Return all problems with their parts pre-fetched, ordered by problem_id."""
     return StoichiometryProblem.objects.prefetch_related('parts').order_by('problem_id')
 
 
@@ -76,216 +87,221 @@ def _get_problem_or_first(prob_id):
 
 
 def _part_context(part: ProblemPart):
-    """
-    Build the template context variables that drive node rendering
-    for a single ProblemPart.
-    """
-    nodes = part.expected_nodes()   # ordered list of {num_value, num_unit, den_value, den_unit}
-    gf  = part.given_substance.formula
-    tf  = part.target_substance.formula
-    gq  = float(part.given_quantity)
-    gu  = part.given_unit          # 'g' or 'mol'
-    tu  = part.target_unit
-
-    # Build the human-readable "starting node" label
-    starting_label = f"{gq} {'g' if gu == 'g' else 'mol'} {gf}"
-    target_label   = f"? {'g' if tu == 'g' else 'mol'} {tf}"
+    """Build the template context dict that drives node rendering for one ProblemPart."""
+    nodes = part.expected_nodes()
+    gf    = part.given_substance.formula
+    tf    = part.target_substance.formula
+    gq    = float(part.given_quantity)
+    gu    = part.given_unit
+    tu    = part.target_unit
 
     return {
-        'conversion_type':  part.conversion_type,
-        'node_count':       part.node_count,
-        'nodes_json':       json.dumps(nodes),   # consumed by JS
-        'given_formula':    gf,
-        'given_quantity':   gq,
-        'given_unit':       gu,
-        'target_formula':   tf,
-        'target_unit':      tu,
-        'starting_label':   starting_label,
-        'target_label':     target_label,
-        'correct_answer':   float(part.correct_answer),
-        'part_label':       part.part_label,
-        'part_prompt':      part.part_prompt,
+        'conversion_type': part.conversion_type,
+        'node_count':      part.node_count,
+        'nodes_json':      json.dumps(nodes),
+        'given_formula':   gf,
+        'given_quantity':  gq,
+        'given_unit':      gu,
+        'target_formula':  tf,
+        'target_unit':     tu,
+        'starting_label':  f"{gq} {'g' if gu == 'g' else 'mol'} {gf}",
+        'target_label':    f"? {'g' if tu == 'g' else 'mol'} {tf}",
+        'correct_answer':  float(part.correct_answer),
+        'part_label':      part.part_label,
+        'part_prompt':     part.part_prompt,
     }
+
 
 def _navigation_context(problem: StoichiometryProblem, current_part: ProblemPart):
     """
-    Returns prev_part / next_part / all_parts for the module navigation bar
-    along with dynamic routing targets.
+    Returns navigation context for Module 2.
+    For limiting problems the last lane part routes to Module 3
+    instead of the lobby.
     """
     all_parts = list(problem.parts.all())
-    idx = next((i for i, p in enumerate(all_parts) if p.pk == current_part.pk), 0)
+    idx       = next((i for i, p in enumerate(all_parts) if p.pk == current_part.pk), 0)
 
-    prev_part = all_parts[idx - 1] if idx > 0 else None
-    next_part = all_parts[idx + 1] if idx < len(all_parts) - 1 else None
+    prev_part    = all_parts[idx - 1] if idx > 0 else None
+    next_part    = all_parts[idx + 1] if idx < len(all_parts) - 1 else None
+    is_last_part = next_part is None
 
-    # Calculate exactly where the next part button should take the student
-    next_part_url = None
-    if next_part:
-        if problem.is_limiting_problem and next_part.part_label in ['a', 'b', 'lane_a', 'lane_b']:
-            # Parallel tracks (A and B) stay in Module 3 Limiting Workspace
-            next_part_url = f'/limiting-workspace/{problem.problem_id}/{next_part.part_label}/'
-        else:
-            # Excess analytics (Part C) or any non-limiting part goes to Module 2 Step-Grid Workspace
-            next_part_url = f'/workspace/{problem.problem_id}/{next_part.part_label}/'
-
-    # Next problem boundaries (for after last part)
-    all_problems = list(_all_problems())
-    prob_idx = next((i for i, p in enumerate(all_problems) if p.pk == problem.pk), 0)
-    next_problem = all_problems[prob_idx + 1] if prob_idx < len(all_problems) - 1 else None
-    next_problem_first_part = (
-        next_problem.parts.first() if next_problem else None
-    )
+    # For limiting problems: last lane part → Module 3
+    goes_to_module3 = is_last_part and problem.is_limiting_problem
 
     return {
-        'all_parts':              all_parts,
-        'current_part_idx':       idx,
-        'prev_part':              prev_part,
-        'next_part':              next_part,
-        'next_part_url':          next_part_url,  # Injected cleanly into templates
-        'next_problem':           next_problem,
-        'next_problem_first_part': next_problem_first_part,
-        'is_last_part':           next_part is None,
-        'is_last_problem':        next_problem is None,
+        'all_parts':        all_parts,
+        'current_part_idx': idx,
+        'prev_part':        prev_part,
+        'next_part':        next_part,
+        'is_last_part':     is_last_part,
+        'goes_to_module3':  goes_to_module3,
     }
 
-# ---------------------------------------------------------------------------
-# View: problem selection lobby
-# ---------------------------------------------------------------------------
 
+def _award_xp(request, xp_amount: int):
+    """Award XP to the logged-in user's profile. No-op for anonymous users."""
+    if request.user.is_authenticated:
+        profile, _ = UserProfile.objects.get_or_create(user=request.user)
+        profile.total_xp += xp_amount
+        profile.save()
+
+
+# ===========================================================================
+# View: Problem selection lobby
+# ===========================================================================
+
+@login_required
 def problem_lobby(request):
-    problems = list(_all_problems())
-    context = {
-        'problems': problems,
-        'user_lvl': 1,
-        'user_xp':  0,
-    }
-    return render(request, 'problem_lobby.html', context)
+    """
+    Renders the central hub of problem selections.
+    Identifies which problems have been answered/attempted to conditionally
+    toggle the Reset option.
+    """
+    problems = _all_problems()
+    
+    # Gather a unique list of problem IDs that this user has telemetry data for
+    answered_problem_ids = set(
+        StudentTelemetryLog.objects.filter(user=request.user)
+        .values_list('problem_id', flat=True)
+    )
 
+    # Attach a dynamic check property onto each problem object
+    for problem in problems:
+        problem.has_telemetry = problem.problem_id in answered_problem_ids
 
-# ---------------------------------------------------------------------------
+    return render(request, 'problem_lobby.html', {
+        'problems': problems
+    })
+
+@login_required
+def reset_problem_telemetry(request, prob_id):
+    """
+    Deletes telemetry log historical data for a given problem ID
+    so the student can loop back and re-attempt execution nodes.
+    """
+    if request.user and request.user.is_authenticated:
+        # 1. Clear database rows for logged-in accounts
+        StudentTelemetryLog.objects.filter(
+            user=request.user,
+            problem_id=prob_id
+        ).delete()
+    else:
+        # 2. Clear database rows where user might be assigned as null/anonymous
+        StudentTelemetryLog.objects.filter(
+            problem_id=prob_id,
+            user__isnull=True
+        ).delete()
+        
+    # Redirect directly back to the problem selection screen (Lobby)
+    return redirect('problem_lobby')
+
+# ===========================================================================
 # View: Module 1 — Preparation Ledger
-# ---------------------------------------------------------------------------
+# ===========================================================================
 
+@login_required
 def preparation_ledger(request, prob_id=None):
     if prob_id:
         problem = _get_problem_or_first(prob_id)
     else:
-        # Default: first problem
         problem = StoichiometryProblem.objects.order_by('problem_id').first()
 
     if not problem:
         return render(request, 'no_problems.html')
 
-    # Parse reactant/product formula lists for the equation builder
-    reactants = problem.reactants   # [{'coeff': 2, 'formula': 'H2'}, ...]
-    products  = problem.products
+    reactants       = problem.reactants
+    products        = problem.products
+    all_formulas    = [r['formula'] for r in reactants] + [p['formula'] for p in products]
+    unique_formulas = list(dict.fromkeys(all_formulas))
 
-    # Substances whose molar masses the student must look up
-    all_formulas = [r['formula'] for r in reactants] + [p['formula'] for p in products]
-    unique_formulas = list(dict.fromkeys(all_formulas))   # preserve order, deduplicate
+    first_part  = problem.parts.first()
+    first_label = first_part.part_label if first_part else 'a'
 
-    # First part (used in breadcrumb only)
-    first_part = problem.parts.first()
-
-    # Determine where "Lock & Proceed" sends the student dynamically
-    if first_part:
-        if first_part.part_label in ['lane_a', 'lane_b', 'a', 'b'] and problem.is_limiting_problem:
-            # If it's a limiting reactant problem starting with its tracks, go to Module 3
-            next_url = f'/limiting-workspace/{problem.problem_id}/{first_part.part_label}/'
-        else:
-            # Otherwise, go to the Module 2 Step-Grid Workspace
-            next_url = f'/workspace/{problem.problem_id}/{first_part.part_label}/'
-    else:
-        next_url = f'/workspace/{problem.problem_id}/a/'
+    # All problems always start at Module 2 (even limiting ones)
+    next_url = f'/workspace/{problem.problem_id}/{first_label}/'
 
     context = {
-        'problem_id':            problem.problem_id,
-        'problem_title':         problem.title,
-        'prompt':                problem.prompt,
-        'reactants':             reactants,
-        'products':              products,
-        'target_substances':     unique_formulas,
-        'correct_coefficients':  problem.correct_coefficients,
-        'first_part_label':      first_part.part_label if first_part else 'a',
-        'next_url':              next_url,
-        'is_limiting_problem':   problem.is_limiting_problem,
-        'all_problems':          list(_all_problems()),
-        'user_lvl': 1,
-        'user_xp':  320,
+        'problem_id':           problem.problem_id,
+        'problem_title':        problem.title,
+        'prompt':               problem.prompt,
+        'reactants':            reactants,
+        'products':             products,
+        'target_substances':    unique_formulas,
+        'correct_coefficients': problem.correct_coefficients,
+        'first_part_label':     first_label,
+        'next_url':             next_url,
+        'is_limiting_problem':  problem.is_limiting_problem,
+        'all_problems':         list(_all_problems()),
     }
     return render(request, 'module1_ledger.html', context)
 
 
-# ---------------------------------------------------------------------------
+# ===========================================================================
 # View: Module 2 — Step-Grid Workspace
-# ---------------------------------------------------------------------------
+# ===========================================================================
 
+@login_required
 def step_grid_workspace(request, prob_id, part_label='a'):
     problem = _get_problem_or_first(prob_id)
     if not problem:
         return render(request, 'no_problems.html')
 
-    part = get_object_or_404(ProblemPart, problem=problem, part_label=part_label)
+    part    = get_object_or_404(ProblemPart, problem=problem, part_label=part_label)
+    nav_ctx = _navigation_context(problem, part)
 
     context = {
         'problem_id':    problem.problem_id,
         'problem_title': problem.title,
         'prompt':        problem.prompt,
         **_part_context(part),
-        **_navigation_context(problem, part),
-        'user_lvl': 1,
-        'user_xp':  370,
-        'module2_node_xp': MODULE2_NODE_XP,
+        **nav_ctx,
     }
     return render(request, 'module2_workspace.html', context)
 
 
-# ---------------------------------------------------------------------------
+# ===========================================================================
 # View: Module 3 — Limiting Reagent Workspace
-# ---------------------------------------------------------------------------
+# ===========================================================================
 
-def limiting_workspace(request, prob_id, part_label='a'):
+@login_required
+def limiting_workspace(request, prob_id):
     problem = _get_problem_or_first(prob_id)
     if not problem:
         return render(request, 'no_problems.html')
 
-    part = get_object_or_404(ProblemPart, problem=problem, part_label=part_label)
+    from .models import Substance, _get_coeff
 
-    reactants = problem.reactants  # [{'coeff': N, 'formula': 'X'}, ...]
+    parts             = list(problem.parts.all())
+    parts_by_formula  = {p.given_substance.formula: p for p in parts}
+    reactants         = problem.reactants
+    first_product_frm = problem.products[0]['formula']
 
-    # Per-reactant given quantities stored on the part (limiting problems only).
-    # Fall back to part.given_quantity for every reactant if not set.
-    lq = part.limiting_given_quantities or {}
+    try:
+        target_sub = Substance.objects.get(formula=first_product_frm)
+    except Substance.DoesNotExist:
+        return render(request, 'no_problems.html')
+
+    coeff_target = _get_coeff(problem, first_product_frm)
 
     tracks = []
-    from .models import Substance, _get_coeff
     for rxn_entry in reactants:
-        formula = rxn_entry['formula']
+        formula   = rxn_entry['formula']
+        lane_part = parts_by_formula.get(formula)
+        if lane_part is None:
+            continue
         try:
             substance = Substance.objects.get(formula=formula)
         except Substance.DoesNotExist:
             continue
 
-        first_product_formula = problem.products[0]['formula']
-        try:
-            target_sub = Substance.objects.get(formula=first_product_formula)
-        except Substance.DoesNotExist:
-            continue
-
-        coeff_given  = rxn_entry['coeff']
-        coeff_target = _get_coeff(problem, first_product_formula)
-
-        # Use per-reactant quantity if available, otherwise fall back
-        given_qty = float(lq.get(formula, part.given_quantity))
-
         tracks.append({
             'formula':           formula,
             'display_name':      substance.display_name,
             'molar_mass':        float(substance.molar_mass),
-            'given_quantity':    given_qty,
-            'coeff_given':       coeff_given,
+            'given_quantity':    float(lane_part.given_quantity),
+            'coeff_given':       rxn_entry['coeff'],
             'coeff_target':      coeff_target,
-            'target_formula':    first_product_formula,
+            'target_formula':    first_product_frm,
             'target_molar_mass': float(target_sub.molar_mass),
         })
 
@@ -294,18 +310,14 @@ def limiting_workspace(request, prob_id, part_label='a'):
         'problem_title': problem.title,
         'prompt':        problem.prompt,
         'tracks_json':   json.dumps(tracks),
-        **_part_context(part),
-        **_navigation_context(problem, part),
-        'user_lvl': 1,
-        'user_xp':  470,
-        'module3_complete_xp': MODULE3_COMPLETE_XP,
     }
     return render(request, 'module3_limiting.html', context)
 
-# ---------------------------------------------------------------------------
+# ===========================================================================
 # Module 4: Student-Facing Telemetry Analytics & Performance Dashboard
-# ---------------------------------------------------------------------------
+# ===========================================================================
 
+@login_required
 def student_dashboard(request):
     # Fetch all logs for calculations
     logs = StudentTelemetryLog.objects.all()
@@ -366,72 +378,61 @@ def student_dashboard(request):
     }
     return render(request, 'module4_dashboard.html', context)
 
+# ===========================================================================
+# API: Award XP  (called from JS after each verified action)
+# ===========================================================================
+
 @csrf_exempt
 def award_node_xp(request):
     """
-    API Endpoint called by your frontend workspaces when a node matches expected parameters.
-    Saves cumulative experience points securely to the UserProfile table.
+    POST { xp_amount: int, reason: str }
+    Awards XP to the authenticated user's profile and returns updated totals.
     """
     if not request.user.is_authenticated:
-        return JsonResponse({'success': False, 'error': 'Unauthenticated user session.'}, status=401)
+        return JsonResponse({'success': False, 'message': 'Login required.'}, status=401)
 
     if request.method != 'POST':
-        return JsonResponse({'success': False, 'error': 'Invalid request method.'}, status=400)
+        return JsonResponse({'success': False, 'message': 'Invalid method.'}, status=405)
 
     try:
-        data = json.loads(request.body or '{}')
-        xp_amount = int(data.get('xp', 0))
-    except (json.JSONDecodeError, ValueError):
-        return JsonResponse({'success': False, 'error': 'Malformed parameters.'}, status=400)
+        data       = json.loads(request.body)
+        xp_amount  = int(data.get('xp_amount', 0))
+    except (json.JSONDecodeError, ValueError, TypeError):
+        return JsonResponse({'success': False, 'message': 'Invalid payload.'}, status=400)
 
     if xp_amount <= 0:
-        return JsonResponse({'success': False, 'error': 'XP must be greater than zero.'}, status=400)
+        return JsonResponse({'success': False, 'message': 'xp_amount must be positive.'}, status=400)
 
-    # Automatically retrieves or establishes the UserProfile table link row
     profile, _ = UserProfile.objects.get_or_create(user=request.user)
-
-    old_level = profile.level
     profile.total_xp += xp_amount
     profile.save()
-    new_level = profile.level
 
     return JsonResponse({
-        'success': True,
-        'total_xp': profile.total_xp,
-        'current_level': new_level,
-        'leveled_up': (new_level > old_level),
+        'success':       True,
+        'xp_awarded':    xp_amount,
+        'total_xp':      profile.total_xp,
+        'level':         profile.level,
         'xp_into_level': profile.xp_into_current_level,
-        'progress_pct': profile.level_progress_pct
+        'progress_pct':  profile.level_progress_pct,
     })
 
 
-def xp_debug(request):
-    """Temporary diagnostic panel to quickly add testing points."""
-    if not request.user.is_authenticated:
-        return JsonResponse({'error': 'Please log in first.'}, status=401)
-
-    profile, _ = UserProfile.objects.get_or_create(user=request.user)
-    profile.total_xp += 35
-    profile.save()
-
-    return JsonResponse({
-        'message': 'Successfully injected 35 testing points into your account!',
-        'total_xp': profile.total_xp,
-        'level': profile.level
-    })
-
-# ---------------------------------------------------------------------------
-# API: Verify balancing (called from Module 1 JS via fetch)
-# ---------------------------------------------------------------------------
+# ===========================================================================
+# API: Verify balancing
+# ===========================================================================
 
 @csrf_exempt
 def verify_balancing_backend(request):
     if request.method != 'POST':
         return JsonResponse({'success': False, 'message': 'Invalid request method.'})
 
-    data     = json.loads(request.body)
-    prob_id  = data.get('problem_id', '')
-    submitted = data.get('coefficients', [])   # e.g. ['2', '1', '2']
+    try:
+        data      = json.loads(request.body)
+    except json.JSONDecodeError:
+        return JsonResponse({'success': False, 'message': 'Invalid JSON.'})
+
+    prob_id   = data.get('problem_id', '')
+    submitted = data.get('coefficients', [])
 
     try:
         problem  = StoichiometryProblem.objects.get(problem_id=prob_id)
@@ -449,8 +450,6 @@ def verify_balancing_backend(request):
         )
         log.attempts_count += 1
         log.is_correct = is_correct
-        log.save()
-
         if request.user.is_authenticated:
             log.user = request.user
         log.save()
@@ -458,6 +457,7 @@ def verify_balancing_backend(request):
         return JsonResponse({
             'success':  is_correct,
             'attempts': log.attempts_count,
+            'xp_reward': XP_PER_BALANCE if is_correct else 0,
             'message':  (
                 'Chamber Stabilized! Reaction is perfectly balanced.'
                 if is_correct else
@@ -469,24 +469,29 @@ def verify_balancing_backend(request):
         return JsonResponse({'success': False, 'message': 'Problem not found.'})
 
 
-# ---------------------------------------------------------------------------
+# ===========================================================================
 # API: Validate a single step-node answer
-# ---------------------------------------------------------------------------
+# ===========================================================================
 
 @csrf_exempt
 def validate_step_node(request):
     """
-    POST  { problem_id, part_label, node_index, num_value, num_unit,
-            den_value, den_unit }
-    Returns  { success, message, expected_num, expected_den }
+    POST { problem_id, part_label, node_index, num_value, num_unit,
+           den_value, den_unit, is_final_node }
+    Returns { success, message, xp_reward }
     """
     if request.method != 'POST':
         return JsonResponse({'success': False, 'message': 'Invalid method.'})
 
-    data       = json.loads(request.body)
-    prob_id    = data.get('problem_id')
-    part_label = data.get('part_label', 'a')
-    node_idx   = int(data.get('node_index', 0))   # 0-based
+    try:
+        data = json.loads(request.body)
+    except json.JSONDecodeError:
+        return JsonResponse({'success': False, 'message': 'Invalid JSON.'})
+
+    prob_id      = data.get('problem_id')
+    part_label   = data.get('part_label', 'a')
+    node_idx     = int(data.get('node_index', 0))
+    is_final     = bool(data.get('is_final_node', False))
 
     try:
         problem = StoichiometryProblem.objects.get(problem_id=prob_id)
@@ -498,10 +503,9 @@ def validate_step_node(request):
     if node_idx >= len(nodes):
         return JsonResponse({'success': False, 'message': 'Node index out of range.'})
 
-    expected = nodes[node_idx]
+    expected  = nodes[node_idx]
     TOLERANCE = 0.01
 
-    # Guard: return early if inputs are null/NaN (empty form submission)
     try:
         num_val = float(data.get('num_value'))
         den_val = float(data.get('den_value'))
@@ -512,11 +516,8 @@ def validate_step_node(request):
         })
 
     num_ok = abs(num_val - expected['num_value']) < TOLERANCE
-    num_u  = data.get('num_unit', '').strip() == expected['num_unit']
     den_ok = abs(den_val - expected['den_value']) < TOLERANCE
-    den_u  = data.get('den_unit', '').strip() == expected['den_unit']
-
-    is_correct = num_ok and num_u and den_ok and den_u
+    is_correct = num_ok and den_ok
 
     # Telemetry
     log, _ = StudentTelemetryLog.objects.get_or_create(
@@ -528,17 +529,23 @@ def validate_step_node(request):
     if not is_correct:
         log.attempts_count += 1
     log.is_correct = is_correct
+    if request.user.is_authenticated:
+        log.user = request.user
     log.save()
 
+    # XP: base per correct node + bonus if this completes the part
+    xp_reward = 0
+    if is_correct:
+        xp_reward = XP_PER_NODE_CORRECT
+        if is_final:
+            xp_reward += XP_PER_PART_COMPLETE
+
     return JsonResponse({
-        'success': is_correct,
+        'success':    is_correct,
+        'xp_reward':  xp_reward,
         'message': (
             f'Node {node_idx + 1} verified! Units cancel correctly.'
             if is_correct else
             'Incorrect — check values and unit labels.'
         ),
-        'expected_num_value': expected['num_value'],
-        'expected_num_unit':  expected['num_unit'],
-        'expected_den_value': expected['den_value'],
-        'expected_den_unit':  expected['den_unit'],
     })

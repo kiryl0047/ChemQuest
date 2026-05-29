@@ -1,114 +1,140 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ChemQuest | Terminal Access Authorization</title>
-    <style>
-        :root {
-            --bg-dark: #0F1115;
-            --bg-slate: #1E222B;
-            --cyber-teal: #00F0FF;
-            --text-light: #E2E8F0;
-            --text-muted: #64748B;
-        }
-        body {
-            background-color: var(--bg-dark);
-            color: var(--text-light);
-            font-family: 'Segoe UI', sans-serif;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            height: 100vh;
-            margin: 0;
-        }
-        .login-card {
-            background: var(--bg-slate);
-            border: 1px solid #2A303C;
-            border-top: 4px solid var(--cyber-teal);
-            padding: 30px 40px;
-            border-radius: 8px;
-            width: 100%;
-            max-width: 400px;
-            box-shadow: 0 8px 32px rgba(0,0,0,0.5);
-        }
-        h2 {
-            margin: 0 0 8px 0;
-            color: #FFF;
-            letter-spacing: 1px;
-        }
-        p {
-            color: var(--text-muted);
-            font-size: 14px;
-            margin: 0 0 24px 0;
-        }
-        .form-group {
-            margin-bottom: 20px;
-        }
-        label {
-            display: block;
-            font-size: 12px;
-            font-weight: bold;
-            text-transform: uppercase;
-            margin-bottom: 6px;
-            color: var(--cyber-teal);
-            letter-spacing: 0.5px;
-        }
-        input[type="text"], input[type="password"] {
-            width: 100%;
-            padding: 10px;
-            background: var(--bg-dark);
-            border: 1px solid #2A303C;
-            border-radius: 4px;
-            color: #FFF;
-            font-size: 16px;
-            box-sizing: border-box;
-            transition: border-color 0.2s;
-        }
-        input:focus {
-            border-color: var(--cyber-teal);
-            outline: none;
-        }
-        .btn-submit {
-            width: 100%;
-            padding: 12px;
-            background: rgba(0, 240, 255, 0.1);
-            border: 1px solid var(--cyber-teal);
-            color: var(--cyber-teal);
-            font-weight: bold;
-            font-size: 14px;
-            border-radius: 4px;
-            cursor: pointer;
-            letter-spacing: 1px;
-            text-transform: uppercase;
-            transition: background 0.2s, color 0.2s;
-            margin-top: 10px;
-        }
-        .btn-submit:hover {
-            background: var(--cyber-teal);
-            color: var(--bg-dark);
-        }
-    </style>
-</head>
-<body>
+{% extends 'base.html' %}
+
+{% block content %}
+<style>
+    .login-card {
+        max-width: 420px;
+        margin: 0 auto;
+        padding: 36px 32px;
+        background: #171A21;
+        border: 1px solid #2A303C;
+        border-radius: 8px;
+        box-shadow: 0 8px 30px rgba(0,0,0,0.5);
+    }
+
+    .login-title {
+        color: var(--cyber-teal);
+        font-size: 20px;
+        font-weight: bold;
+        letter-spacing: 1.5px;
+        margin: 0 0 6px 0;
+    }
+
+    .login-subtitle {
+        color: var(--text-muted);
+        font-size: 13px;
+        margin: 0 0 28px 0;
+    }
+
+    .field-group {
+        margin-bottom: 18px;
+    }
+
+    .field-label {
+        display: block;
+        font-size: 12px;
+        font-weight: bold;
+        letter-spacing: 1px;
+        color: var(--text-muted);
+        margin-bottom: 6px;
+        text-transform: uppercase;
+    }
+
+    .field-input {
+        width: 100%;
+        background: var(--bg-dark);
+        border: 1px solid #2A303C;
+        color: #FFF;
+        font-size: 15px;
+        padding: 10px 12px;
+        border-radius: 4px;
+        box-sizing: border-box;
+        transition: border-color 0.2s;
+    }
+
+    .field-input:focus {
+        outline: none;
+        border-color: var(--cyber-teal);
+        box-shadow: 0 0 8px rgba(0,240,255,0.15);
+    }
+
+    .field-errors {
+        margin-top: 5px;
+        font-size: 12px;
+        color: var(--coral-red);
+    }
+
+    .btn-login {
+        width: 100%;
+        background: transparent;
+        border: 2px solid var(--cyber-teal);
+        color: var(--cyber-teal);
+        font-size: 14px;
+        font-weight: bold;
+        padding: 12px;
+        border-radius: 4px;
+        cursor: pointer;
+        letter-spacing: 1px;
+        transition: all 0.2s ease;
+        margin-top: 8px;
+    }
+
+    .btn-login:hover {
+        background: var(--cyber-teal);
+        color: var(--bg-dark);
+        box-shadow: 0 0 12px rgba(0,240,255,0.4);
+    }
+
+    .non-field-errors {
+        background: rgba(255,61,0,0.12);
+        border: 1px solid var(--coral-red);
+        border-radius: 4px;
+        padding: 10px 14px;
+        font-size: 13px;
+        color: var(--coral-red);
+        margin-bottom: 20px;
+    }
+</style>
 
 <div class="login-card">
-    <h2>CHEMQUEST //</h2>
-    <p>Terminal Access Authorization Required</p>
+    <p class="login-title">CHEMQUEST // LOGIN</p>
+    <p class="login-subtitle">Enter your credentials to access the Stoichiometric Engine.</p>
 
-    <form method="POST">
+    {% if form.non_field_errors %}
+    <div class="non-field-errors">
+        {% for error in form.non_field_errors %}{{ error }}{% endfor %}
+    </div>
+    {% endif %}
+
+    <form method="post" novalidate>
         {% csrf_token %}
-        <div class="form-group">
-            <label>Student Username</label>
-            <input type="text" name="username" required autocomplete="off">
+
+        <div class="field-group">
+            <label class="field-label" for="{{ form.username.id_for_label }}">Username</label>
+            <input class="field-input"
+                   type="text"
+                   id="{{ form.username.id_for_label }}"
+                   name="{{ form.username.html_name }}"
+                   value="{{ form.username.value|default:'' }}"
+                   autofocus>
+            {% if form.username.errors %}
+            <div class="field-errors">{{ form.username.errors|join:", " }}</div>
+            {% endif %}
         </div>
-        <div class="form-group">
-            <label>Security Crypt Key (Password)</label>
-            <input type="password" name="password" required>
+
+        <div class="field-group">
+            <label class="field-label" for="{{ form.password.id_for_label }}">Password</label>
+            <input class="field-input"
+                   type="password"
+                   id="{{ form.password.id_for_label }}"
+                   name="{{ form.password.html_name }}"
+                   autocomplete="current-password">
+            {% if form.password.errors %}
+            <div class="field-errors">{{ form.password.errors|join:", " }}</div>
+            {% endif %}
         </div>
-        <button type="submit" class="btn-submit">Initialize Connection ──></button>
+
+        <button type="submit" class="btn-login">LOGIN</button>
     </form>
 </div>
-
-</body>
-</html>
+{% endblock content %}

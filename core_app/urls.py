@@ -8,6 +8,7 @@ urlpatterns = [
 
     # Lobby — problem selection
     path('problem_lobby/', views.problem_lobby, name='problem_lobby'),
+    path('problem/reset/<str:prob_id>/', views.reset_problem_telemetry, name='reset_problem_telemetry'),
 
     # Module 1 — Preparation Ledger
     path('ledger/',                          views.preparation_ledger, name='preparation_ledger_default'),
@@ -25,7 +26,6 @@ urlpatterns = [
 
     # ── XP award endpoint (called from Module 2 & 3 JS) ──────────
     path('award-xp/', views.award_node_xp, name='award_node_xp'),
-    path('xp-debug/', views.xp_debug, name='xp_debug'),  # ← temporary
 
     # API endpoints
     path('api/verify-balancing/',  views.verify_balancing_backend, name='verify_balancing'),

@@ -125,6 +125,97 @@
         height: 10px;
         border-radius: 50%;
     }
+
+    /* Modal Overlay Blur & Dimming */
+    .modal-overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(11, 14, 20, 0.85); /* Matches var(--bg-dark) with opacity */
+        backdrop-filter: blur(4px);
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        z-index: 99999;
+    }
+
+    /* Modal Window Base Box */
+    .modal-box {
+        background: #171A21; /* Matches metric-card background */
+        border: 1px solid var(--coral-red, #FF3D00); /* Warn indicator highlights */
+        border-radius: 6px;
+        width: 100%;
+        max-width: 460px;
+        padding: 24px;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+        transform: translateY(0);
+        animation: modalSlideIn 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    .modal-header {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        color: var(--coral-red, #FF3D00);
+        margin-bottom: 16px;
+        border-bottom: 1px solid #2A303C;
+        padding-bottom: 12px;
+    }
+
+    .warning-icon {
+        font-size: 22px;
+    }
+
+    .modal-body {
+        margin-bottom: 24px;
+    }
+
+    /* Actions Ribbon Layout */
+    .modal-actions {
+        display: flex;
+        justify-content: flex-end;
+        gap: 12px;
+    }
+
+    /* Base Modal Button Core Structure */
+    .btn-modal {
+        padding: 10px 18px;
+        font-size: 13px;
+        font-weight: bold;
+        border-radius: 4px;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        letter-spacing: 0.5px;
+    }
+
+    .btn-cancel {
+        background: transparent;
+        border: 1px solid #2A303C;
+        color: var(--text-muted, #64748B);
+    }
+
+    .btn-cancel:hover {
+        background: rgba(255, 255, 255, 0.05);
+        color: #FFF;
+    }
+
+    .btn-proceed {
+        background: var(--coral-red, #FF3D00);
+        border: 1px solid var(--coral-red, #FF3D00);
+        color: #FFF;
+    }
+
+    .btn-proceed:hover {
+        background: #E03500;
+        box-shadow: 0 0 12px rgba(255, 61, 0, 0.35);
+    }
+
+    @keyframes modalSlideIn {
+        from { opacity: 0; transform: translateY(-15px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
 </style>
 
 <div class="lobby-header">
@@ -177,11 +268,103 @@
         <a class="btn-start" href="{% url 'preparation_ledger' problem.problem_id %}">
             Begin Preparation Ledger ──>
         </a>
+        
+        {% if problem.has_telemetry %}
+            <button href="{% url 'reset_problem_telemetry' problem.problem_id %}" 
+            onclick="return performSystemWipe('{{ problem.problem_id }}');"
+            style="text-decoration: none; padding: 8px 12px; border: 1px dashed var(--coral-red); color: var(--coral-red); font-size: 13px; border-radius: 4px; font-weight: bold; display: inline-flex; align-items: center; background-color: transparent;">
+                🔄 Retry
+            </button>
+        {% else %}
+            <span style="color: var(--text-muted); font-size: 12px; font-style: italic; border: 1px solid #2A303C; padding: 8px 12px; border-radius: 4px; pointer-events: none; opacity: 0.5;">
+                🔒 Locked (Untouched)
+            </span>
+        {% endif %}
     </div>
     {% empty %}
     <p style="color: var(--text-muted); font-size: 15px;">
         No problems found. Run <code>python manage.py seed_problems</code> to populate the database.
     </p>
     {% endfor %}
+
+    <div id="cyberConfirmModal" class="modal-overlay" style="display: none;">
+        <div class="modal-box">
+            <div class="modal-header">
+                <span class="warning-icon">⚠</span>
+                <h3 style="margin: 0; font-size: 18px; letter-spacing: 1px;">SYSTEM ALERT: RESET SEQUENCE</h3>
+            </div>
+            <div class="modal-body">
+                <p id="cyberConfirmMessage" style="margin: 0; line-height: 1.6; color: var(--text-light); font-size: 14px;"></p>
+            </div>
+            <div class="modal-actions">
+                <button id="cyberConfirmCancel" class="btn-modal btn-cancel">ABORT SEQUENCE</button>
+                <button id="cyberConfirmProceed" class="btn-modal btn-proceed">CONFIRM ERASE</button>
+            </div>
+        </div>
+    </div>
 </div>
+
+
+<script>
+async function performSystemWipe(problemId) {
+    const msg = "Are you sure you want to reset Problem " + problemId + "? This will delete all telemetry records and clear out all your input values.";
+    
+    // 1. Wait for user input from our custom UI modal
+    const confirmed = await showCyberConfirm(msg);
+    
+    // 2. If the user aborted, stop execution entirely
+    if (!confirmed) {
+        return; 
+    }
+
+    // 3. If confirmed, execute the local storage wipe sequence
+    try {
+        const cacheKeys = Object.keys(localStorage);
+        
+        cacheKeys.forEach(key => {
+            if (key.toLowerCase().includes(problemId.toLowerCase()) || 
+                key.includes('ledger') || 
+                key.includes('workspace') || 
+                key.includes('nodes')) {
+                
+                localStorage.removeItem(key);
+                console.log("[WIPER] Purged cache key row: " + key);
+            }
+        });
+        
+        sessionStorage.clear();
+        
+    } catch (e) {
+        console.error("[WIPER] Error clearing client-side state maps: ", e);
+    }
+
+    // 4. Proceed safely to the backend deletion routing rule
+    window.location.href = "/problem/reset/" + problemId + "/";
+}
+
+function showCyberConfirm(message) {
+    return new Promise((resolve) => {
+        const modal = document.getElementById('cyberConfirmModal');
+        const msgEl = document.getElementById('cyberConfirmMessage');
+        const btnCancel = document.getElementById('cyberConfirmCancel');
+        const btnProceed = document.getElementById('cyberConfirmProceed');
+
+        msgEl.textContent = message;
+        modal.style.display = 'flex';
+
+        function handleChoice(confirmed) {
+            modal.style.display = 'none';
+            btnCancel.removeEventListener('click', onCancel);
+            btnProceed.removeEventListener('click', onProceed);
+            resolve(confirmed);
+        }
+
+        function onCancel()  { handleChoice(false); }
+        function onProceed() { handleChoice(true); }
+
+        btnCancel.addEventListener('click', onCancel);
+        btnProceed.addEventListener('click', onProceed);
+    });
+}
+</script>
 {% endblock content %}
