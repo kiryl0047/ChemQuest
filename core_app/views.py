@@ -326,13 +326,15 @@ def limiting_workspace(request, prob_id):
                         'message': f'Calculation variance discovered in step box {i+1}. Check conversion constants.',
                         'error_node_index': i
                     })
-
+            correct_answer_val = float(current_part.correct_answer)
+            target_formula = current_part.target_substance.formula
             return JsonResponse({
                 'success': True,
                 'is_correct': True,
-                'message': f'Part {part_label.upper()} confirmed and logged securely!'
+                'message': f'Part {part_label.upper()} confirmed and logged securely!',
+                'correct_answer': f'{correct_answer_val:.4f} g {target_formula}',
+                'answer_label': f'COMPUTED YIELD — PART {part_label.upper()}'
             })
-
         elif action == 'verify_deduction':
             limiting_reagent = data.get('limiting_reagent')
             theoretical_yield = data.get('theoretical_yield')
