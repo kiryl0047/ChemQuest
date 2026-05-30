@@ -656,6 +656,21 @@ PROBLEMS = [
                 'conversion_type': CONVERSION_G_TO_G,
                 'correct_answer':  11.4116,
             },
+            {
+                'part_label':      'a',
+                'part_prompt':     'Identify the limiting reagent and determine how many moles of ZnCl2 are formed when 7.0 moles of Zn are mixed with 12.0 moles of HCl.',
+                'given_formula':   'Zn',
+                'given_quantity':  7.0,
+                'given_unit':      'mol',
+                'target_formula':  'ZnCl2',
+                'target_unit':     'mol',
+                'conversion_type': CONVERSION_MOL_TO_MOL,
+                'correct_answer':  6.0000,
+                'limiting_given_quantities': {
+                    'Zn': 7.0,
+                    'HCl': 12.0
+                }
+            },
         ],
     },
 
@@ -701,7 +716,22 @@ PROBLEMS = [
                 'target_unit':     'g',
                 'conversion_type': CONVERSION_G_TO_G,
                 'correct_answer':  17.2703,
-            }
+            },
+            {
+                'part_label':      'a',
+                'part_prompt':     'Determine the maximum moles of AgCl precipitate generated when 3.5 moles of AgNo3 are combined with 4.2 moles of NaCl.',
+                'given_formula':   'AgNo3',
+                'given_quantity':  3.5,
+                'given_unit':      'mol',
+                'target_formula':  'AgCl',
+                'target_unit':     'mol',
+                'conversion_type': CONVERSION_MOL_TO_MOL,
+                'correct_answer':  3.5000,
+                'limiting_given_quantities': {
+                    'AgNo3': 3.5,
+                    'NaCl':  4.2
+                }
+            },
         ],
     },
 
@@ -747,7 +777,22 @@ PROBLEMS = [
                 'target_unit':     'g',
                 'conversion_type': CONVERSION_G_TO_G,
                 'correct_answer':  18.9004,
-            }
+            },
+            {
+                'part_label':      'a',
+                'part_prompt':     'If 8.0 moles of CH4 are ignited alongside 14.0 moles of O2, calculate how many moles of CO2 gas are produced.',
+                'given_formula':   'CH4',
+                'given_quantity':  8.0,
+                'given_unit':      'mol',
+                'target_formula':  'CO2',
+                'target_unit':     'mol',
+                'conversion_type': CONVERSION_MOL_TO_MOL,
+                'correct_answer':  7.0000,
+                'limiting_given_quantities': {
+                    'CH4': 8.0,
+                    'O2':  14.0
+                }
+            },
         ],
     },
 
@@ -793,7 +838,22 @@ PROBLEMS = [
                 'target_unit':     'g',
                 'conversion_type': CONVERSION_G_TO_G,
                 'correct_answer':  32.5855,
-            }
+            },
+            {
+                'part_label':      'a',
+                'part_prompt':     'When 10.0 moles of Al are mixed with 6.0 moles of Fe2O3, find the resulting yield of liquid Iron (Fe) in moles.',
+                'given_formula':   'Al',
+                'given_quantity':  10.0,
+                'given_unit':      'mol',
+                'target_formula':  'Fe',
+                'target_unit':     'mol',
+                'conversion_type': CONVERSION_MOL_TO_MOL,
+                'correct_answer':  10.0000,
+                'limiting_given_quantities': {
+                    'Al':    10.0,
+                    'Fe2O3': 6.0
+                }
+            },
         ],
     },
 
@@ -839,11 +899,25 @@ PROBLEMS = [
                 'target_unit':     'g',
                 'conversion_type': CONVERSION_G_TO_G,
                 'correct_answer':  32.9138,
-            }
+            },
+            {
+                'part_label':      'a',
+                'part_prompt':     'Calculate the theoretical yield of MgO in moles if 5.0 moles of Mg are reacted with 2.0 moles of O2 gas.',
+                'given_formula':   'Mg',
+                'given_quantity':  5.0,
+                'given_unit':      'mol',
+                'target_formula':  'MgO',
+                'target_unit':     'mol',
+                'conversion_type': CONVERSION_MOL_TO_MOL,
+                'correct_answer':  4.0000,
+                'limiting_given_quantities': {
+                    'Mg': 5.0,
+                    'O2': 2.0
+                }
+            },
         ],
     },
 ]
-
 
 class Command(BaseCommand):
     help = 'Seed the database with all ChemQuest sample problems and substances.'
@@ -855,27 +929,26 @@ class Command(BaseCommand):
             formula      = record[0]
             display_name = record[1]
             molar_mass   = record[2]
-            
-            # Extract metadata elements cleanly to update the target attributes
             is_element   = record[3]
             period       = record[4]
             group        = record[5]
             category     = record[6]
 
+            # FIX: Ensure all layout metadata properties are cleanly passed into defaults
             obj, created = Substance.objects.update_or_create(
                 formula=formula,
                 defaults={
-                    'display_name': display_name, 
+                    'display_name': display_name,
                     'molar_mass': molar_mass,
                     'is_element': is_element,
                     'period': period,
                     'group': group,
-                    'category': category
+                    'category': category,
                 },
             )
             substance_map[formula] = obj
             status = 'CREATED' if created else 'UPDATED'
-            self.stdout.write(f'  [{status}] {formula} ({molar_mass} g/mol) Grid Space: ({period}, {group})')
+            self.stdout.write(f'  [{status}] {formula} ({molar_mass} g/mol) Coord: ({period}, {group})')
 
         self.stdout.write('\n--- Seeding Problems ---')
         for prob_data in PROBLEMS:

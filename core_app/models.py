@@ -127,10 +127,16 @@ class StudentTelemetryLog(models.Model):
 # Chemical substance registry
 # ---------------------------------------------------------------------------
 class Substance(models.Model):
-    formula      = models.CharField(max_length=30, unique=True)
-    display_name = models.CharField(max_length=80)
-    molar_mass   = models.DecimalField(max_digits=10, decimal_places=4)
- 
+    formula      = models.CharField(max_length=50, primary_key=True)
+    display_name = models.CharField(max_length=100)
+    molar_mass   = models.FloatField()
+    
+    # ── New Fields for Periodic Matrix Layout ──
+    is_element   = models.BooleanField(default=True)
+    period       = models.IntegerField(null=True, blank=True)
+    group        = models.IntegerField(null=True, blank=True)
+    category     = models.CharField(max_length=50, null=True, blank=True)
+
     def __str__(self):
         return f"{self.formula} ({self.molar_mass} g/mol)"
 
