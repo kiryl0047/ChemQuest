@@ -264,52 +264,135 @@ def step_grid_workspace(request, prob_id, part_label='a'):
 # ===========================================================================
 
 @login_required
+@csrf_exempt
 def limiting_workspace(request, prob_id):
     problem = _get_problem_or_first(prob_id)
     if not problem:
         return render(request, 'no_problems.html')
 
     from .models import Substance, _get_coeff
+    import json
 
-    parts             = list(problem.parts.all())
-    parts_by_formula  = {p.given_substance.formula: p for p in parts}
-    reactants         = problem.reactants
-    first_product_frm = problem.products[0]['formula']
-
-    try:
-        target_sub = Substance.objects.get(formula=first_product_frm)
-    except Substance.DoesNotExist:
+    parts_queryset = problem.parts.all().order_by('order')
+    if not parts_queryset.exists():
         return render(request, 'no_problems.html')
 
-    coeff_target = _get_coeff(problem, first_product_frm)
+    # Ensure we know the target formula from the first manufacturing line
+    first_product_frm = problem.products[0]['formula'] if problem.products else ''
 
-    tracks = []
-    for rxn_entry in reactants:
-        formula   = rxn_entry['formula']
-        lane_part = parts_by_formula.get(formula)
-        if lane_part is None:
-            continue
+    # =======================================================================
+    # HANDLE ASYNC POST AUDITS
+    # =======================================================================
+    if request.method == 'POST':
         try:
-            substance = Substance.objects.get(formula=formula)
-        except Substance.DoesNotExist:
-            continue
+            data = json.loads(request.body)
+        except Exception:
+            return JsonResponse({'success': False, 'message': 'Invalid JSON format.'})
 
-        tracks.append({
-            'formula':           formula,
-            'display_name':      substance.display_name,
-            'molar_mass':        float(substance.molar_mass),
-            'given_quantity':    float(lane_part.given_quantity),
-            'coeff_given':       rxn_entry['coeff'],
-            'coeff_target':      coeff_target,
-            'target_formula':    first_product_frm,
-            'target_molar_mass': float(target_sub.molar_mass),
+        action = data.get('action')
+
+        if action == 'verify_lane':
+            part_label = data.get('part_label')
+            if not part_label:
+                return JsonResponse({'success': False, 'message': 'Missing target part label.'})
+
+            try:
+                # Use __iexact to safely pull the part whether it comes in as 'a' or 'A'
+                current_part = parts_queryset.get(part_label__iexact=part_label)
+            except ProblemPart.DoesNotExist:
+                return JsonResponse({'success': False, 'message': 'Part tracking mismatch configuration.'})
+
+            expected_nodes = current_part.expected_nodes()
+            submitted_nodes = data.get('nodes', [])
+
+            if len(submitted_nodes) != len(expected_nodes):
+                return JsonResponse({'success': False, 'message': 'Please fill out all fractional nodes.'})
+
+            TOLERANCE = 0.05
+            for i, expected in enumerate(expected_nodes):
+                try:
+                    sub_num = float(submitted_nodes[i].get('num_value'))
+                    sub_den = float(submitted_nodes[i].get('den_value'))
+                except (TypeError, ValueError):
+                    return JsonResponse({
+                        'success': False,
+                        'message': f'Empty or invalid value inside node step {i+1}.',
+                        'error_node_index': i
+                    })
+
+                if abs(sub_num - expected['num_value']) > TOLERANCE or abs(sub_den - expected['den_value']) > TOLERANCE:
+                    return JsonResponse({
+                        'success': False,
+                        'message': f'Calculation variance discovered in step box {i+1}. Check conversion constants.',
+                        'error_node_index': i
+                    })
+
+            return JsonResponse({
+                'success': True,
+                'is_correct': True,
+                'message': f'Part {part_label.upper()} confirmed and logged securely!'
+            })
+
+        elif action == 'verify_deduction':
+            limiting_reagent = data.get('limiting_reagent')
+            theoretical_yield = data.get('theoretical_yield')
+
+            # Look up correct answer by finding the lowest yield among manufacturing lines
+            true_limiting_formula = None
+            lowest_yield = float('inf')
+
+            for p in parts_queryset:
+                if p.target_substance.formula == first_product_frm:
+                    ans = float(p.correct_answer)
+                    if ans < lowest_yield:
+                        lowest_yield = ans
+                        true_limiting_formula = p.given_substance.formula
+
+            try:
+                submitted_yield = float(theoretical_yield)
+            except (ValueError, TypeError):
+                return JsonResponse({'success': False, 'message': 'Numerical value required for theoretical yield.'})
+
+            limiting_match = (limiting_reagent == true_limiting_formula)
+            yield_match = abs(submitted_yield - lowest_yield) < 0.2
+
+            if limiting_match and yield_match:
+                return JsonResponse({
+                    'success': True,
+                    'message': 'Chemical synthesis sequence master cleared! Redirecting...',
+                    'next_url': '/problem_lobby/'
+                })
+            else:
+                if not limiting_match:
+                    return JsonResponse({'success': False, 'message': 'Incorrect Limiting Reagent assignment.'})
+                return JsonResponse({'success': False, 'message': 'Theoretical product yield mass calculation error.'})
+
+        return JsonResponse({'success': False, 'message': 'Unknown execution parameter.'})
+
+    # =======================================================================
+    # HANDLE GET PAGE RENDERING
+    # =======================================================================
+    processed_parts = []
+    for idx, p in enumerate(parts_queryset):
+        processed_parts.append({
+            'part_label':      p.part_label,
+            'part_prompt':     p.part_prompt,
+            'given_quantity':  float(p.given_quantity),
+            'given_unit':      p.given_unit,
+            'given_formula':   p.given_substance.formula,
+            'target_formula':  p.target_substance.formula,
+            'nodes':           p.expected_nodes(), # Full sequence array populated here
+            'index':           idx
         })
 
     context = {
-        'problem_id':    problem.problem_id,
-        'problem_title': problem.title,
-        'prompt':        problem.prompt,
-        'tracks_json':   json.dumps(tracks),
+        'problem':          problem,
+        'problem_id':       problem.problem_id,
+        'problem_title':    problem.title,
+        'prompt':           problem.prompt,
+        'processed_parts':  processed_parts,
+        'reactants':        problem.reactants,
+        'target_formula':   first_product_frm,
     }
     return render(request, 'module3_limiting.html', context)
 

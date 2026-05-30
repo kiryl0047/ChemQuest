@@ -4,22 +4,29 @@
 <style>
     .grid-info-header {
         background: #171A21;
-        border-bottom: 2px solid var(--coral-red);
+        border-bottom: 2px solid var(--cyber-teal);
         padding: 15px 18px;
         margin-bottom: 28px;
         border-radius: 4px;
         font-size: 14px;
     }
-
-    .parallel-track-chasm {
+    .part-lane-card {
         background: var(--bg-dark);
         border: 1px solid #2A303C;
-        padding: 18px 20px;
+        padding: 20px;
         border-radius: 8px;
-        margin-bottom: 20px;
-        transition: border-color 0.3s;
+        margin-bottom: 25px;
+        transition: all 0.4s ease;
     }
-
+    .part-lane-card.locked-lane {
+        opacity: 0.35;
+        pointer-events: none;
+        filter: blur(1.5px);
+    }
+    .part-lane-card.verified-lane {
+        border-color: #059669 !important;
+        background: rgba(4, 120, 87, 0.03);
+    }
     .lane-title {
         font-weight: bold;
         font-size: 13px;
@@ -28,592 +35,370 @@
         display: flex;
         justify-content: space-between;
         align-items: center;
-        flex-wrap: wrap;
-        gap: 8px;
     }
-
     .lane-status {
-        font-size: 12px;
+        font-size: 11px;
         padding: 3px 9px;
         border-radius: 3px;
-        background: #2D3748;
-        color: #A0AEC0;
-        transition: all 0.3s;
+        font-weight: bold;
     }
-
+    .status-waiting { background: #2D3748; color: #A0AEC0; }
+    .status-cleared { background: #065F46; color: #34D399; }
+    
     .row-layout {
         display: flex;
         align-items: center;
-        gap: 12px;
-        flex-wrap: nowrap;
-        overflow-x: auto;
-        padding-bottom: 4px;
+        flex-wrap: wrap;
+        gap: 10px;
+        background: #0F1115;
+        padding: 15px;
+        border-radius: 6px;
     }
-
-    .static-node {
-        background: var(--bg-slate);
-        border: 1px solid var(--text-muted);
-        padding: 10px 12px;
-        border-radius: 4px;
-        text-align: center;
-        min-width: 95px;
-        font-size: 13px;
-        flex-shrink: 0;
-    }
-
-    .mini-fraction {
-        background: var(--bg-slate);
-        border: 1px solid var(--cyber-teal);
-        padding: 9px 10px;
-        border-radius: 4px;
+    .fraction-block {
         display: flex;
         flex-direction: column;
-        gap: 5px;
-        flex-shrink: 0;
-        min-width: 130px;
-    }
-
-    .mini-row {
-        display: flex;
         align-items: center;
-        gap: 6px;
+        background: #141822;
+        border: 1px solid #222A3B;
+        border-radius: 4px;
+        min-width: 110px;
     }
-
-    .mini-input {
-        background: var(--bg-dark);
-        border: 1px solid #333;
-        color: #FFF;
-        width: 58px;
-        text-align: center;
-        font-size: 12px;
-        padding: 4px;
-        border-radius: 3px;
+    .fraction-bar {
+        width: 100%;
+        height: 2px;
+        background: #222A3B;
     }
-    .mini-input:disabled { color: #A0AEC0; background: #1A202C; }
-
-    .mini-unit {
-        color: var(--text-muted);
-        font-size: 11px;
-        font-weight: bold;
-        white-space: nowrap;
-    }
-
-    .divider-line { height: 1px; background: var(--cyber-teal); width: 100%; }
-
-    .op-sign {
-        font-size: 18px;
-        color: var(--text-muted);
-        flex-shrink: 0;
-    }
-
-    .btn-lane-trigger {
+    .fraction-input-cell {
+        width: 95px;
         background: transparent;
-        border: 1px solid var(--cyber-teal);
-        color: var(--cyber-teal);
-        padding: 8px 12px;
+        border: none;
+        color: #FFFFFF;
+        text-align: center;
+        padding: 6px;
+        font-size: 13px;
+    }
+    .fraction-input-cell:focus { outline: none; background: rgba(0,240,255,0.02); }
+    .fraction-multiply { font-weight: bold; color: var(--text-muted); font-size: 18px; }
+    
+    .btn-verify-lane {
+        background: #1F2937;
+        border: 1px solid #374151;
+        color: #E5E7EB;
+        padding: 8px 16px;
         font-size: 12px;
         font-weight: bold;
-        cursor: pointer;
         border-radius: 4px;
-        transition: all 0.2s;
-        margin-left: auto;
-        flex-shrink: 0;
-    }
-    .btn-lane-trigger:hover { background: var(--cyber-teal); color: var(--bg-dark); }
-
-    /* ── Deduction card ── */
-    .deduction-card {
-        background: #171A21;
-        border: 2px solid var(--text-muted);
-        border-radius: 6px;
-        padding: 25px;
-        margin-top: 36px;
-        display: none;
-    }
-
-    .deduction-card.active-deduction {
-        border-color: var(--constant-gold);
-        display: block;
-    }
-
-    .radio-group {
-        display: flex;
-        gap: 24px;
-        flex-wrap: wrap;
-        margin: 14px 0 20px;
-    }
-
-    .radio-label {
-        font-size: 16px;
-        font-weight: bold;
         cursor: pointer;
-        color: var(--text-light);
-        display: flex;
-        align-items: center;
-        gap: 8px;
+        transition: background 0.2s;
     }
+    .btn-verify-lane:hover { background: #374151; }
 
-    .yield-final-input {
-        background: var(--bg-dark);
-        border: 2px solid var(--constant-gold);
-        color: #FFF;
-        font-size: 18px;
-        padding: 9px 12px;
-        width: 140px;
-        border-radius: 4px;
-        text-align: center;
+    #deductionCard.locked-lane {
+        opacity: 0.35;
+        pointer-events: none;
+        filter: blur(1.5px);
     }
-
-    .hint-block {
-        display: none;
-        background: #1A2235;
-        border: 1px solid #4A90D9;
-        border-radius: 6px;
-        padding: 18px;
-        margin-top: 20px;
-        font-size: 14px;
-        line-height: 1.7;
-        color: #93C5FD;
-    }
-
-    .hint-block.visible { display: block; }
 </style>
 
-<!-- ── Header ── -->
-<div class="grid-info-header">
-    <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;">
-        <span style="color:var(--coral-red); font-weight:bold; letter-spacing:1px;">
-            LIMITING REAGENT WORKSPACE &nbsp;·&nbsp; {{ problem_id }}
+<div class="container" style="max-width: 1100px; margin: 0 auto; padding: 20px;">
+    
+    <div class="grid-info-header">
+        <span style="color: var(--cyber-teal); font-weight: bold; font-size: 16px;">
+            STATION SYSTEM BALANCING // {{ problem_title }}
         </span>
-        <a href="{% url 'preparation_ledger' problem_id %}"
-            style="color:var(--text-muted); font-size:12px; text-decoration:none;">
-            ← Back to Ledger
-        </a>
-    </div>
-    <p style="margin:6px 0 0 0; color:var(--text-light);">
-        <strong>{{ prompt }}</strong>
-    </p>
-</div>
-
-<!-- ── Reactant tracks (rendered by JS) ── -->
-<div id="tracksContainer"></div>
-
-<!-- ── Deduction card ── -->
-<div class="deduction-card" id="deductionCard">
-    <h3 style="color:var(--constant-gold); margin-top:0;">🎯 Command Center Deduction Matrix</h3>
-    <p style="color:var(--text-light);">
-        Analyze both conversion chains. The reactant producing the <em>smaller</em> theoretical yield
-        is the limiting reagent.
-    </p>
-
-    <span style="font-weight:bold; color:var(--cyber-teal); font-size:13px; letter-spacing:0.5px;">
-        1. SELECT LIMITING REAGENT
-    </span>
-    <div class="radio-group" id="reagentRadioGroup">
-        <!-- Populated by JS -->
+        <p style="margin-top: 10px; color: var(--text-muted); line-height: 1.6;">{{ prompt }}</p>
     </div>
 
-    <span style="font-weight:bold; color:var(--cyber-teal); font-size:13px; letter-spacing:0.5px; display:block; margin-bottom:10px;">
-        2. ENTER THEORETICAL YIELD MAXIMUM
-    </span>
-    <div style="display:flex; align-items:center; gap:14px; flex-wrap:wrap;">
-        <input type="number" step="0.01" class="yield-final-input"
-               id="finalYieldInput" placeholder="0.00">
-        <span style="font-size:16px; font-weight:bold; color:var(--text-muted);" id="yieldUnitLabel">
-            g product
-        </span>
-
-        <button class="btn-lane-trigger"
-                style="border-color:var(--constant-gold); color:var(--constant-gold);
-                       padding:11px 22px; margin-left:auto;"
-                onclick="verifyDeduction()">
-            Submit Resolution
-        </button>
-    </div>
-
-    <!-- Hint block: visible after 3 failed attempts -->
-    <div class="hint-block" id="hintBlock">
-        <strong style="color:#60A5FA;">💡 HINT BREAKDOWN</strong><br>
-        Compare the two theoretical yield values computed in your tracks above.
-        The limiting reagent is whichever reactant produces the <strong>smaller</strong> amount of product —
-        it runs out first, capping the reaction. Enter that smaller yield value in the box above.
-    </div>
-</div>
-{% endblock content %}
-<script>
-    // ─────────────────────────────────────────────────────────────────────────────
-    // Data injected by Django
-    // ─────────────────────────────────────────────────────────────────────────────
-    const PROBLEM_ID    = "{{ problem_id }}";
-
-    // tracks = [{formula, display_name, molar_mass, given_quantity,
-    //            coeff_given, coeff_target, target_formula, target_molar_mass}, ...]
-    const TRACKS = {{ tracks_json|safe }};
-
-    // TARGET_FORMULA and TARGET_UNIT are derived from TRACKS[0] at runtime
-    const TARGET_FORMULA = TRACKS.length > 0 ? TRACKS[0].target_formula : '';
-    const TARGET_UNIT    = 'g';  // limiting workspace is always g_to_g
-
-    // ─────────────────────────────────────────────────────────────────────────────
-    // Persistence helpers
-    // ─────────────────────────────────────────────────────────────────────────────
-    const STORE_KEY = `cq_m3_${PROBLEM_ID}`;
-
-    function saveState() {
-        const state = { inputs: {}, clearedTracks: [] };
-        TRACKS.forEach((track, tIdx) => {
-            [0, 1, 2].forEach(nIdx => {
-                const nEl = document.getElementById(`n_${tIdx}_${nIdx}`);
-                const dEl = document.getElementById(`d_${tIdx}_${nIdx}`);
-                if (nEl) state.inputs[`n_${tIdx}_${nIdx}`] = nEl.value;
-                if (dEl) state.inputs[`d_${tIdx}_${nIdx}`] = dEl.value;
-            });
-            const chasm = document.getElementById(`chasm_${tIdx}`);
-            if (chasm && chasm.style.borderColor === 'var(--combo-green)') {
-                state.clearedTracks.push(tIdx);
-            }
-        });
-        const sel = document.querySelector('input[name="reagent_pick"]:checked');
-        state.reagentPick  = sel ? sel.value : null;
-        state.yieldEntry   = document.getElementById('finalYieldInput')?.value || '';
-        state.deductionOpen = document.getElementById('deductionCard')
-                                  .classList.contains('active-deduction');
-        try { localStorage.setItem(STORE_KEY, JSON.stringify(state)); } catch(e) {}
-    }
-
-    function restoreState() {
-        let state;
-        try { state = JSON.parse(localStorage.getItem(STORE_KEY)); } catch(e) {}
-        if (!state) return;
-
-        // Restore input values
-        Object.entries(state.inputs || {}).forEach(([id, val]) => {
-            const el = document.getElementById(id);
-            if (el && val !== undefined) el.value = val;
-        });
-
-        // Re-apply cleared track visual state
-        (state.clearedTracks || []).forEach(tIdx => {
-            const track  = TRACKS[tIdx];
-            const chasm  = document.getElementById(`chasm_${tIdx}`);
-            const status = document.getElementById(`status_${tIdx}`);
-            const btn    = document.getElementById(`btn_track_${tIdx}`);
-            if (!chasm) return;
-
-            const yield_val = computeTrackYield(track);
-            trackResults[track.formula] = yield_val;
-            chasm.style.borderColor = 'var(--combo-green)';
-            status.textContent = `STABILIZED // ${yield_val.toFixed(2)} ${TARGET_UNIT === 'g' ? 'g' : 'mol'}`;
-            status.style.background = '#065F46';
-            status.style.color      = '#A7F3D0';
-            if (btn) btn.style.display = 'none';
-
-            // Lock inputs for this track
-            [0, 1, 2].forEach(nIdx => {
-                const nEl = document.getElementById(`n_${tIdx}_${nIdx}`);
-                const dEl = document.getElementById(`d_${tIdx}_${nIdx}`);
-                if (nEl) nEl.disabled = true;
-                if (dEl) dEl.disabled = true;
-            });
-
-            clearedTracks++;
-        });
-
-        // If both tracks were cleared, rebuild deduction card
-        if (clearedTracks === TRACKS.length) {
-            buildDeductionCard();
-        }
-
-        // Restore deduction card selections
-        if (state.reagentPick) {
-            const radio = document.querySelector(`input[name="reagent_pick"][value="${state.reagentPick}"]`);
-            if (radio) radio.checked = true;
-        }
-        if (state.yieldEntry) {
-            const yInput = document.getElementById('finalYieldInput');
-            if (yInput) yInput.value = state.yieldEntry;
-        }
-    }
-
-    // ─────────────────────────────────────────────────────────────────────────────
-    // Build parallel track UI
-    // ─────────────────────────────────────────────────────────────────────────────
-    const tracksContainer = document.getElementById('tracksContainer');
-    let clearedTracks = 0;
-    const trackResults = {};   // formula → computed yield
-
-    // Pre-compute expected yields for each track  (g_to_g: 3 nodes)
-    function computeTrackYield(track) {
-        // g_to_g:   (given_g / molar_mass_given) × (coeff_target / coeff_given) × molar_mass_target
-        return (track.given_quantity / track.molar_mass)
-             * (track.coeff_target / track.coeff_given)
-             * track.target_molar_mass;
-    }
-
-    function buildTrackNodes(track) {
-        // Returns array of {num_value, num_unit_display, den_value, den_unit_display}
-        const gf = track.formula;
-        const tf = track.target_formula;
-        const mm_given  = track.molar_mass;
-        const mm_target = track.target_molar_mass;
-        const cg = track.coeff_given;
-        const ct = track.coeff_target;
-
-        return [
-            { nv: 1,      nu: `mol ${gf}`,  dv: mm_given,  du: `g ${gf}` },
-            { nv: ct,     nu: `mol ${tf}`,  dv: cg,        du: `mol ${gf}` },
-            { nv: mm_target, nu: `g ${tf}`, dv: 1,         du: `mol ${tf}` },
-        ];
-    }
-
-    TRACKS.forEach((track, tIdx) => {
-        const nodes     = buildTrackNodes(track);
-        const yield_val = computeTrackYield(track);
-        trackResults[track.formula] = yield_val;
-
-        const chasm = document.createElement('div');
-        chasm.className = 'parallel-track-chasm';
-        chasm.id        = `chasm_${tIdx}`;
-
-        const letters = ['A','B','C','D'];
-        const trackLetter = letters[tIdx] || String(tIdx + 1);
-
-        chasm.innerHTML = `
+    <div id="pipelineContainer">
+        {% for part in processed_parts %}
+        <div class="part-lane-card locked-lane" id="card_{{ part.part_label }}" data-idx="{{ part.index }}">
             <div class="lane-title">
-                <span style="color:var(--cyber-teal);">
-                    TRACK ${trackLetter} // REAGENT: ${track.display_name.toUpperCase()} (${track.formula})
+                <span style="color: #94A3B8;">
+                    STEP {{ part.index|add:1 }}: SUB-PROBLEM UNIFIED PART [{{ part.part_label|upper }}]
                 </span>
-                <span class="lane-status" id="status_${tIdx}">PROCESSING…</span>
+                <span class="lane-status status-waiting" id="status_{{ part.part_label }}">AWAITING DATA LINK</span>
             </div>
-            <div class="row-layout" id="row_${tIdx}">
-                <div class="static-node">
-                    <strong>${track.given_quantity} g</strong><br>
-                    <span style="font-size:11px;">${track.formula} Input</span>
+            
+            <p style="font-size: 13px; color: #CBD5E1; margin-bottom: 12px;">{{ part.part_prompt }}</p>
+
+            <div class="row-layout">
+                <div class="fraction-block" style="border-color: #1E293B;">
+                    <span style="font-size: 13px; font-weight: bold; color: var(--cyber-teal); padding: 6px;">
+                        {{ part.given_quantity }}
+                    </span>
+                    <div class="fraction-bar"></div>
+                    <span style="font-size: 11px; color: var(--text-muted); padding: 6px;">
+                        {{ part.given_unit }} {{ part.given_formula }}
+                    </span>
                 </div>
-                ${nodes.map((n, nIdx) => `
-                    <span class="op-sign">✖</span>
-                    <div class="mini-fraction" id="mf_${tIdx}_${nIdx}">
-                        <div class="mini-row">
-                            <input type="number" class="mini-input" id="n_${tIdx}_${nIdx}" placeholder="Val" step="any">
-                            <span class="mini-unit">${n.nu}</span>
-                        </div>
-                        <div class="divider-line"></div>
-                        <div class="mini-row">
-                            <input type="number" class="mini-input" id="d_${tIdx}_${nIdx}" placeholder="Val" step="any">
-                            <span class="mini-unit">${n.du}</span>
-                        </div>
-                    </div>
-                `).join('')}
-                <button class="btn-lane-trigger" id="btn_track_${tIdx}"
-                        onclick="evaluateTrack(${tIdx})">
-                    Evaluate Track ${trackLetter}
+
+                {% for node in part.nodes %}
+                <span class="fraction-multiply">×</span>
+                <div class="fraction-block" 
+                    data-part="{{ part.part_label }}" 
+                    data-node="{{ forloop.counter0 }}">
+                    <input type="number" step="0.0001" 
+                        class="fraction-input-cell input-cell-num" 
+                        id="input_{{ part.part_label }}_{{ forloop.counter0 }}_num"
+                        placeholder="{{ node.num_unit }}">
+                    <div class="fraction-bar"></div>
+                    <input type="number" step="0.0001" 
+                        class="fraction-input-cell input-cell-den" 
+                        id="input_{{ part.part_label }}_{{ forloop.counter0 }}_den"
+                        placeholder="{{ node.den_unit }}">
+                </div>
+                {% endfor %}
+
+                <button class="btn-verify-lane" style="margin-left: auto;" 
+                        id="btn_verify_{{ part.part_label }}"
+                        onclick="verifyStepPart('{{ part.part_label }}')">
+                    Audit Conversion Link
                 </button>
             </div>
+        </div>
+        {% endfor %}
+    </div>
+
+    <div class="part-lane-card locked-lane" id="deductionCard" style="border-top: 2px dashed #3F4E65;">
+        <div class="lane-title">
+            <span style="color: var(--coral-red); font-weight: bold;">FINAL ANALYSIS: STRATEGIC REAGENT BOUNDARY</span>
+            <span class="lane-status status-waiting" id="deductionStatus">LOCKED</span>
+        </div>
+        
+        <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 15px;">
+            Analyze conversion yield lines compiled above. Identify the true limiting factor to compute operational chemical mass.
+        </p>
+
+        <div style="display: flex; flex-wrap: wrap; gap: 20px; align-items: flex-end; background: #0F1115; padding: 18px; border-radius: 6px;">
+            <div>
+                <label style="display: block; font-size: 11px; font-weight: bold; color: #94A3B8; margin-bottom: 6px;">
+                    LIMITING REAGENT FORMULA
+                </label>
+                <select id="selectLimiting" style="background: #141822; border: 1px solid #222A3B; color: white; padding: 8px 12px; border-radius: 4px; font-size: 13px; min-width: 160px;">
+                    <option value="">-- Choose Element --</option>
+                    {% for r in reactants %}
+                        <option value="{{ r.formula }}">{{ r.formula }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div>
+                <label style="display: block; font-size: 11px; font-weight: bold; color: #94A3B8; margin-bottom: 6px;">
+                    THEORETICAL PRODUCT YIELD (g {{ target_formula }})
+                </label>
+                <input type="number" step="0.0001" id="inputYield" placeholder="Total Yield Amount"
+                       style="background: #141822; border: 1px solid #222A3B; color: white; padding: 7px 12px; border-radius: 4px; font-size: 13px; width: 180px;">
+            </div>
+
+            <button class="btn-verify-lane" style="margin-left: auto; background: var(--coral-red); border-color: var(--coral-red); color: white;" 
+                    onclick="verifyFinalDeduction()">
+                Commit Synthesis Boundary
+            </button>
+        </div>
+    </div>
+</div>
+
+<script>
+    const PROBLEM_ID = "{{ problem_id }}";
+    
+    document.addEventListener("DOMContentLoaded", function() {
+        initializeProgressionGrid();
+    });
+
+    // Add at the top of the <script> block if base.html doesn't provide this globally
+    function showToast(message, type) {
+        const existing = document.getElementById('chemquest-toast');
+        if (existing) existing.remove();
+        
+        const toast = document.createElement('div');
+        toast.id = 'chemquest-toast';
+        toast.textContent = message;
+        toast.style.cssText = `
+            position: fixed; bottom: 24px; right: 24px; z-index: 9999;
+            padding: 12px 20px; border-radius: 6px; font-size: 13px;
+            font-weight: bold; color: white;
+            background: ${type === 'ok' ? '#065F46' : '#7F1D1D'};
+            border: 1px solid ${type === 'ok' ? '#34D399' : '#F87171'};
+            box-shadow: 0 4px 12px rgba(0,0,0,0.4);
         `;
-        tracksContainer.appendChild(chasm);
-    });
+        document.body.appendChild(toast);
+        setTimeout(() => toast.remove(), 3500);
+    }
 
-    // Restore saved state after track DOM is built
-    restoreState();
-
-    // Auto-save on every input change
-    document.addEventListener('input', e => {
-        if (e.target.classList.contains('mini-input') ||
-            e.target.classList.contains('yield-final-input')) saveState();
-    });
-    document.addEventListener('change', e => {
-        if (e.target.name === 'reagent_pick') saveState();
-    });
-
-    // ─────────────────────────────────────────────────────────────────────────────
-    // Evaluate a track
-    // ─────────────────────────────────────────────────────────────────────────────
-    function evaluateTrack(tIdx) {
-        const track = TRACKS[tIdx];
-        const nodes = buildTrackNodes(track);
-        const TOLS  = 0.01;
-
-        let allOk = true;
-        nodes.forEach((n, nIdx) => {
-            const nv = parseFloat(document.getElementById(`n_${tIdx}_${nIdx}`).value);
-            const dv = parseFloat(document.getElementById(`d_${tIdx}_${nIdx}`).value);
-            if (Math.abs(nv - n.nv) > TOLS || Math.abs(dv - n.dv) > TOLS) {
-                allOk = false;
+    function initializeProgressionGrid() {
+        const cards = document.querySelectorAll('#pipelineContainer .part-lane-card');
+        
+        cards.forEach((card, idx) => {
+            const label = card.id.replace('card_', '');
+            const cleared = localStorage.getItem(`m3_cleared_${PROBLEM_ID}_${label}`) === 'true';
+            
+            if (cleared) {
+                markLaneAsCleared(label);
             }
         });
 
-        const chasm  = document.getElementById(`chasm_${tIdx}`);
-        const status = document.getElementById(`status_${tIdx}`);
-        const yield_val = trackResults[track.formula];
+        evaluateLockStates();
+    }
 
-        if (allOk) {
-            chasm.style.borderColor = 'var(--combo-green)';
-            status.textContent = `STABILIZED // ${yield_val.toFixed(2)} ${TARGET_UNIT === 'g' ? 'g' : 'mol'}`;
-            status.style.background = '#065F46';
-            status.style.color      = '#A7F3D0';
+    function evaluateLockStates() {
+        const cards = Array.from(document.querySelectorAll('#pipelineContainer .part-lane-card'));
+        let allPreviousCleared = true;
 
-            // Lock inputs
-            nodes.forEach((_, nIdx) => {
-                document.getElementById(`n_${tIdx}_${nIdx}`).disabled = true;
-                document.getElementById(`d_${tIdx}_${nIdx}`).disabled = true;
-            });
-            document.getElementById(`btn_track_${tIdx}`).style.display = 'none';
-
-            clearedTracks++;
-            saveState();
-            if (clearedTracks === TRACKS.length) {
-                buildDeductionCard();
+        cards.forEach((card, idx) => {
+            const label = card.id.replace('card_', '');
+            
+            if (idx === 0 || allPreviousCleared) {
+                card.classList.remove('locked-lane');
+            } else {
+                card.classList.add('locked-lane');
             }
 
-            showToast(`Track ${['A','B','C','D'][tIdx]} verified: ${yield_val.toFixed(4)} ${TARGET_UNIT === 'g' ? 'g' : 'mol'} ${track.target_formula}`, 'ok');
+            // Check if this step is solved before iterating to the next downstream line
+            const cleared = localStorage.getItem(`m3_cleared_${PROBLEM_ID}_${label}`) === 'true';
+            if (!cleared) {
+                allPreviousCleared = false;
+            }
+        });
+
+        // The final deduction card unlocks only after all path conversion lines are cleared
+        const deductionCard = document.getElementById('deductionCard');
+        if (allPreviousCleared) {
+            deductionCard.classList.remove('locked-lane');
+            document.getElementById('deductionStatus').textContent = "READY FOR ARCHITECTURE ANALYSIS";
+            document.getElementById('deductionStatus').style.background = "#1E3A8A";
+            document.getElementById('deductionStatus').style.color = "#93C5FD";
         } else {
-            chasm.style.borderColor = 'var(--coral-red)';
-            showToast(`Track ${['A','B','C','D'][tIdx]} error — check values against stoichiometric fractions.`, 'err');
+            deductionCard.classList.add('locked-lane');
         }
     }
 
-    // ─────────────────────────────────────────────────────────────────────────────
-    // Build deduction card radio buttons once both tracks pass
-    // ─────────────────────────────────────────────────────────────────────────────
-    function buildDeductionCard() {
-        // Update yield unit label with actual target formula
-        const unitLabel = document.getElementById('yieldUnitLabel');
-        if (unitLabel && TRACKS.length > 0) {
-            unitLabel.textContent = `g ${TRACKS[0].target_formula}`;
-        }
-        const rg = document.getElementById('reagentRadioGroup');
-        rg.innerHTML = '';
-        TRACKS.forEach(track => {
-            const lbl = document.createElement('label');
-            lbl.className = 'radio-label';
-            lbl.innerHTML = `
-                <input type="radio" name="reagent_pick" value="${track.formula}">
-                ${track.display_name} (${track.formula})
-                &nbsp;<span style="color:var(--text-muted); font-size:13px;">
-                    — ${trackResults[track.formula].toFixed(2)} ${TARGET_UNIT === 'g' ? 'g' : 'mol'} ${track.target_formula}
-                </span>
-            `;
-            rg.appendChild(lbl);
-        });
-
-        document.getElementById('deductionCard').classList.add('active-deduction');
+    function markLaneAsCleared(label) {
+        const card = document.getElementById(`card_${label}`);
+        if (!card) return;
+        
+        card.classList.add('verified-lane');
+        card.classList.remove('locked-lane');
+        
+        const statusSpan = document.getElementById(`status_${label}`);
+        statusSpan.textContent = "VERIFIED VECTOR";
+        statusSpan.className = "lane-status status-cleared";
+        
+        // Disable inputs inside verified vectors
+        card.querySelectorAll('input').forEach(i => i.disabled = true);
+        const btn = document.getElementById(`btn_verify_${label}`);
+        if (btn) btn.style.display = 'none';
     }
 
-    // ─────────────────────────────────────────────────────────────────────────────
-    // Verify final deduction
-    // ─────────────────────────────────────────────────────────────────────────────
-    let deductionAttempts = 0;
-
-    function verifyDeduction() {
-        const selected    = document.querySelector('input[name="reagent_pick"]:checked')?.value;
-        const enteredYield = parseFloat(document.getElementById('finalYieldInput').value);
-
-        if (!selected) {
-            showToast('Select a limiting reagent first.', 'err');
+    async function verifyStepPart(label) {
+        // Force standard lowercase configuration to guarantee accurate DOM queries
+        const cleanLabel = label.toLowerCase();
+        
+        const card = document.getElementById(`card_${cleanLabel}`);
+        if (!card) {
+            showToast('Error: Target card element container not located.', 'err');
             return;
         }
 
-        // Correct limiting reagent = reactant with minimum yield
-        const yields      = TRACKS.map(t => ({ formula: t.formula, y: trackResults[t.formula] }));
-        const minEntry    = yields.reduce((a, b) => a.y <= b.y ? a : b);
-        const correctFormula = minEntry.formula;
-        const correctYield   = minEntry.y;
-        const YIELD_TOL      = 0.5;
+        const blocks = card.querySelectorAll(`.fraction-block[data-part="${cleanLabel}"]`);
+        let nodesData = [];
+        let hasEmptyCells = false;
 
-        const reagentOk = selected === correctFormula;
-        const yieldOk   = Math.abs(enteredYield - correctYield) <= YIELD_TOL;
+        blocks.forEach((block) => {
+            const nodeIdx = block.getAttribute('data-node');
+            if (nodeIdx !== null) {
+                const numEl = document.getElementById(`input_${cleanLabel}_${nodeIdx}_num`);
+                const denEl = document.getElementById(`input_${cleanLabel}_${nodeIdx}_den`);
 
-        if (reagentOk && yieldOk) {
-            showToast(`Correct! ${correctFormula} is the limiting reagent. Yield = ${correctYield.toFixed(2)} — Resolution unlocked!`, 'ok');
-            document.getElementById('deductionCard').style.borderColor = 'var(--combo-green)';
-            setTimeout(() => { window.location.href = '{% url "problem_lobby" %}'; }, 2000);
-        } else {
-            deductionAttempts++;
-            const msgs = [];
-            if (!reagentOk) msgs.push(`${selected} is not the limiting reagent`);
-            if (!yieldOk)   msgs.push(`Yield entry is off (expected ~${correctYield.toFixed(2)})`);
-            showToast(`System anomaly: ${msgs.join(' · ')}`, 'err');
-
-            if (deductionAttempts >= 3) {
-                document.getElementById('hintBlock').classList.add('visible');
+                if (numEl && denEl) {
+                    if (!numEl.value.trim() || !denEl.value.trim()) {
+                        hasEmptyCells = true;
+                    }
+                    nodesData.push({
+                        num_value: numEl.value.trim(),
+                        den_value: denEl.value.trim()
+                    });
+                } else {
+                    hasEmptyCells = true;
+                }
             }
+        });
+
+        if (hasEmptyCells || nodesData.length === 0) {
+            showToast('Please fill out all fractional nodes completely before submitting an audit.', 'err');
+            return;
         }
-    }
 
-    // ─────────────────────────────────────────────────────────────────────────────
-    // XP Grant Helper (add once to module2_workspace.html <script>)
-    // ─────────────────────────────────────────────────────────────────────────────
-
-    function updateHeaderXP(data) {
-        const levelEl = document.querySelector('.user-status span:first-child');
-        const xpEl    = document.querySelector('.xp-display');
-        const barEl   = document.querySelector('.xp-bar-fill');
-
-        if (levelEl) levelEl.textContent = `LVL ${data.level}`;
-        if (xpEl)    xpEl.textContent    = `XP: ${data.total_xp}`;
-        if (barEl)   barEl.style.width   = `${data.level_progress_pct}%`;
-    }
-
-    async function grantCompletionXP() {
-        console.log(`[XP] Firing Module 3 completion bonus, problem {{ problem_id }}`);
         try {
-            const res = await fetch('/award-xp/', {
+            const response = await fetch(window.location.href, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: { 
+                    'Content-Type': 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest'
+                },
                 body: JSON.stringify({
-                    problem_id: '{{ problem_id }}',
-                    module: 3,
-                    node_index: 0
+                    action: 'verify_lane',
+                    part_label: cleanLabel, // Keeps backend query keys happy
+                    nodes: nodesData
                 })
             });
 
-            console.log(`[XP] Response status: ${res.status}`);
-
-            if (!res.ok) {
-                console.error(`[XP] Server rejected request: ${res.status} ${res.statusText}`);
-                return;
+            if (!response.ok) {
+                throw new Error(`HTTP Error Status: ${response.status}`);
             }
 
-            const data = await res.json();
-            console.log('[XP] Server response:', data);
-
-            if (data.success) {
-                updateHeaderXP(data);
-                const toast = data.leveled_up
-                    ? `⬆ LEVEL UP! Now LVL ${data.level} — +${data.xp_awarded} XP Milestone!`
-                    : `+${data.xp_awarded} XP // Module 3 Complete!`;
-                alert(toast);
+            const res = await response.json();
+            if (res.success && res.is_correct) {
+                showToast(res.message, 'ok');
+                localStorage.setItem(`m3_cleared_${PROBLEM_ID}_${cleanLabel}`, 'true');
+                markLaneAsCleared(cleanLabel);
+                evaluateLockStates();
+            } else {
+                showToast(res.message || 'Validation failed. Check your values.', 'err');
             }
         } catch (err) {
-            console.error('[XP] Fetch threw an exception:', err);
+            console.error('Audit transaction pipeline exception:', err);
+            showToast('Asynchronous processing gateway link timed out.', 'err');
         }
     }
 
-    // ─────────────────────────────────────────────────────────────────────────────
-    // Toast
-    // ─────────────────────────────────────────────────────────────────────────────
-    let _toastTimeout;
-    function showToast(msg, type = 'info') {
-        let toast = document.getElementById('_cq_toast');
-        if (!toast) {
-            toast = document.createElement('div');
-            toast.id = '_cq_toast';
-            toast.style.cssText = `
-                position:fixed; bottom:28px; left:50%; transform:translateX(-50%);
-                padding:10px 22px; border-radius:5px; font-size:14px; font-weight:bold;
-                z-index:9999; transition:opacity 0.3s; pointer-events:none;
-                box-shadow:0 4px 16px rgba(0,0,0,0.5); max-width:520px; text-align:center;
-            `;
-            document.body.appendChild(toast);
+    async function verifyFinalDeduction() {
+        const reagent = document.getElementById('selectLimiting').value;
+        const totalYield = document.getElementById('inputYield').value;
+
+        if (!reagent || !totalYield) {
+            showToast('Please fill out all analytical decision parameters.', 'err');
+            return;
         }
-        toast.textContent = msg;
-        toast.style.opacity = '1';
-        toast.style.background = type === 'ok'  ? '#065F46' :
-                                  type === 'err' ? '#7F1D1D' : '#1E222B';
-        toast.style.color      = type === 'ok'  ? '#A7F3D0' :
-                                  type === 'err' ? '#FCA5A5' : '#E2E8F0';
-        toast.style.border     = `1px solid ${type === 'ok' ? 'var(--combo-green)' : type === 'err' ? 'var(--coral-red)' : '#2A303C'}`;
-        clearTimeout(_toastTimeout);
-        _toastTimeout = setTimeout(() => { toast.style.opacity = '0'; }, 3500);
+
+        try {
+            const response = await fetch(window.location.href, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    action: 'verify_deduction',
+                    limiting_reagent: reagent,
+                    theoretical_yield: totalYield
+                })
+            });
+
+            const res = await response.json();
+            if (res.success) {
+                showToast(res.message, 'ok');
+                // Clean progression keys on complete mastery success
+                const cards = document.querySelectorAll('#pipelineContainer .part-lane-card');
+                cards.forEach(c => {
+                    const l = c.id.replace('card_', '');
+                    localStorage.removeItem(`m3_cleared_${PROBLEM_ID}_${l}`);
+                });
+                setTimeout(() => {
+                    window.location.href = res.next_url || '/problem_lobby/';
+                }, 1500);
+            } else {
+                showToast(res.message, 'err');
+            }
+        } catch (err) {
+            console.error('Final commitment verification channel failure:', err);
+        }
     }
 </script>
+{% endblock %}

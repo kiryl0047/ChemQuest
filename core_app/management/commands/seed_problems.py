@@ -656,267 +656,119 @@ PROBLEMS = [
                 'conversion_type': CONVERSION_G_TO_G,
                 'correct_answer':  11.4116,
             },
-            {
-                'part_label':      'a',
-                'part_prompt':     'Identify the limiting reagent and determine how many moles of ZnCl2 are formed when 7.0 moles of Zn are mixed with 12.0 moles of HCl.',
-                'given_formula':   'Zn',
-                'given_quantity':  7.0,
-                'given_unit':      'mol',
-                'target_formula':  'ZnCl2',
-                'target_unit':     'mol',
-                'conversion_type': CONVERSION_MOL_TO_MOL,
-                'correct_answer':  6.0000,
-                'limiting_given_quantities': {
-                    'Zn': 7.0,
-                    'HCl': 12.0
-                }
-            },
         ],
     },
+    # # PROB_502 – Haber Process Capstone Challenge
+    # {
+    #     'problem_id':  'PROB_502',
+    #     'title':       'Haber Catalyst Core Starvation',
+    #     'prompt':      'An industrial synthesis grid combines 80.0 grams of Nitrogen gas with 20.0 grams of Hydrogen gas to produce Ammonia. Chart both raw element tracks to pinpoint the true yield limit.',
+    #     'reactants_str':       '1:N2,3:H2',
+    #     'products_str':        '2:NH3',
+    #     'correct_coefficients':'1,3,2',
+    #     'is_limiting_problem': True,
+    #     'parts': [
+    #         {
+    #             'part_label':      'a',
+    #             'part_prompt':     'Determine the maximum moles of AgCl precipitate generated when 3.5 moles of AgNo3 are combined with 4.2 moles of NaCl.',
+    #             'given_formula':   'AgNo3',
+    #             'given_quantity':  3.5,
+    #             'given_unit':      'mol',
+    #             'target_formula':  'AgCl',
+    #             'target_unit':     'mol',
+    #             'conversion_type': CONVERSION_MOL_TO_MOL,
+    #             'correct_answer':  3.5000,
+    #             'limiting_given_quantities': {
+    #                 'AgNo3': 3.5,
+    #                 'NaCl':  4.2
+    #             }
+    #         },
+    #     ],
+    # },
 
-    # PROB_502 – Haber Process Capstone Challenge
-    {
-        'problem_id':  'PROB_502',
-        'title':       'Haber Catalyst Core Starvation',
-        'prompt':      'An industrial synthesis grid combines 80.0 grams of Nitrogen gas with 20.0 grams of Hydrogen gas to produce Ammonia. Chart both raw element tracks to pinpoint the true yield limit.',
-        'reactants_str':       '1:N2,3:H2',
-        'products_str':        '2:NH3',
-        'correct_coefficients':'1,3,2',
-        'is_limiting_problem': True,
-        'parts': [
-            {
-                'part_label':      'a',
-                'part_prompt':     'Track A (N2): Compute total grams of NH3 formed if all Nitrogen gas converts fully.',
-                'given_formula':   'N2',
-                'given_quantity':  80.0,
-                'given_unit':      'g',
-                'target_formula':  'NH3',
-                'target_unit':     'g',
-                'conversion_type': CONVERSION_G_TO_G,
-                'correct_answer':  97.2781,
-            },
-            {
-                'part_label':      'b',
-                'part_prompt':     'Track B (H2): Compute total grams of NH3 formed if all Hydrogen gas converts fully.',
-                'given_formula':   'H2',
-                'given_quantity':  20.0,
-                'given_unit':      'g',
-                'target_formula':  'NH3',
-                'target_unit':     'g',
-                'conversion_type': CONVERSION_G_TO_G,
-                'correct_answer':  112.6230,
-            },
-            {
-                'part_label':      'c',
-                'part_prompt':     'Excess Analytics: Using the true limiting reagent mass (80.0 g N2), calculate exactly how many grams of H2 gas were used.',
-                'given_formula':   'N2',
-                'given_quantity':  80.0,
-                'given_unit':      'g',
-                'target_formula':  'H2',
-                'target_unit':     'g',
-                'conversion_type': CONVERSION_G_TO_G,
-                'correct_answer':  17.2703,
-            },
-            {
-                'part_label':      'a',
-                'part_prompt':     'Determine the maximum moles of AgCl precipitate generated when 3.5 moles of AgNo3 are combined with 4.2 moles of NaCl.',
-                'given_formula':   'AgNo3',
-                'given_quantity':  3.5,
-                'given_unit':      'mol',
-                'target_formula':  'AgCl',
-                'target_unit':     'mol',
-                'conversion_type': CONVERSION_MOL_TO_MOL,
-                'correct_answer':  3.5000,
-                'limiting_given_quantities': {
-                    'AgNo3': 3.5,
-                    'NaCl':  4.2
-                }
-            },
-        ],
-    },
+    # # PROB_503 – Rocket Combustion Matrix (2 H2 + O2 → 2 H2O)
+    # {
+    #     'problem_id':  'PROB_503',
+    #     'title':       'Cryogenic Oxidizer Volumetric Check',
+    #     'prompt':      'Cryogenic engine manifolds mix 40.0 grams of Hydrogen gas with 150.0 grams of Oxygen gas to produce water exhaust vapor. Evaluate the payload capacity constraint.',
+    #     'reactants_str':       '2:H2,1:O2',
+    #     'products_str':        '2:H2O',
+    #     'correct_coefficients':'2,1,2',
+    #     'is_limiting_problem': True,
+    #     'parts': [
+    #         {
+    #             'part_label':      'a',
+    #             'part_prompt':     'If 8.0 moles of CH4 are ignited alongside 14.0 moles of O2, calculate how many moles of CO2 gas are produced.',
+    #             'given_formula':   'CH4',
+    #             'given_quantity':  8.0,
+    #             'given_unit':      'mol',
+    #             'target_formula':  'CO2',
+    #             'target_unit':     'mol',
+    #             'conversion_type': CONVERSION_MOL_TO_MOL,
+    #             'correct_answer':  7.0000,
+    #             'limiting_given_quantities': {
+    #                 'CH4': 8.0,
+    #                 'O2':  14.0
+    #             }
+    #         },
+    #     ],
+    # },
 
-    # PROB_503 – Rocket Combustion Matrix (2 H2 + O2 → 2 H2O)
-    {
-        'problem_id':  'PROB_503',
-        'title':       'Cryogenic Oxidizer Volumetric Check',
-        'prompt':      'Cryogenic engine manifolds mix 40.0 grams of Hydrogen gas with 150.0 grams of Oxygen gas to produce water exhaust vapor. Evaluate the payload capacity constraint.',
-        'reactants_str':       '2:H2,1:O2',
-        'products_str':        '2:H2O',
-        'correct_coefficients':'2,1,2',
-        'is_limiting_problem': True,
-        'parts': [
-            {
-                'part_label':      'a',
-                'part_prompt':     'Track A (H2): Determine grams of H2O water condensation generated if H2 is the limit factor.',
-                'given_formula':   'H2',
-                'given_quantity':  40.0,
-                'given_unit':      'g',
-                'target_formula':  'H2O',
-                'target_unit':     'g',
-                'conversion_type': CONVERSION_G_TO_G,
-                'correct_answer':  357.4464,
-            },
-            {
-                'part_label':      'b',
-                'part_prompt':     'Track B (O2): Determine grams of H2O water condensation generated if O2 is the limit factor.',
-                'given_formula':   'O2',
-                'given_quantity':  150.0,
-                'given_unit':      'g',
-                'target_formula':  'H2O',
-                'target_unit':     'g',
-                'conversion_type': CONVERSION_G_TO_G,
-                'correct_answer':  168.9001,
-            },
-            {
-                'part_label':      'c',
-                'part_prompt':     'Excess Analytics: Calculate how many grams of liquid H2 fuel were actually consumed based on the limiting Oxygen volume.',
-                'given_formula':   'O2',
-                'given_quantity':  150.0,
-                'given_unit':      'g',
-                'target_formula':  'H2',
-                'target_unit':     'g',
-                'conversion_type': CONVERSION_G_TO_G,
-                'correct_answer':  18.9004,
-            },
-            {
-                'part_label':      'a',
-                'part_prompt':     'If 8.0 moles of CH4 are ignited alongside 14.0 moles of O2, calculate how many moles of CO2 gas are produced.',
-                'given_formula':   'CH4',
-                'given_quantity':  8.0,
-                'given_unit':      'mol',
-                'target_formula':  'CO2',
-                'target_unit':     'mol',
-                'conversion_type': CONVERSION_MOL_TO_MOL,
-                'correct_answer':  7.0000,
-                'limiting_given_quantities': {
-                    'CH4': 8.0,
-                    'O2':  14.0
-                }
-            },
-        ],
-    },
+    # # PROB_504 – Methane Combustion Capstone
+    # {
+    #     'problem_id':  'PROB_504',
+    #     'title':       'Sub-Atmospheric Burn Ceiling',
+    #     'prompt':      'An environmental glove box locks 60.0 grams of pure Methane gas inside a chamber filled with 130.0 grams of Oxygen gas. Trigger dual track computations to identify exhaust parameters.',
+    #     'reactants_str':       '1:CH4,2:O2',
+    #     'products_str':        '1:CO2,2:H2O',
+    #     'correct_coefficients':'1,2,1,2',
+    #     'is_limiting_problem': True,
+    #     'parts': [
+    #         {
+    #             'part_label':      'a',
+    #             'part_prompt':     'When 10.0 moles of Al are mixed with 6.0 moles of Fe2O3, find the resulting yield of liquid Iron (Fe) in moles.',
+    #             'given_formula':   'Al',
+    #             'given_quantity':  10.0,
+    #             'given_unit':      'mol',
+    #             'target_formula':  'Fe',
+    #             'target_unit':     'mol',
+    #             'conversion_type': CONVERSION_MOL_TO_MOL,
+    #             'correct_answer':  10.0000,
+    #             'limiting_given_quantities': {
+    #                 'Al':    10.0,
+    #                 'Fe2O3': 6.0
+    #             }
+    #         },
+    #     ],
+    # },
 
-    # PROB_504 – Methane Combustion Capstone
-    {
-        'problem_id':  'PROB_504',
-        'title':       'Sub-Atmospheric Burn Ceiling',
-        'prompt':      'An environmental glove box locks 60.0 grams of pure Methane gas inside a chamber filled with 130.0 grams of Oxygen gas. Trigger dual track computations to identify exhaust parameters.',
-        'reactants_str':       '1:CH4,2:O2',
-        'products_str':        '1:CO2,2:H2O',
-        'correct_coefficients':'1,2,1,2',
-        'is_limiting_problem': True,
-        'parts': [
-            {
-                'part_label':      'a',
-                'part_prompt':     'Track A (CH4): Solve for total grams of generated CO2 gas assuming the alkane fuel is exhausted completely.',
-                'given_formula':   'CH4',
-                'given_quantity':  60.0,
-                'given_unit':      'g',
-                'target_formula':  'CO2',
-                'target_unit':     'g',
-                'conversion_type': CONVERSION_G_TO_G,
-                'correct_answer':  164.5951,
-            },
-            {
-                'part_label':      'b',
-                'part_prompt':     'Track B (O2): Solve for total grams of generated CO2 gas assuming the oxygen supply completely starves out.',
-                'given_formula':   'O2',
-                'given_quantity':  130.0,
-                'given_unit':      'g',
-                'target_formula':  'CO2',
-                'target_unit':     'g',
-                'conversion_type': CONVERSION_G_TO_G,
-                'correct_answer':  89.3951,
-            },
-            {
-                'part_label':      'c',
-                'part_prompt':     'Excess Analytics: Find the weight in grams of Methane broken down using the limiting weight parameter.',
-                'given_formula':   'O2',
-                'given_quantity':  130.0,
-                'given_unit':      'g',
-                'target_formula':  'CH4',
-                'target_unit':     'g',
-                'conversion_type': CONVERSION_G_TO_G,
-                'correct_answer':  32.5855,
-            },
-            {
-                'part_label':      'a',
-                'part_prompt':     'When 10.0 moles of Al are mixed with 6.0 moles of Fe2O3, find the resulting yield of liquid Iron (Fe) in moles.',
-                'given_formula':   'Al',
-                'given_quantity':  10.0,
-                'given_unit':      'mol',
-                'target_formula':  'Fe',
-                'target_unit':     'mol',
-                'conversion_type': CONVERSION_MOL_TO_MOL,
-                'correct_answer':  10.0000,
-                'limiting_given_quantities': {
-                    'Al':    10.0,
-                    'Fe2O3': 6.0
-                }
-            },
-        ],
-    },
-
-    # PROB_505 – Magnesium Powder Smelting Capstone
-    {
-        'problem_id':  'PROB_505',
-        'title':       'Magnesium Smelting Boundary',
-        'prompt':      'A metal forging cell blends 50.0 grams of raw solid Magnesium particles with 40.0 grams of Oxygen gas to form Magnesium Oxide powder. Evaluate the chemical matrix limitations.',
-        'reactants_str':       '2:Mg,1:O2',
-        'products_str':        '2:MgO',
-        'correct_coefficients':'2,1,2',
-        'is_limiting_problem': True,
-        'parts': [
-            {
-                'part_label':      'a',
-                'part_prompt':     'Track A (Mg): Solve for total grams of solid MgO ash created if the magnesium blocks oxidize completely.',
-                'given_formula':   'Mg',
-                'given_quantity':  50.0,
-                'given_unit':      'g',
-                'target_formula':  'MgO',
-                'target_unit':     'g',
-                'conversion_type': CONVERSION_G_TO_G,
-                'correct_answer':  82.9138,
-            },
-            {
-                'part_label':      'b',
-                'part_prompt':     'Track B (O2): Solve for total grams of solid MgO ash created if the oxygen gas reserves run out first.',
-                'given_formula':   'O2',
-                'given_quantity':  40.0,
-                'given_unit':      'g',
-                'target_formula':  'MgO',
-                'target_unit':     'g',
-                'conversion_type': CONVERSION_G_TO_G,
-                'correct_answer':  100.7648,
-            },
-            {
-                'part_label':      'c',
-                'part_prompt':     'Excess Analytics: Calculate the exact mass in grams of Oxygen gas gas bound into the ash pile based on the limiting factor.',
-                'given_formula':   'Mg',
-                'given_quantity':  50.0,
-                'given_unit':      'g',
-                'target_formula':  'O2',
-                'target_unit':     'g',
-                'conversion_type': CONVERSION_G_TO_G,
-                'correct_answer':  32.9138,
-            },
-            {
-                'part_label':      'a',
-                'part_prompt':     'Calculate the theoretical yield of MgO in moles if 5.0 moles of Mg are reacted with 2.0 moles of O2 gas.',
-                'given_formula':   'Mg',
-                'given_quantity':  5.0,
-                'given_unit':      'mol',
-                'target_formula':  'MgO',
-                'target_unit':     'mol',
-                'conversion_type': CONVERSION_MOL_TO_MOL,
-                'correct_answer':  4.0000,
-                'limiting_given_quantities': {
-                    'Mg': 5.0,
-                    'O2': 2.0
-                }
-            },
-        ],
-    },
+    # # PROB_505 – Magnesium Powder Smelting Capstone
+    # {
+    #     'problem_id':  'PROB_505',
+    #     'title':       'Magnesium Smelting Boundary',
+    #     'prompt':      'A metal forging cell blends 50.0 grams of raw solid Magnesium particles with 40.0 grams of Oxygen gas to form Magnesium Oxide powder. Evaluate the chemical matrix limitations.',
+    #     'reactants_str':       '2:Mg,1:O2',
+    #     'products_str':        '2:MgO',
+    #     'correct_coefficients':'2,1,2',
+    #     'is_limiting_problem': True,
+    #     'parts': [
+    #         {
+    #             'part_label':      'a',
+    #             'part_prompt':     'Calculate the theoretical yield of MgO in moles if 5.0 moles of Mg are reacted with 2.0 moles of O2 gas.',
+    #             'given_formula':   'Mg',
+    #             'given_quantity':  5.0,
+    #             'given_unit':      'mol',
+    #             'target_formula':  'MgO',
+    #             'target_unit':     'mol',
+    #             'conversion_type': CONVERSION_MOL_TO_MOL,
+    #             'correct_answer':  4.0000,
+    #             'limiting_given_quantities': {
+    #                 'Mg': 5.0,
+    #                 'O2': 2.0
+    #             }
+    #         },
+    #     ],
+    # },
 ]
 
 class Command(BaseCommand):

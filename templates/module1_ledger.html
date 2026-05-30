@@ -536,8 +536,7 @@ function lockAndProceed() {
     if (allOk) {
         saveState();
 
-        // ── DYNAMIC ROUTING RESOLUTION ENGINE ──
-        // Reads the Django boolean template variable context safely
+        // Check if the Django template boolean is flagged true
         const isLimiting = "{{ is_limiting_problem }}".toLowerCase() === "true";
         
         let targetUrl = NEXT_URL;
@@ -545,7 +544,7 @@ function lockAndProceed() {
 
         if (isLimiting) {
             destName  = 'Limiting Reagent Workspace';
-            // Routes to your newly added Module 3 base pattern from urls.py
+            // Dynamically resolve your Module 3 base routing structure
             targetUrl = "{% url 'limiting_workspace' prob_id=problem_id %}";
         }
 
