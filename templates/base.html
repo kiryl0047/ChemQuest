@@ -79,6 +79,155 @@
             background-color: var(--bg-slate);
             border-top: 1px solid #2A303C;
         }
+
+        /* ── Canned Constants Tray ── */
+        #cq-tray {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            z-index: 8000;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: flex-end;
+            gap: 0;
+        }
+
+        #cq-tray-panel {
+            background: #1E222B;
+            border: 1px solid var(--constant-gold);
+            border-radius: 6px;
+            width: 240px;
+            overflow: hidden;
+            max-height: 0;
+            transition: max-height 0.3s ease, opacity 0.3s ease, border-color 0.2s;
+            opacity: 0;
+            pointer-events: none;
+            margin-bottom: 6px;
+        }
+
+        #cq-tray-panel.open {
+            max-height: 420px;
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        #cq-tray-panel-header {
+            background: #12151C;
+            border-bottom: 1px solid #2A303C;
+            padding: 10px 14px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        #cq-tray-panel-header span {
+            font-size: 10px;
+            font-weight: bold;
+            letter-spacing: 1.5px;
+            color: var(--constant-gold);
+        }
+
+        #cq-tray-panel-header small {
+            font-size: 10px;
+            color: var(--text-muted);
+        }
+
+        #cq-tray-body {
+            padding: 10px 12px;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            max-height: 340px;
+            overflow-y: auto;
+        }
+
+        #cq-tray-body::-webkit-scrollbar { width: 4px; }
+        #cq-tray-body::-webkit-scrollbar-track { background: #12151C; }
+        #cq-tray-body::-webkit-scrollbar-thumb { background: #2A303C; border-radius: 2px; }
+
+        .cq-const-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: #12151C;
+            border: 1px solid #2A303C;
+            border-radius: 4px;
+            padding: 7px 10px;
+        }
+
+        .cq-const-formula {
+            font-size: 15px;
+            font-weight: bold;
+            color: var(--cyber-teal);
+        }
+
+        .cq-const-value {
+            font-size: 13px;
+            color: var(--constant-gold);
+            font-weight: bold;
+        }
+
+        .cq-const-unit {
+            font-size: 10px;
+            color: var(--text-muted);
+            margin-left: 3px;
+        }
+
+        #cq-tray-empty {
+            font-size: 12px;
+            color: var(--text-muted);
+            text-align: center;
+            padding: 14px 0;
+            font-style: italic;
+        }
+
+        #cq-tray-tab {
+            background: #1E222B;
+            border: 1px solid var(--constant-gold);
+            border-radius: 5px;
+            padding: 7px 13px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            transition: background 0.2s, box-shadow 0.2s;
+            user-select: none;
+        }
+
+        #cq-tray-tab:hover {
+            background: rgba(255, 214, 0, 0.08);
+            box-shadow: 0 0 10px rgba(255, 214, 0, 0.2);
+        }
+
+        #cq-tray-tab-label {
+            font-size: 11px;
+            font-weight: bold;
+            letter-spacing: 1px;
+            color: var(--constant-gold);
+        }
+
+        #cq-tray-tab-count {
+            background: var(--constant-gold);
+            color: #0F1115;
+            font-size: 10px;
+            font-weight: bold;
+            border-radius: 3px;
+            padding: 1px 6px;
+            min-width: 18px;
+            text-align: center;
+        }
+
+        #cq-tray-tab-chevron {
+            font-size: 11px;
+            color: var(--constant-gold);
+            transition: transform 0.25s ease;
+            line-height: 1;
+        }
+
+        #cq-tray-tab-chevron.rotated {
+            transform: rotate(180deg);
+        }
     </style>
 </head>
 <body>
@@ -92,14 +241,15 @@
             </span>
         {% endif %}
 
-        <span>LVL {{ user_level }}</span>
-        <span class="xp-display">XP: {{ user_total_xp }}</span>
+        <span id="xp-level-display">LVL {{ user_level }}</span>
+        <span class="xp-display" id="xp-total-display">XP: {{ user_total_xp }}</span>
 
         <!-- XP progress bar -->
         <div style="width:110px; height:6px; background:#2A303C; border-radius:3px;
                     overflow:hidden; cursor:default;"
              title="{{ user_xp_into_level }} / 500 XP into level {{ user_level }}">
-            <div style="width:{{ user_level_progress_pct }}%; height:100%;
+            <div id="xp-bar-fill"
+                 style="width:{{ user_level_progress_pct }}%; height:100%;
                         background:var(--constant-gold); border-radius:3px;
                         transition:width 0.5s ease;"></div>
         </div>
@@ -131,6 +281,175 @@
 <footer>
     &copy; 2026 ChemQuest Framework &mdash; Procedural Assessment Engine
 </footer>
+
+<!-- ── Canned Constants Tray (persistent across all modules) ── -->
+<div id="cq-tray" aria-label="Canned Constants reference tray">
+
+    <div id="cq-tray-panel" role="region" aria-label="Locked molar mass constants">
+        <div id="cq-tray-panel-header">
+            <span>CANNED CONSTANTS</span>
+            <small id="cq-tray-prob-id">—</small>
+        </div>
+        <div id="cq-tray-body">
+            <div id="cq-tray-empty">No constants locked yet.<br>Complete the Preparation Ledger first.</div>
+        </div>
+    </div>
+
+    <div id="cq-tray-tab" onclick="cqTrayToggle()" role="button" tabindex="0"
+         aria-expanded="false" aria-controls="cq-tray-panel"
+         onkeydown="if(event.key==='Enter'||event.key===' ')cqTrayToggle()">
+        <span id="cq-tray-tab-label">CONSTANTS</span>
+        <span id="cq-tray-tab-count">0</span>
+        <span id="cq-tray-tab-chevron">▲</span>
+    </div>
+
+</div>
+
+<script>
+(function initCqTray() {
+    // ── Derive problem_id from current URL path ──────────────────────────────
+    // Handles all ChemQuest URL patterns:
+    //   /ledger/PROB_101/
+    //   /workspace/PROB_101/a/
+    //   /limiting-workspace/PROB_101/
+    //   /limiting-workspace/PROB_101/a/
+    //   /dashboard/ and /problem_lobby/ → no problem_id, show empty state
+    function getProblemIdFromUrl() {
+        const path = window.location.pathname;
+        const patterns = [
+            /\/ledger\/([^/]+)\//,
+            /\/workspace\/([^/]+)\//,
+            /\/limiting-workspace\/([^/]+)\//,
+        ];
+        for (const re of patterns) {
+            const m = path.match(re);
+            if (m) return m[1];
+        }
+        return null;
+    }
+
+    // ── Read locked molar masses from Module 1 localStorage cache ────────────
+    // Module 1 saves state under key: cq_m1_${PROBLEM_ID}
+    // state.masses = { "H2": "2.016", "O2": "31.998", ... }
+    // Only entries that were validated (border class = correct) are truly locked,
+    // but since we save on every keystroke we filter by checking the massStatus
+    // badge text — instead we re-validate: any numeric value present is shown.
+    // The source of truth is whatever the student locked (lockAndProceed passed).
+    // We use a separate localStorage key written at lock-time for reliability.
+    function getLockedConstants(probId) {
+        // Primary source: explicit lock record written by lockAndProceed()
+        const lockKey = `cq_constants_locked_${probId}`;
+        try {
+            const locked = JSON.parse(localStorage.getItem(lockKey));
+            if (locked && Object.keys(locked).length > 0) return locked;
+        } catch(e) {}
+
+        // Fallback: read from full Module 1 state cache (masses that have values)
+        const stateKey = `cq_m1_${probId}`;
+        try {
+            const state = JSON.parse(localStorage.getItem(stateKey));
+            if (state && state.masses) {
+                const result = {};
+                Object.entries(state.masses).forEach(([formula, val]) => {
+                    const num = parseFloat(val);
+                    if (!isNaN(num) && num > 0) result[formula] = num;
+                });
+                if (Object.keys(result).length > 0) return result;
+            }
+        } catch(e) {}
+
+        return {};
+    }
+
+    function renderTray(constants, probId) {
+        const body      = document.getElementById('cq-tray-body');
+        const countEl   = document.getElementById('cq-tray-tab-count');
+        const probLabel = document.getElementById('cq-tray-prob-id');
+        if (!body) return;
+
+        const entries = Object.entries(constants);
+        countEl.textContent = entries.length;
+
+        if (probLabel) probLabel.textContent = probId || '—';
+
+        // Clear existing rows (keep #cq-tray-empty in DOM, just hide it)
+        body.querySelectorAll('.cq-const-row').forEach(r => r.remove());
+        const emptyEl = document.getElementById('cq-tray-empty');
+
+        if (entries.length === 0) {
+            if (emptyEl) emptyEl.style.display = 'block';
+            return;
+        }
+
+        if (emptyEl) emptyEl.style.display = 'none';
+
+        entries.forEach(([formula, mass]) => {
+            const row = document.createElement('div');
+            row.className = 'cq-const-row';
+            row.innerHTML = `
+                <span class="cq-const-formula">${formula}</span>
+                <span>
+                    <span class="cq-const-value">${parseFloat(mass).toFixed(4)}</span>
+                    <span class="cq-const-unit">g/mol</span>
+                </span>
+            `;
+            body.appendChild(row);
+        });
+    }
+
+    // ── Toggle open/close ────────────────────────────────────────────────────
+    let trayOpen = false;
+    window.cqTrayToggle = function() {
+        trayOpen = !trayOpen;
+        const panel   = document.getElementById('cq-tray-panel');
+        const chevron = document.getElementById('cq-tray-tab-chevron');
+        const tab     = document.getElementById('cq-tray-tab');
+        if (!panel) return;
+        panel.classList.toggle('open', trayOpen);
+        chevron.classList.toggle('rotated', trayOpen);
+        tab.setAttribute('aria-expanded', String(trayOpen));
+    };
+
+    // ── Boot ─────────────────────────────────────────────────────────────────
+    const probId    = getProblemIdFromUrl();
+    const constants = probId ? getLockedConstants(probId) : {};
+    const currentPath = window.location.pathname;
+    renderTray(constants, probId);
+    
+    // Explicitly verify the user is working inside Module 1, 2, or 3 workspaces
+    const isWorkspaceRoute = currentPath.includes('/module1/') || 
+                             currentPath.includes('/module2/') || 
+                             currentPath.includes('/module3/');
+
+    if (probId && isWorkspaceRoute) {
+        // Render the tray normally if we are inside a valid module route workspace
+        const constants = getLockedConstants(probId);
+        renderTray(constants, probId);
+
+        // Re-render when Module 1 writes the lock record
+        window.addEventListener('storage', function(e) {
+            if (e.key === `cq_constants_locked_${probId}` || e.key === `cq_m1_${probId}`) {
+                const fresh = getLockedConstants(probId);
+                renderTray(fresh, probId);
+            }
+        });
+    } else {
+        // Completely eliminate the tray markup structural nodes from rendering on other routes
+        const tabEl = document.getElementById('cq-tray-tab');
+        const panelEl = document.getElementById('cq-tray-panel');
+        if (tabEl) tabEl.style.display = 'none';
+        if (panelEl) panelEl.style.display = 'none';
+    }
+
+    window.addEventListener('storage', function(e) {
+        if (!probId) return;
+        if (e.key === `cq_constants_locked_${probId}` || e.key === `cq_m1_${probId}`) {
+            const fresh = getLockedConstants(probId);
+            renderTray(fresh, probId);
+        }
+    });
+})();
+</script>
 
 </body>
 </html>

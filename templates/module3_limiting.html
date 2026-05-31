@@ -199,6 +199,35 @@
 </div>
 
 <script>
+    // ─────────────────────────────────────────────────────────────────────────────
+    // XP helpers (shared pattern with Module 2)
+    // ─────────────────────────────────────────────────────────────────────────────
+    function updateHeaderXP(data) {
+        const levelEl = document.getElementById('xp-level-display');
+        const xpEl    = document.getElementById('xp-total-display');
+        const barEl   = document.getElementById('xp-bar-fill');
+        if (levelEl) levelEl.textContent = `LVL ${data.level}`;
+        if (xpEl)    xpEl.textContent    = `XP: ${data.total_xp}`;
+        if (barEl)   barEl.style.width   = `${data.progress_pct}%`;
+    }
+
+    async function awardXP(xpAmount, reason) {
+        try {
+            const res = await fetch('/award-xp/', {
+                method:  'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body:    JSON.stringify({ xp_amount: xpAmount, reason }),
+            });
+            if (!res.ok) return;
+            const data = await res.json();
+            if (data.success) {
+                updateHeaderXP(data);
+                showToast(`+${data.xp_awarded} XP — ${reason.replaceAll('_', ' ')}`, 'ok');
+            }
+        } catch (err) {
+            console.warn('[XP] Award failed silently:', err);
+        }
+    }
     const PROBLEM_ID = "{{ problem_id }}";
     
     document.addEventListener("DOMContentLoaded", function() {
@@ -415,6 +444,7 @@
                 localStorage.setItem(`m3_cleared_${PROBLEM_ID}_${cleanLabel}`, 'true');
                 markLaneAsCleared(cleanLabel);
                 evaluateLockStates();
+                await awardXP(40, `lane_${cleanLabel}_verified`);
             } else {
                 showToast(res.message || 'Validation failed. Check your values.', 'err');
             }
@@ -447,6 +477,7 @@
             const res = await response.json();
             if (res.success) {
                 showToast(res.message, 'ok');
+                await awardXP(100, 'limiting_reagent_deduction');
                 // Clean progression keys on complete mastery success
                 const cards = document.querySelectorAll('#pipelineContainer .part-lane-card');
                 cards.forEach(c => {

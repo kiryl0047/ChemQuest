@@ -274,6 +274,49 @@ const TARGET_FORMULA  = "{{ target_formula }}";
 const NODES_SPEC = {{ nodes_json|safe }};
 
 // ─────────────────────────────────────────────────────────────────────────────
+// XP helpers
+// ─────────────────────────────────────────────────────────────────────────────
+
+function updateHeaderXP(data) {
+    // Targets the IDs added to base.html
+    const levelEl = document.getElementById('xp-level-display');
+    const xpEl    = document.getElementById('xp-total-display');
+    const barEl   = document.getElementById('xp-bar-fill');
+
+    if (levelEl) levelEl.textContent = `LVL ${data.level}`;
+    if (xpEl)    xpEl.textContent    = `XP: ${data.total_xp}`;
+    if (barEl)   barEl.style.width   = `${data.progress_pct}%`;
+}
+
+async function awardXP(isFinalNode) {
+    // XP_PER_NODE_CORRECT = 25, XP_PER_PART_COMPLETE = 50 (mirrors models.py)
+    const xpAmount = 25 + (isFinalNode ? 50 : 0);
+    try {
+        const res = await fetch('/award-xp/', {
+            method:  'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body:    JSON.stringify({
+                xp_amount: xpAmount,
+                reason: `node_correct_${PROBLEM_ID}_${PART_LABEL}`,
+            }),
+        });
+        if (!res.ok) return;
+        const data = await res.json();
+        if (data.success) {
+            updateHeaderXP(data);
+            const msg = data.level > (parseInt(document.getElementById('xp-level-display')
+                            ?.textContent?.replace('LVL ', '')) || 1)
+                ? `⬆ LEVEL UP! Now LVL ${data.level} — +${data.xp_awarded} XP`
+                : `+${data.xp_awarded} XP`;
+            showToast(msg, 'ok');
+        }
+    } catch (err) {
+        // XP grant is best-effort — never block the learning flow
+        console.warn('[XP] Award request failed silently:', err);
+    }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // Persistence helpers
 // ─────────────────────────────────────────────────────────────────────────────
 const STORE_KEY = `cq_m2_${PROBLEM_ID}_${PART_LABEL}`;
@@ -299,13 +342,11 @@ function restoreState() {
     try { state = JSON.parse(localStorage.getItem(STORE_KEY)); } catch(e) {}
     if (!state) return;
 
-    // Restore values into already-built input elements
     Object.entries(state.inputs || {}).forEach(([id, val]) => {
         const el = document.getElementById(id);
         if (el && val !== undefined) el.value = val;
     });
 
-    // Re-apply verified state for each completed node
     (state.verified || []).forEach(idx => {
         const card  = document.getElementById(`node_${idx}`);
         const nEl   = document.getElementById(`num_${idx}`);
@@ -319,7 +360,6 @@ function restoreState() {
         if (btnEl) btnEl.style.display = 'none';
         verifiedCount++;
 
-        // Ensure the next node and its operator are visible/unlocked
         const nextOp   = document.getElementById(`op_${idx + 1}`);
         const nextCard = document.getElementById(`node_${idx + 1}`);
         if (nextOp)   nextOp.style.display = 'inline';
@@ -345,7 +385,6 @@ NODES_SPEC.forEach((spec, idx) => {
     const isFirst  = idx === 0;
     const isLocked = !isFirst;
 
-    // Operator
     const op = document.createElement('span');
     op.className = 'operator-sign';
     op.id        = `op_${idx}`;
@@ -353,16 +392,12 @@ NODES_SPEC.forEach((spec, idx) => {
     if (isLocked) op.style.display = 'none';
     container.appendChild(op);
 
-    // Card
     const card = document.createElement('div');
     card.className = `fraction-card ${isFirst ? 'active-link' : 'locked-link'}`;
     card.id        = `node_${idx}`;
 
-    // Format unit label for display
     function fmtUnit(u) {
-        // "mol_SO2" → "mol SO₂",  "g_H2O" → "g H₂O"
-        return u.replace(/_/g, ' ')
-                .replace(/(\d+)/g, '<sub>$1</sub>');
+        return u.replace(/_/g, ' ').replace(/(\d+)/g, '<sub>$1</sub>');
     }
 
     card.innerHTML = `
@@ -382,23 +417,20 @@ NODES_SPEC.forEach((spec, idx) => {
     container.appendChild(card);
 });
 
-// Restore saved state after DOM nodes are built
 restoreState();
 
-// Auto-save on every input keystroke
 document.addEventListener('input', e => {
     if (e.target.classList.contains('slot-input')) saveState();
 });
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Verify a single node against backend
+// Verify a single node
 // ─────────────────────────────────────────────────────────────────────────────
 async function verifyNode(idx) {
     const numVal = document.getElementById(`num_${idx}`).value.trim();
     const denVal = document.getElementById(`den_${idx}`).value.trim();
     const spec   = NODES_SPEC[idx];
 
-    // Guard: reject empty inputs immediately, no backend call
     if (numVal === '' || denVal === '') {
         showToast('Fill in both numerator and denominator before validating.', 'err');
         return;
@@ -407,13 +439,11 @@ async function verifyNode(idx) {
     const numFloat = parseFloat(numVal);
     const denFloat = parseFloat(denVal);
 
-    // Guard: reject non-numeric inputs
     if (isNaN(numFloat) || isNaN(denFloat)) {
         showToast('Numeric values only — no letters or symbols.', 'err');
         return;
     }
 
-    // ── Client-side fast-path (0.3s target, no round-trip needed for value check)
     const numOk = Math.abs(numFloat - spec.num_value) < 0.01;
     const denOk = Math.abs(denFloat - spec.den_value) < 0.01;
     const isOk  = numOk && denOk;
@@ -432,7 +462,9 @@ async function verifyNode(idx) {
         verifiedCount++;
         saveState();
 
-        // Unlock next node if exists
+        const isFinalNode = (verifiedCount === NODE_COUNT);
+
+        // Unlock next node if it exists
         if (idx + 1 < NODES_SPEC.length) {
             const nextOp   = document.getElementById(`op_${idx + 1}`);
             const nextCard = document.getElementById(`node_${idx + 1}`);
@@ -446,11 +478,29 @@ async function verifyNode(idx) {
             }
         }
 
-        if (verifiedCount === NODE_COUNT) {
+        if (isFinalNode) {
             revealFinalYield();
         }
 
-        showToast(`Link ${idx + 1} connected! Units cancel correctly.`, 'ok');
+        // ── Award XP (awaited so toast fires after XP response, not before)
+        await awardXP(isFinalNode);
+
+        // Post telemetry non-blocking (fire-and-forget after XP is already awarded)
+        fetch('/api/validate-step-node/', {
+            method:  'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body:    JSON.stringify({
+                problem_id:    PROBLEM_ID,
+                part_label:    PART_LABEL,
+                node_index:    idx,
+                num_value:     numFloat,
+                num_unit:      spec.num_unit,
+                den_value:     denFloat,
+                den_unit:      spec.den_unit,
+                is_final_node: isFinalNode,
+            }),
+        }).catch(() => {});
+
     } else {
         card.classList.remove('active-link', 'verified-link');
         card.classList.add('error-link');
@@ -463,23 +513,23 @@ async function verifyNode(idx) {
         if (!numOk) wrongFields.push('numerator');
         if (!denOk) wrongFields.push('denominator');
         showToast(`Node ${idx + 1}: incorrect ${wrongFields.join(' and ')} — check your conversion factor.`, 'err');
-    }
 
-    // POST to backend for telemetry (non-blocking, fire-and-forget)
-    // Only fires after input validation passes above, so num/den are always valid floats
-    fetch('/api/validate-step-node/', {
-        method:  'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body:    JSON.stringify({
-            problem_id:  PROBLEM_ID,
-            part_label:  PART_LABEL,
-            node_index:  idx,
-            num_value:   numFloat,
-            num_unit:    spec.num_unit,
-            den_value:   denFloat,
-            den_unit:    spec.den_unit,
-        }),
-    }).catch(() => {});
+        // Post telemetry for failed attempt
+        fetch('/api/validate-step-node/', {
+            method:  'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body:    JSON.stringify({
+                problem_id:    PROBLEM_ID,
+                part_label:    PART_LABEL,
+                node_index:    idx,
+                num_value:     numFloat,
+                num_unit:      spec.num_unit,
+                den_value:     denFloat,
+                den_unit:      spec.den_unit,
+                is_final_node: false,
+            }),
+        }).catch(() => {});
+    }
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -495,138 +545,6 @@ function revealFinalYield() {
         `${CORRECT_ANSWER.toFixed(4)} ${unit}`;
 
     document.getElementById('actionsBar').style.display = 'flex';
-    showToast('Mass-to-Mass chain complete! Theoretical yield established.', 'ok');
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-// XP Grant Helper (add once to module2_workspace.html <script>)
-// ─────────────────────────────────────────────────────────────────────────────
-
-// module2_workspace.html — update all three check functions to async
-// and insert the await call immediately after lockCardInputs()
-
-async function checkStepOne() {
-    const nv = document.getElementById('num_1').value;
-    const nu = document.getElementById('num_unit_1').value;
-    const dv = document.getElementById('den_1').value;
-    const du = document.getElementById('den_unit_1').value;
-
-    if (nv == "1" && nu == "mol_h2" && Math.abs(parseFloat(dv) - reactantMass) < 0.01 && du == "g_h2") {
-        const card = document.getElementById('node_1');
-        card.style.borderColor = "var(--combo-green)";
-        card.style.boxShadow = "0 0 15px rgba(0, 230, 118, 0.3)";
-        lockCardInputs(1);
-        await grantNodeXP(1);   // ← async XP call, awaited so toast fires in order
-
-        document.getElementById('op_2').style.display = "inline";
-        const node2 = document.getElementById('node_2');
-        node2.style.display = "flex";
-        setTimeout(() => {
-            node2.classList.remove('locked-link');
-            node2.classList.add('active-link');
-        }, 50);
-    } else {
-        applyErrorFlash(1);
-        alert("Connection Broken! Check that your units match across the diagonal boundary.");
-    }
-}
-
-async function checkStepTwo() {
-    const nv = document.getElementById('num_2').value;
-    const nu = document.getElementById('num_unit_2').value;
-    const dv = document.getElementById('den_2').value;
-    const du = document.getElementById('den_unit_2').value;
-
-    if (nv == "2" && nu == "mol_h2o" && dv == "2" && du == "mol_h2") {
-        const card = document.getElementById('node_2');
-        card.style.borderColor = "var(--combo-green)";
-        card.style.boxShadow = "0 0 15px rgba(0, 230, 118, 0.3)";
-        lockCardInputs(2);
-        await grantNodeXP(2);   // ← async XP call
-
-        document.getElementById('op_3').style.display = "inline";
-        const node3 = document.getElementById('node_3');
-        node3.style.display = "flex";
-        setTimeout(() => {
-            node3.classList.remove('locked-link');
-            node3.classList.add('active-link');
-        }, 50);
-    } else {
-        applyErrorFlash(2);
-        alert("Molar Ratio Conflict! Check your equation coefficients from the preparation ledger.");
-    }
-}
-
-async function checkStepThree() {
-    const nv = document.getElementById('num_3').value;
-    const nu = document.getElementById('num_unit_3').value;
-    const dv = document.getElementById('den_3').value;
-    const du = document.getElementById('den_unit_3').value;
-
-    if (Math.abs(parseFloat(nv) - productMass) < 0.01 && nu == "g_h2o" && dv == "1" && du == "mol_h2o") {
-        const card = document.getElementById('node_3');
-        card.style.borderColor = "var(--combo-green)";
-        card.style.boxShadow = "0 0 15px rgba(0, 230, 118, 0.3)";
-        lockCardInputs(3);
-        await grantNodeXP(3);   // ← async XP call
-
-        document.getElementById('op_eq').style.display = "inline";
-        document.getElementById('yieldNode').style.display = "block";
-
-        const finalCalculatedYield = ((15.0 / reactantMass) * (2 / 2) * productMass).toFixed(2);
-        document.getElementById('yieldValue').innerText = finalCalculatedYield + " g";
-        document.getElementById('actionsBar').style.display = "flex";
-    } else {
-        applyErrorFlash(3);
-        alert("Terminal Mass Error! Convert product moles back into exact physical mass units.");
-    }
-}
-
-function updateHeaderXP(data) {
-    const levelEl = document.querySelector('.user-status span:first-child');
-    const xpEl    = document.querySelector('.xp-display');
-    const barEl   = document.querySelector('.xp-bar-fill');
-
-    if (levelEl) levelEl.textContent = `LVL ${data.level}`;
-    if (xpEl)    xpEl.textContent    = `XP: ${data.total_xp}`;
-    if (barEl)   barEl.style.width   = `${data.level_progress_pct}%`;
-}
-
-async function grantNodeXP(nodeIndex) {
-    console.log(`[XP] Firing award for node ${nodeIndex}, problem {{ problem_id }}`);
-    try {
-        const res = await fetch('/award-xp/', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                problem_id: '{{ problem_id }}',
-                module: 2,
-                node_index: nodeIndex
-            })
-        });
-
-        console.log(`[XP] Response status: ${res.status}`);
-
-        if (!res.ok) {
-            console.error(`[XP] Server rejected request: ${res.status} ${res.statusText}`);
-            return;
-        }
-
-        const data = await res.json();
-        console.log('[XP] Server response:', data);
-
-        if (data.success) {
-            updateHeaderXP(data);
-            const toast = data.leveled_up
-                ? `⬆ LEVEL UP! Now LVL ${data.level} — +${data.xp_awarded} XP`
-                : `+${data.xp_awarded} XP Awarded`;
-            alert(toast);
-        } else {
-            console.warn('[XP] Award returned success:false —', data.message);
-        }
-    } catch (err) {
-        console.error('[XP] Fetch threw an exception:', err);
-    }
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

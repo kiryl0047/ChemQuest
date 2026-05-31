@@ -164,6 +164,68 @@
     }
     .balance-status.ok  { background: #065F46; color: #A7F3D0; }
     .balance-status.err { background: #7F1D1D; color: #FCA5A5; }
+
+    /* ── Full Periodic Table ── */
+    .periodic-popover {
+        background: var(--bg-dark);
+        border: 1px solid #2A303C;
+        padding: 15px;
+        border-radius: 6px;
+        margin-top: 20px;
+    }
+
+    .pt-el {
+        position: relative;
+        aspect-ratio: 1;
+        background: #1A1F28;
+        border: 1px solid #2A303C;
+        border-radius: 3px;
+        cursor: pointer;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        padding: 1px;
+        transition: border-color 0.15s, transform 0.12s;
+        user-select: none;
+        overflow: visible;
+    }
+    .pt-el:hover    { transform: scale(1.25); z-index: 50; border-color: #FFF !important; }
+    .pt-el:active   { transform: scale(1.05); }
+    .pt-el.pt-empty { background: transparent; border-color: transparent; pointer-events: none; }
+    .pt-el.pt-label { cursor: default; pointer-events: none; display: flex; align-items: center;
+                    justify-content: center; font-size: 7px; font-weight: bold; text-align: center; }
+    .pt-el.pt-hl    { box-shadow: 0 0 6px rgba(255,214,0,0.45); }
+
+    .pt-num  { font-size: 7px; color: rgba(255,255,255,0.3); line-height: 1; align-self: flex-start; padding-left: 2px; }
+    .pt-sym  { font-size: 11px; font-weight: bold; line-height: 1; }
+    .pt-mass { font-size: 6px; color: rgba(255,255,255,0.4); line-height: 1; margin-top: 1px; }
+
+    .pt-tip {
+        position: absolute;
+        bottom: calc(100% + 5px);
+        left: 50%;
+        transform: translateX(-50%);
+        background: #0F1115;
+        border: 1px solid #2A303C;
+        border-radius: 4px;
+        padding: 6px 10px;
+        font-size: 11px;
+        white-space: nowrap;
+        z-index: 200;
+        pointer-events: none;
+        opacity: 0;
+        transition: opacity 0.15s;
+        text-align: center;
+    }
+    .pt-el:hover .pt-tip { opacity: 1; }
+    .pt-tip-name  { color: var(--cyber-teal); font-weight: bold; display: block; margin-bottom: 2px; }
+    .pt-tip-mass  { color: var(--constant-gold); }
+    .pt-tip-cat   { color: var(--text-muted); font-size: 10px; display: block; margin-top: 2px; }
+
+    .pt-legend-item { display:flex; align-items:center; gap:5px; font-size:10px;
+                    color:var(--text-muted); font-weight:bold; letter-spacing:0.5px; }
+    .pt-legend-dot  { width:8px; height:8px; border-radius:2px; flex-shrink:0; opacity:0.85; }
 </style>
 
 <!-- ── Ledger Header ── -->
@@ -242,13 +304,21 @@
     </div>
     {% endfor %}
 
-    <!-- Atomic Databank -->
-    <div class="periodic-popover">
+    <!-- Atomic Databank — Full Periodic Table -->
+    <div class="periodic-popover" id="periodicTableContainer">
         <span style="font-size: 11px; color: var(--text-muted); display: block; margin-bottom: 10px;
-                     font-weight: bold; letter-spacing: 1px;">ATOMIC DATABANK REFERENCE</span>
-        <div class="periodic-grid" id="periodicGrid">
-            <!-- Populated by JS from IUPAC_MASSES below -->
-        </div>
+                     font-weight: bold; letter-spacing: 1px;">ATOMIC DATABANK REFERENCE — CLICK ANY ELEMENT TO COPY MASS</span>
+        
+        <div id="ptToastMsg" style="font-size:12px; color:var(--combo-green); font-weight:bold; min-height:16px; margin-bottom:8px;">&nbsp;</div>
+
+        <!-- Legend -->
+        <div id="ptLegend" style="display:flex; flex-wrap:wrap; gap:8px; margin-bottom:12px;"></div>
+
+        <!-- Main grid -->
+        <div id="ptGrid" style="display:grid; grid-template-columns:repeat(18,1fr); gap:2px; margin-bottom:6px;"></div>
+
+        <!-- Footnote rows (lanthanides + actinides) -->
+        <div id="ptFootnote" style="display:grid; grid-template-columns:repeat(18,1fr); gap:2px;"></div>
     </div>
 
     <button class="btn-action"
@@ -260,6 +330,36 @@
 </div>
 
 <script>
+// ─────────────────────────────────────────────────────────────────────────────
+// XP helpers (shared pattern with Module 2)
+// ─────────────────────────────────────────────────────────────────────────────
+function updateHeaderXP(data) {
+    const levelEl = document.getElementById('xp-level-display');
+    const xpEl    = document.getElementById('xp-total-display');
+    const barEl   = document.getElementById('xp-bar-fill');
+    if (levelEl) levelEl.textContent = `LVL ${data.level}`;
+    if (xpEl)    xpEl.textContent    = `XP: ${data.total_xp}`;
+    if (barEl)   barEl.style.width   = `${data.progress_pct}%`;
+}
+
+async function awardXP(xpAmount, reason) {
+    try {
+        const res = await fetch('/award-xp/', {
+            method:  'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body:    JSON.stringify({ xp_amount: xpAmount, reason }),
+        });
+        if (!res.ok) return;
+        const data = await res.json();
+        if (data.success) {
+            updateHeaderXP(data);
+            showToast(`+${data.xp_awarded} XP — ${reason.replaceAll('_', ' ')}`, 'ok');
+        }
+    } catch (err) {
+        console.warn('[XP] Award failed silently:', err);
+    }
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 // Config injected from Django
 // ─────────────────────────────────────────────────────────────────────────────
@@ -376,19 +476,254 @@ document.addEventListener('input', e => {
     }
 });
 
-(function buildPeriodicGrid() {
-    const grid = document.getElementById('periodicGrid');
-    Object.entries(IUPAC_MASSES).forEach(([sym, mass]) => {
-        const btn = document.createElement('div');
-        btn.className = 'element-node';
-        btn.innerHTML = `<span class="element-symbol">${sym}</span><span class="element-weight">${mass}</span>`;
-        btn.title = `Click to copy ${sym} mass (${mass})`;
-        btn.onclick = () => {
+(function buildPeriodicTable() {
+    const CATS = {
+        alkali:     { label: 'Alkali Metal',      color: '#FF6B35' },
+        alkaline:   { label: 'Alkaline Earth',    color: '#FFD600' },
+        transition: { label: 'Transition Metal',  color: '#A78BFA' },
+        post:       { label: 'Post-Trans. Metal', color: '#34D399' },
+        metalloid:  { label: 'Metalloid',         color: '#60A5FA' },
+        reactive:   { label: 'Reactive Nonmetal', color: '#00F0FF' },
+        halogen:    { label: 'Halogen',           color: '#F472B6' },
+        noble:      { label: 'Noble Gas',         color: '#94A3B8' },
+        lanthanide: { label: 'Lanthanide',        color: '#FB923C' },
+        actinide:   { label: 'Actinide',          color: '#E879F9' },
+    };
+
+    // [atomic_number, symbol, name, mass, category, period, group]
+    // period/group = null for lanthanide/actinide footnote rows
+    const ELDATA = [
+        [1,'H','Hydrogen',1.008,'reactive',1,1],
+        [2,'He','Helium',4.003,'noble',1,18],
+        [3,'Li','Lithium',6.941,'alkali',2,1],
+        [4,'Be','Beryllium',9.012,'alkaline',2,2],
+        [5,'B','Boron',10.811,'metalloid',2,13],
+        [6,'C','Carbon',12.011,'reactive',2,14],
+        [7,'N','Nitrogen',14.007,'reactive',2,15],
+        [8,'O','Oxygen',15.999,'reactive',2,16],
+        [9,'F','Fluorine',18.998,'halogen',2,17],
+        [10,'Ne','Neon',20.180,'noble',2,18],
+        [11,'Na','Sodium',22.990,'alkali',3,1],
+        [12,'Mg','Magnesium',24.305,'alkaline',3,2],
+        [13,'Al','Aluminum',26.982,'post',3,13],
+        [14,'Si','Silicon',28.086,'metalloid',3,14],
+        [15,'P','Phosphorus',30.974,'reactive',3,15],
+        [16,'S','Sulfur',32.065,'reactive',3,16],
+        [17,'Cl','Chlorine',35.453,'halogen',3,17],
+        [18,'Ar','Argon',39.948,'noble',3,18],
+        [19,'K','Potassium',39.098,'alkali',4,1],
+        [20,'Ca','Calcium',40.078,'alkaline',4,2],
+        [21,'Sc','Scandium',44.956,'transition',4,3],
+        [22,'Ti','Titanium',47.867,'transition',4,4],
+        [23,'V','Vanadium',50.942,'transition',4,5],
+        [24,'Cr','Chromium',51.996,'transition',4,6],
+        [25,'Mn','Manganese',54.938,'transition',4,7],
+        [26,'Fe','Iron',55.845,'transition',4,8],
+        [27,'Co','Cobalt',58.933,'transition',4,9],
+        [28,'Ni','Nickel',58.693,'transition',4,10],
+        [29,'Cu','Copper',63.546,'transition',4,11],
+        [30,'Zn','Zinc',65.380,'transition',4,12],
+        [31,'Ga','Gallium',69.723,'post',4,13],
+        [32,'Ge','Germanium',72.630,'metalloid',4,14],
+        [33,'As','Arsenic',74.922,'metalloid',4,15],
+        [34,'Se','Selenium',78.971,'reactive',4,16],
+        [35,'Br','Bromine',79.904,'halogen',4,17],
+        [36,'Kr','Krypton',83.798,'noble',4,18],
+        [37,'Rb','Rubidium',85.468,'alkali',5,1],
+        [38,'Sr','Strontium',87.620,'alkaline',5,2],
+        [39,'Y','Yttrium',88.906,'transition',5,3],
+        [40,'Zr','Zirconium',91.224,'transition',5,4],
+        [41,'Nb','Niobium',92.906,'transition',5,5],
+        [42,'Mo','Molybdenum',95.950,'transition',5,6],
+        [43,'Tc','Technetium',98.000,'transition',5,7],
+        [44,'Ru','Ruthenium',101.07,'transition',5,8],
+        [45,'Rh','Rhodium',102.906,'transition',5,9],
+        [46,'Pd','Palladium',106.420,'transition',5,10],
+        [47,'Ag','Silver',107.868,'transition',5,11],
+        [48,'Cd','Cadmium',112.411,'transition',5,12],
+        [49,'In','Indium',114.818,'post',5,13],
+        [50,'Sn','Tin',118.710,'post',5,14],
+        [51,'Sb','Antimony',121.760,'metalloid',5,15],
+        [52,'Te','Tellurium',127.600,'metalloid',5,16],
+        [53,'I','Iodine',126.904,'halogen',5,17],
+        [54,'Xe','Xenon',131.293,'noble',5,18],
+        [55,'Cs','Cesium',132.905,'alkali',6,1],
+        [56,'Ba','Barium',137.327,'alkaline',6,2],
+        [57,'La','Lanthanum',138.905,'lanthanide',6,3],
+        [72,'Hf','Hafnium',178.490,'transition',6,4],
+        [73,'Ta','Tantalum',180.948,'transition',6,5],
+        [74,'W','Tungsten',183.840,'transition',6,6],
+        [75,'Re','Rhenium',186.207,'transition',6,7],
+        [76,'Os','Osmium',190.230,'transition',6,8],
+        [77,'Ir','Iridium',192.217,'transition',6,9],
+        [78,'Pt','Platinum',195.084,'transition',6,10],
+        [79,'Au','Gold',196.967,'transition',6,11],
+        [80,'Hg','Mercury',200.592,'transition',6,12],
+        [81,'Tl','Thallium',204.383,'post',6,13],
+        [82,'Pb','Lead',207.200,'post',6,14],
+        [83,'Bi','Bismuth',208.980,'post',6,15],
+        [84,'Po','Polonium',209.000,'metalloid',6,16],
+        [85,'At','Astatine',210.000,'halogen',6,17],
+        [86,'Rn','Radon',222.000,'noble',6,18],
+        [87,'Fr','Francium',223.000,'alkali',7,1],
+        [88,'Ra','Radium',226.000,'alkaline',7,2],
+        [89,'Ac','Actinium',227.000,'actinide',7,3],
+        [104,'Rf','Rutherfordium',267.000,'transition',7,4],
+        [105,'Db','Dubnium',268.000,'transition',7,5],
+        [106,'Sg','Seaborgium',271.000,'transition',7,6],
+        [107,'Bh','Bohrium',272.000,'transition',7,7],
+        [108,'Hs','Hassium',270.000,'transition',7,8],
+        [109,'Mt','Meitnerium',278.000,'transition',7,9],
+        [110,'Ds','Darmstadtium',281.000,'transition',7,10],
+        [111,'Rg','Roentgenium',282.000,'transition',7,11],
+        [112,'Cn','Copernicium',285.000,'transition',7,12],
+        [113,'Nh','Nihonium',286.000,'post',7,13],
+        [114,'Fl','Flerovium',289.000,'post',7,14],
+        [115,'Mc','Moscovium',290.000,'post',7,15],
+        [116,'Lv','Livermorium',293.000,'post',7,16],
+        [117,'Ts','Tennessine',294.000,'halogen',7,17],
+        [118,'Og','Oganesson',294.000,'noble',7,18],
+        // Lanthanides — footnote row
+        [58,'Ce','Cerium',140.116,'lanthanide',null,null],
+        [59,'Pr','Praseodymium',140.908,'lanthanide',null,null],
+        [60,'Nd','Neodymium',144.242,'lanthanide',null,null],
+        [61,'Pm','Promethium',145.000,'lanthanide',null,null],
+        [62,'Sm','Samarium',150.360,'lanthanide',null,null],
+        [63,'Eu','Europium',151.964,'lanthanide',null,null],
+        [64,'Gd','Gadolinium',157.250,'lanthanide',null,null],
+        [65,'Tb','Terbium',158.925,'lanthanide',null,null],
+        [66,'Dy','Dysprosium',162.500,'lanthanide',null,null],
+        [67,'Ho','Holmium',164.930,'lanthanide',null,null],
+        [68,'Er','Erbium',167.259,'lanthanide',null,null],
+        [69,'Tm','Thulium',168.934,'lanthanide',null,null],
+        [70,'Yb','Ytterbium',173.045,'lanthanide',null,null],
+        [71,'Lu','Lutetium',174.967,'lanthanide',null,null],
+        // Actinides — footnote row
+        [90,'Th','Thorium',232.038,'actinide',null,null],
+        [91,'Pa','Protactinium',231.036,'actinide',null,null],
+        [92,'U','Uranium',238.029,'actinide',null,null],
+        [93,'Np','Neptunium',237.000,'actinide',null,null],
+        [94,'Pu','Plutonium',244.000,'actinide',null,null],
+        [95,'Am','Americium',243.000,'actinide',null,null],
+        [96,'Cm','Curium',247.000,'actinide',null,null],
+        [97,'Bk','Berkelium',247.000,'actinide',null,null],
+        [98,'Cf','Californium',251.000,'actinide',null,null],
+        [99,'Es','Einsteinium',252.000,'actinide',null,null],
+        [100,'Fm','Fermium',257.000,'actinide',null,null],
+        [101,'Md','Mendelevium',258.000,'actinide',null,null],
+        [102,'No','Nobelium',259.000,'actinide',null,null],
+        [103,'Lr','Lawrencium',266.000,'actinide',null,null],
+    ];
+
+    // Sync IUPAC_MASSES so existing computeMolarMass() keeps working
+    ELDATA.forEach(([,sym,,mass]) => { IUPAC_MASSES[sym] = mass; });
+
+    let _ptToast;
+    function ptToast(msg) {
+        const el = document.getElementById('ptToastMsg');
+        if (!el) return;
+        el.textContent = msg;
+        clearTimeout(_ptToast);
+        _ptToast = setTimeout(() => { el.textContent = '\u00a0'; }, 2200);
+    }
+
+    function makeEl(data) {
+        const div = document.createElement('div');
+        if (!data) { div.className = 'pt-el pt-empty'; return div; }
+        const [num, sym, name, mass, cat] = data;
+        const color = CATS[cat]?.color || '#888';
+        div.className = 'pt-el';
+        div.style.cssText = `border-color:${color}40; background:${color}12;`;
+        div.innerHTML = `
+            <span class="pt-num">${num}</span>
+            <span class="pt-sym" style="color:${color}">${sym}</span>
+            <span class="pt-mass">${mass.toFixed(2)}</span>
+            <div class="pt-tip">
+                <span class="pt-tip-name">${sym} — ${name}</span>
+                <span class="pt-tip-mass">${mass} g/mol</span>
+                <span class="pt-tip-cat">${CATS[cat]?.label || cat}</span>
+            </div>`;
+        div.addEventListener('click', () => {
             navigator.clipboard?.writeText(String(mass)).catch(() => {});
-            showToast(`${sym}: ${mass} g/mol copied`);
-        };
-        grid.appendChild(btn);
-    });
+            ptToast(`${sym}: ${mass} g/mol copied`);
+            div.classList.add('pt-hl');
+            setTimeout(() => div.classList.remove('pt-hl'), 800);
+        });
+        return div;
+    }
+
+    // Build legend
+    const legendEl = document.getElementById('ptLegend');
+    if (legendEl) {
+        Object.entries(CATS).forEach(([, {label, color}]) => {
+            const item = document.createElement('span');
+            item.className = 'pt-legend-item';
+            item.innerHTML = `<span class="pt-legend-dot" style="background:${color}"></span>${label}`;
+            legendEl.appendChild(item);
+        });
+    }
+
+    // Fill 7×18 main grid
+    const gridMap = Array.from({length: 7}, () => Array(18).fill(null));
+    ELDATA.filter(([,,,,,p]) => p !== null)
+          .forEach(el => { gridMap[el[5]-1][el[6]-1] = el; });
+
+    const ptGrid = document.getElementById('ptGrid');
+    if (ptGrid) {
+        gridMap.forEach((row, rIdx) => {
+            row.forEach((el, cIdx) => {
+                // Period 6 col 3 → La placeholder; Period 7 col 3 → Ac placeholder
+                if (rIdx === 5 && cIdx === 2) {
+                    const d = document.createElement('div');
+                    d.className = 'pt-el pt-label';
+                    d.style.cssText = `background:${CATS.lanthanide.color}18; border-color:${CATS.lanthanide.color}50; color:${CATS.lanthanide.color};`;
+                    d.innerHTML = '57–71<br>↓';
+                    ptGrid.appendChild(d); return;
+                }
+                if (rIdx === 6 && cIdx === 2) {
+                    const d = document.createElement('div');
+                    d.className = 'pt-el pt-label';
+                    d.style.cssText = `background:${CATS.actinide.color}18; border-color:${CATS.actinide.color}50; color:${CATS.actinide.color};`;
+                    d.innerHTML = '89–103<br>↓';
+                    ptGrid.appendChild(d); return;
+                }
+                ptGrid.appendChild(makeEl(el));
+            });
+        });
+    }
+
+    // Footnote rows
+    const ftGrid = document.getElementById('ptFootnote');
+    if (!ftGrid) return;
+
+    function addFootnoteRow(label, elements, color) {
+        for (let i = 0; i < 3; i++) {
+            const sp = document.createElement('div');
+            sp.className = 'pt-el pt-empty';
+            ftGrid.appendChild(sp);
+        }
+        const lbl = document.createElement('div');
+        lbl.className = 'pt-el pt-label';
+        lbl.style.cssText = `background:${color}18; border-color:${color}50; color:${color}; font-size:8px;`;
+        lbl.textContent = label;
+        ftGrid.appendChild(lbl);
+        elements.forEach(el => ftGrid.appendChild(makeEl(el)));
+        // pad to 18 cols
+        const filled = 4 + elements.length;
+        for (let i = filled; i < 18; i++) {
+            const sp = document.createElement('div');
+            sp.className = 'pt-el pt-empty';
+            ftGrid.appendChild(sp);
+        }
+    }
+
+    // Insert gap row
+    const gapDiv = document.createElement('div');
+    gapDiv.style.cssText = 'grid-column: 1 / -1; height: 8px;';
+    ftGrid.appendChild(gapDiv);
+
+    addFootnoteRow('Ln', ELDATA.filter(([num,,,, c]) => c === 'lanthanide' && num !== 57), CATS.lanthanide.color);
+    addFootnoteRow('An', ELDATA.filter(([num,,,, c]) => c === 'actinide'   && num !== 89), CATS.actinide.color);
 })();
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -419,6 +754,8 @@ async function checkBalancing() {
         balancingCleared = true;
         statusEl.textContent = 'STABILIZED';
         statusEl.className   = 'balance-status ok';
+
+        await awardXP(30, 'equation_balanced');
 
         // Lock coefficient inputs
         ALL_FORMULAS.forEach((_, i) => {
@@ -497,7 +834,7 @@ function computeMolarMass(formula) {
     }, 0);
 }
 
-function lockAndProceed() {
+async function lockAndProceed() {
     if (!balancingCleared) {
         showToast('Stabilize the chemical chamber first!', 'err');
         return;
@@ -535,6 +872,20 @@ function lockAndProceed() {
 
     if (allOk) {
         saveState();
+
+        const lockedRecord = {};
+        formulas.forEach(formula => {
+            const val = parseFloat(document.getElementById(`mass_${formula}`)?.value);
+            if (!isNaN(val)) lockedRecord[formula] = val;
+        });
+        try {
+            localStorage.setItem(
+                `cq_constants_locked_${PROBLEM_ID}`,
+                JSON.stringify(lockedRecord)
+            );
+        } catch(e) {}
+
+        await awardXP(30, 'constants_locked');
 
         // Check if the Django template boolean is flagged true
         const isLimiting = "{{ is_limiting_problem }}".toLowerCase() === "true";
