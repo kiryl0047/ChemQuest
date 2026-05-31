@@ -80,16 +80,16 @@
             border-top: 1px solid #2A303C;
         }
 
-        /* ── Canned Constants Tray ── */
+        /* ── Canned Constants Tray (Shifted to Left) ── */
         #cq-tray {
             position: fixed;
             bottom: 20px;
-            right: 20px;
+            left: 20px; /* Changed from right: 20px */
             z-index: 8000;
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             display: flex;
             flex-direction: column;
-            align-items: flex-end;
+            align-items: flex-start; /* Changed from flex-end to align with the left edge */
             gap: 0;
         }
 
@@ -411,38 +411,33 @@
     };
 
     // ── Boot ─────────────────────────────────────────────────────────────────
-    const probId    = getProblemIdFromUrl();
-    const constants = probId ? getLockedConstants(probId) : {};
-    const currentPath = window.location.pathname;
-    renderTray(constants, probId);
+    const probId = getProblemIdFromUrl();
     
-    // Explicitly verify the user is working inside Module 1, 2, or 3 workspaces
-    const isWorkspaceRoute = currentPath.includes('/module1/') || 
-                             currentPath.includes('/module2/') || 
-                             currentPath.includes('/module3/');
-
-    if (probId && isWorkspaceRoute) {
-        // Render the tray normally if we are inside a valid module route workspace
-        const constants = getLockedConstants(probId);
-        renderTray(constants, probId);
-
-        // Re-render when Module 1 writes the lock record
-        window.addEventListener('storage', function(e) {
-            if (e.key === `cq_constants_locked_${probId}` || e.key === `cq_m1_${probId}`) {
-                const fresh = getLockedConstants(probId);
-                renderTray(fresh, probId);
-            }
-        });
-    } else {
-        // Completely eliminate the tray markup structural nodes from rendering on other routes
-        const tabEl = document.getElementById('cq-tray-tab');
-        const panelEl = document.getElementById('cq-tray-panel');
-        if (tabEl) tabEl.style.display = 'none';
-        if (panelEl) panelEl.style.display = 'none';
+    // Check if the current page belongs to Module 1, 2, or 3
+    function isAllowedModule() {
+        const path = window.location.pathname;
+        // Adjust these keywords/patterns to match your exact module routing structures
+        return path.includes('/ledger/') ||                // Module 1: Preparation Ledger
+               path.includes('/workspace/') ||             // Module 2: Standard Workspace
+               path.includes('/limiting-workspace/');     // Module 3: Limiting Workspace
     }
 
+    const trayElement = document.getElementById('cq-tray');
+
+    if (probId && isAllowedModule()) {
+        // If it's a valid module path, load constants and render them
+        const constants = getLockedConstants(probId);
+        renderTray(constants, probId);
+    } else {
+        // If not in modules 1, 2, or 3 (e.g., dashboard, lobby, settings), remove it entirely
+        if (trayElement) {
+            trayElement.remove();
+        }
+    }
+
+    // ── Re-render when Module 1 writes the lock record ───────────────────────
     window.addEventListener('storage', function(e) {
-        if (!probId) return;
+        if (!probId || !isAllowedModule()) return; // Added guard clause here too
         if (e.key === `cq_constants_locked_${probId}` || e.key === `cq_m1_${probId}`) {
             const fresh = getLockedConstants(probId);
             renderTray(fresh, probId);
