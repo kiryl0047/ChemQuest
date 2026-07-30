@@ -141,36 +141,6 @@ class Substance(models.Model):
         return f"{self.formula} ({self.molar_mass} g/mol)"
 
 # ---------------------------------------------------------------------------
-# Top-level reaction problem
-# ---------------------------------------------------------------------------
-class StoichiometryProblem(models.Model):
-    problem_id            = models.CharField(max_length=50, unique=True)
-    title                 = models.CharField(max_length=200)
-    prompt                = models.TextField()
-    reactants_str         = models.CharField(max_length=200)
-    products_str          = models.CharField(max_length=200)
-    correct_coefficients  = models.CharField(max_length=50)
-    is_limiting_problem   = models.BooleanField(default=False)
- 
-    def __str__(self):
-        return f"[{self.problem_id}] {self.title}"
- 
-    def parse_side(self, side_str):
-        result = []
-        for token in side_str.split(','):
-            coeff_str, formula = token.strip().split(':')
-            result.append({'coeff': int(coeff_str), 'formula': formula.strip()})
-        return result
- 
-    @property
-    def reactants(self):
-        return self.parse_side(self.reactants_str)
- 
-    @property
-    def products(self):
-        return self.parse_side(self.products_str)
-
-# ---------------------------------------------------------------------------
 # Sub-question / part
 # ---------------------------------------------------------------------------
 class ProblemPart(models.Model):
@@ -239,24 +209,6 @@ class ProblemPart(models.Model):
             ]
  
         return nodes
-
-
-# ---------------------------------------------------------------------------
-# Telemetry log
-# ---------------------------------------------------------------------------
-class StudentTelemetryLog(models.Model):
-    user           = models.ForeignKey(User, on_delete=models.CASCADE,
-                                       null=True, blank=True)
-    problem_id     = models.CharField(max_length=50)
-    part_label     = models.CharField(max_length=10, default='a')
-    module_phase   = models.IntegerField(default=1)
-    is_correct     = models.BooleanField(default=False)
-    attempts_count = models.IntegerField(default=0)
-    created_at     = models.DateTimeField(auto_now_add=True)
- 
-    def __str__(self):
-        return f"Telemetry-{self.problem_id}-{self.part_label}"
-
 
 # ---------------------------------------------------------------------------
 # Private helpers
