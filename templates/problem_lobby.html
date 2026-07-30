@@ -7,7 +7,70 @@
         padding: 15px 20px;
         background: #171A21;
         border-radius: 4px;
-        margin-bottom: 30px;
+        margin-bottom: 25px;
+    }
+
+    /* Filter Controls Ribbon */
+    .filter-ribbon {
+        display: flex;
+        gap: 10px;
+        flex-wrap: wrap;
+        margin-bottom: 25px;
+        background: #171A21;
+        padding: 12px;
+        border-radius: 6px;
+        border: 1px solid #2A303C;
+    }
+
+    .filter-btn {
+        background: var(--bg-dark);
+        border: 1px solid #2A303C;
+        color: var(--text-muted);
+        padding: 8px 16px;
+        font-size: 12px;
+        font-weight: bold;
+        border-radius: 4px;
+        cursor: pointer;
+        letter-spacing: 0.5px;
+        transition: all 0.2s ease;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+
+    .filter-btn:hover {
+        border-color: #4A5568;
+        color: var(--text-light);
+    }
+
+    .filter-btn.active {
+        background: rgba(0, 240, 255, 0.08);
+        border-color: var(--cyber-teal);
+        color: var(--cyber-teal);
+        box-shadow: 0 0 8px rgba(0, 240, 255, 0.2);
+    }
+
+    /* Specific Tab Highlights when Active */
+    .filter-btn[data-type="mol_to_mol"].active { border-color: #4A90D9; color: #4A90D9; background: rgba(74, 144, 217, 0.1); }
+    .filter-btn[data-type="mol_to_g"].active   { border-color: var(--combo-green); color: var(--combo-green); background: rgba(0, 255, 136, 0.08); }
+    .filter-btn[data-type="g_to_mol"].active   { border-color: var(--constant-gold); color: var(--constant-gold); background: rgba(255, 184, 0, 0.08); }
+    .filter-btn[data-type="g_to_g"].active     { border-color: var(--cyber-teal); color: var(--cyber-teal); background: rgba(0, 240, 255, 0.08); }
+
+    /* Fix: Prevent badge text from blending into active background */
+    .filter-count {
+        font-size: 10px;
+        padding: 2px 7px;
+        border-radius: 10px;
+        background: #2A303C;
+        color: var(--text-light);
+        font-weight: bold;
+        transition: all 0.2s ease;
+    }
+
+    .filter-btn.active .filter-count {
+        background: #0B0E14;
+        color: #FFFFFF;
+        border: 1px solid rgba(255, 255, 255, 0.15);
     }
 
     .problem-grid {
@@ -105,27 +168,6 @@
         box-shadow: 0 0 10px rgba(0, 240, 255, 0.4);
     }
 
-    .conversion-legend {
-        display: flex;
-        gap: 15px;
-        flex-wrap: wrap;
-        margin-bottom: 25px;
-        font-size: 12px;
-    }
-
-    .legend-item {
-        display: flex;
-        align-items: center;
-        gap: 6px;
-        color: var(--text-muted);
-    }
-
-    .legend-dot {
-        width: 10px;
-        height: 10px;
-        border-radius: 50%;
-    }
-
     /* Modal Overlay Blur & Dimming */
     .modal-overlay {
         position: fixed;
@@ -133,7 +175,7 @@
         left: 0;
         width: 100%;
         height: 100%;
-        background: rgba(11, 14, 20, 0.85); /* Matches var(--bg-dark) with opacity */
+        background: rgba(11, 14, 20, 0.85);
         backdrop-filter: blur(4px);
         display: flex;
         justify-content: center;
@@ -141,10 +183,9 @@
         z-index: 99999;
     }
 
-    /* Modal Window Base Box */
     .modal-box {
-        background: #171A21; /* Matches metric-card background */
-        border: 1px solid var(--coral-red, #FF3D00); /* Warn indicator highlights */
+        background: #171A21;
+        border: 1px solid var(--coral-red, #FF3D00);
         border-radius: 6px;
         width: 100%;
         max-width: 460px;
@@ -164,22 +205,15 @@
         padding-bottom: 12px;
     }
 
-    .warning-icon {
-        font-size: 22px;
-    }
+    .warning-icon { font-size: 22px; }
+    .modal-body { margin-bottom: 24px; }
 
-    .modal-body {
-        margin-bottom: 24px;
-    }
-
-    /* Actions Ribbon Layout */
     .modal-actions {
         display: flex;
         justify-content: flex-end;
         gap: 12px;
     }
 
-    /* Base Modal Button Core Structure */
     .btn-modal {
         padding: 10px 18px;
         font-size: 13px;
@@ -221,21 +255,37 @@
 <div class="lobby-header">
     <span style="color: var(--cyber-teal); font-weight: bold; font-size: 12px; letter-spacing: 2px;">CHEMQUEST // PROBLEM SELECTION LOBBY</span>
     <p style="margin: 6px 0 0 0; color: var(--text-light); font-size: 14px;">
-        Select a reaction set to begin. Each problem contains sequenced sub-parts requiring dimensional analysis chain-building.
+        Select a reaction set to begin. Filter by target conversion type to focus on specific stoichiometry mechanics.
     </p>
 </div>
 
-<div class="conversion-legend">
-    <span style="color: var(--text-muted); font-weight: bold; font-size: 11px; letter-spacing: 1px; align-self: center;">CONVERSION TYPES:</span>
-    <span class="legend-item"><span class="legend-dot" style="background:#4A90D9;"></span> mol → mol</span>
-    <span class="legend-item"><span class="legend-dot" style="background:var(--combo-green);"></span> mol → g</span>
-    <span class="legend-item"><span class="legend-dot" style="background:var(--constant-gold);"></span> g → mol</span>
-    <span class="legend-item"><span class="legend-dot" style="background:var(--cyber-teal);"></span> g → g</span>
+<!-- Category Filtering Tabs Ribbon -->
+<div class="filter-ribbon">
+    <button class="filter-btn active" onclick="filterCategory('all', this)" data-type="all">
+        ALL TYPES <span class="filter-count" id="count-all">0</span>
+    </button>
+    <button class="filter-btn" onclick="filterCategory('mol_to_mol', this)" data-type="mol_to_mol">
+        <span style="display:inline-block; width:8px; height:8px; border-radius:50%; background:#4A90D9;"></span>
+        mol → mol <span class="filter-count" id="count-mol_to_mol">0</span>
+    </button>
+    <button class="filter-btn" onclick="filterCategory('mol_to_g', this)" data-type="mol_to_g">
+        <span style="display:inline-block; width:8px; height:8px; border-radius:50%; background:var(--combo-green);"></span>
+        mol → g <span class="filter-count" id="count-mol_to_g">0</span>
+    </button>
+    <button class="filter-btn" onclick="filterCategory('g_to_mol', this)" data-type="g_to_mol">
+        <span style="display:inline-block; width:8px; height:8px; border-radius:50%; background:var(--constant-gold);"></span>
+        g → mol <span class="filter-count" id="count-g_to_mol">0</span>
+    </button>
+    <button class="filter-btn" onclick="filterCategory('g_to_g', this)" data-type="g_to_g">
+        <span style="display:inline-block; width:8px; height:8px; border-radius:50%; background:var(--cyber-teal);"></span>
+        g → g <span class="filter-count" id="count-g_to_g">0</span>
+    </button>
 </div>
 
-<div class="problem-grid">
+<div class="problem-grid" id="problemGrid">
     {% for problem in problems %}
-    <div class="problem-card">
+    <!-- Serializing all contained conversion types into data-conversions attribute -->
+    <div class="problem-card" data-conversions="{% for part in problem.parts.all %}{{ part.conversion_type }} {% endfor %}">
         <div class="problem-card-header">
             <div>
                 <p class="problem-title">
@@ -270,9 +320,8 @@
         </a>
         
         {% if problem.has_telemetry %}
-            <button href="{% url 'reset_problem_telemetry' problem.problem_id %}" 
-            onclick="return performSystemWipe('{{ problem.problem_id }}');"
-            style="text-decoration: none; padding: 8px 12px; border: 1px dashed var(--coral-red); color: var(--coral-red); font-size: 13px; border-radius: 4px; font-weight: bold; display: inline-flex; align-items: center; background-color: transparent;">
+            <button onclick="return performSystemWipe('{{ problem.problem_id }}');"
+            style="text-decoration: none; padding: 8px 12px; border: 1px dashed var(--coral-red); color: var(--coral-red); font-size: 13px; border-radius: 4px; font-weight: bold; display: inline-flex; align-items: center; background-color: transparent; cursor: pointer;">
                 🔄 Retry
             </button>
         {% else %}
@@ -287,6 +336,12 @@
     </p>
     {% endfor %}
 
+    <!-- Empty search/filter dynamic notice -->
+    <div id="noResultsNotice" style="display: none; text-align: center; padding: 40px; background: #171A21; border: 1px dashed #2A303C; border-radius: 8px;">
+        <p style="color: var(--text-muted); margin: 0; font-size: 15px;">No problems available under this conversion category.</p>
+    </div>
+
+    <!-- System Wipe Confirmation Modal -->
     <div id="cyberConfirmModal" class="modal-overlay" style="display: none;">
         <div class="modal-box">
             <div class="modal-header">
@@ -304,41 +359,81 @@
     </div>
 </div>
 
-
 <script>
+// Dynamic Category Filtering logic
+function filterCategory(targetType, btnElement) {
+    // 1. Manage Active State on Tab Buttons
+    document.querySelectorAll('.filter-btn').forEach(btn => btn.classList.remove('active'));
+    btnElement.classList.add('active');
+
+    // 2. Hide/Show Cards
+    const cards = document.querySelectorAll('.problem-card');
+    let visibleCount = 0;
+
+    cards.forEach(card => {
+        const types = card.getAttribute('data-conversions') || '';
+        
+        if (targetType === 'all' || types.includes(targetType)) {
+            card.style.display = 'block';
+            visibleCount++;
+        } else {
+            card.style.display = 'none';
+        }
+    });
+
+    // 3. Toggle empty state indicator
+    const noResults = document.getElementById('noResultsNotice');
+    if (noResults) {
+        noResults.style.display = visibleCount === 0 ? 'block' : 'none';
+    }
+}
+
+// Compute dynamic badges count on load
+function updateCategoryCounters() {
+    const cards = document.querySelectorAll('.problem-card');
+    const counts = {
+        all: cards.length,
+        mol_to_mol: 0,
+        mol_to_g: 0,
+        g_to_mol: 0,
+        g_to_g: 0
+    };
+
+    cards.forEach(card => {
+        const types = card.getAttribute('data-conversions') || '';
+        if (types.includes('mol_to_mol')) counts.mol_to_mol++;
+        if (types.includes('mol_to_g'))   counts.mol_to_g++;
+        if (types.includes('g_to_mol'))   counts.g_to_mol++;
+        if (types.includes('g_to_g'))     counts.g_to_g++;
+    });
+
+    for (const [key, val] of Object.entries(counts)) {
+        const el = document.getElementById(`count-${key}`);
+        if (el) el.textContent = val;
+    }
+}
+
 async function performSystemWipe(problemId) {
     const msg = "Are you sure you want to reset Problem " + problemId + "? This will delete all telemetry records and clear out all your input values.";
     
-    // 1. Wait for user input from our custom UI modal
     const confirmed = await showCyberConfirm(msg);
-    
-    // 2. If the user aborted, stop execution entirely
-    if (!confirmed) {
-        return; 
-    }
+    if (!confirmed) return; 
 
-    // 3. If confirmed, execute the local storage wipe sequence
     try {
         const cacheKeys = Object.keys(localStorage);
-        
         cacheKeys.forEach(key => {
             if (key.toLowerCase().includes(problemId.toLowerCase()) || 
                 key.includes('ledger') || 
                 key.includes('workspace') || 
                 key.includes('nodes')) {
-                
                 localStorage.removeItem(key);
-                console.log("[WIPER] Purged cache key row: " + key);
             }
         });
-        
         sessionStorage.clear();
-        
     } catch (e) {
         console.error("[WIPER] Error clearing client-side state maps: ", e);
     }
 
-    // 4. Proceed safely to the backend deletion routing rule
     window.location.href = "/problem/reset/" + problemId + "/";
 }
 
@@ -366,5 +461,8 @@ function showCyberConfirm(message) {
         btnProceed.addEventListener('click', onProceed);
     });
 }
+
+// Execute counts initialization
+document.addEventListener('DOMContentLoaded', updateCategoryCounters);
 </script>
 {% endblock content %}

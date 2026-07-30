@@ -6,9 +6,37 @@
         background: #171A21;
         border-bottom: 2px solid var(--cyber-teal);
         padding: 15px 18px;
-        margin-bottom: 28px;
+        margin-bottom: 20px;
         border-radius: 4px;
         font-size: 14px;
+    }
+
+    /* ── Educational Strategy Accordion ── */
+    .edu-expander {
+        background: rgba(0, 240, 255, 0.05);
+        border: 1px solid rgba(0, 240, 255, 0.2);
+        border-radius: 6px;
+        padding: 12px 16px;
+        margin-bottom: 22px;
+        font-size: 13px;
+        color: var(--text-light);
+        line-height: 1.6;
+    }
+
+    .edu-expander summary {
+        cursor: pointer;
+        font-weight: bold;
+        color: var(--cyber-teal);
+        letter-spacing: 0.5px;
+        user-select: none;
+    }
+
+    .edu-expander summary:hover { color: #FFF; }
+
+    .edu-content {
+        margin-top: 10px;
+        border-top: 1px dashed rgba(255, 255, 255, 0.1);
+        padding-top: 10px;
     }
 
     /* ── Part navigation strip ── */
@@ -29,7 +57,6 @@
         color: var(--text-muted);
         background: var(--bg-dark);
         letter-spacing: 0.5px;
-        cursor: default;
     }
 
     .part-pill.active-pill {
@@ -48,8 +75,8 @@
         background: var(--bg-dark);
         border: 1px dashed var(--text-muted);
         border-radius: 8px;
-        margin-bottom: 36px;
-        min-height: 190px;
+        margin-bottom: 25px;
+        min-height: 220px;
     }
 
     .starting-node, .terminal-yield-node {
@@ -58,7 +85,7 @@
         padding: 14px 16px;
         border-radius: 6px;
         text-align: center;
-        min-width: 110px;
+        min-width: 120px;
         flex-shrink: 0;
     }
 
@@ -74,7 +101,7 @@
         flex-shrink: 0;
     }
 
-    /* ── Fraction cards ── */
+    /* ── Student-Constructed Fraction Cards ── */
     .fraction-card {
         background: var(--bg-slate);
         border: 2px solid var(--text-muted);
@@ -82,54 +109,66 @@
         border-radius: 6px;
         display: flex;
         flex-direction: column;
-        gap: 9px;
+        gap: 8px;
         box-shadow: 0 3px 10px rgba(0,0,0,0.3);
         transition: all 0.25s ease;
         flex-shrink: 0;
-        min-width: 180px;
+        width: 220px;
     }
 
-    .fraction-card.active-link  { border-color: var(--cyber-teal); box-shadow: 0 0 12px rgba(0,240,255,0.18); }
-    .fraction-card.locked-link  { opacity: 0.22; pointer-events: none; }
+    .fraction-card.active-link   { border-color: var(--cyber-teal); box-shadow: 0 0 12px rgba(0,240,255,0.18); }
     .fraction-card.verified-link { border-color: var(--combo-green); box-shadow: 0 0 14px rgba(0,230,118,0.25); }
-    .fraction-card.error-link   { border-color: var(--coral-red);   box-shadow: 0 0 14px rgba(255,61,0,0.35); }
+    .fraction-card.error-link    { border-color: var(--coral-red); box-shadow: 0 0 14px rgba(255,61,0,0.35); }
 
     .slot-container {
         display: flex;
         align-items: center;
-        gap: 7px;
+        gap: 6px;
     }
 
     .slot-input {
         background: var(--bg-dark);
         border: 1px solid #2A303C;
         color: #FFF;
-        padding: 5px;
+        padding: 6px;
         text-align: center;
         border-radius: 4px;
-        width: 70px;
+        width: 65px;
         font-size: 13px;
     }
     .slot-input:disabled { color: #A0AEC0; background: #1A202C; }
 
-    .unit-label {
-        font-size: 12px;
-        font-weight: bold;
+    .unit-select {
+        background: var(--bg-dark);
+        border: 1px solid #2A303C;
         color: var(--cyber-teal);
+        font-size: 11px;
+        font-weight: bold;
+        padding: 5px;
+        border-radius: 4px;
+        flex-grow: 1;
+        max-width: 135px;
+        overflow: hidden;
+        text-overflow: ellipsis;
         white-space: nowrap;
     }
-
-    .unit-label.muted { color: var(--text-muted); }
+    .unit-select:disabled { color: var(--text-muted); }
 
     .fraction-divider {
         height: 2px;
         background: var(--text-muted);
         width: 100%;
         margin: 2px 0;
-        transition: background 0.25s;
     }
     .fraction-card.active-link .fraction-divider   { background: var(--cyber-teal); }
     .fraction-card.verified-link .fraction-divider { background: var(--combo-green); }
+
+    /* Strike-through effect ONLY for canceled units */
+    .unit-cancelled {
+        text-decoration: line-through;
+        color: var(--coral-red) !important;
+        opacity: 0.6;
+    }
 
     .btn-verify-node {
         background: transparent;
@@ -141,9 +180,40 @@
         border-radius: 4px;
         font-weight: bold;
         transition: all 0.2s ease;
-        margin-top: 2px;
+        margin-top: 4px;
     }
     .btn-verify-node:hover { background: var(--cyber-teal); color: var(--bg-dark); }
+
+    .btn-add-node {
+        background: rgba(0, 240, 255, 0.1);
+        border: 2px dashed var(--cyber-teal);
+        color: var(--cyber-teal);
+        padding: 20px;
+        border-radius: 6px;
+        cursor: pointer;
+        font-weight: bold;
+        font-size: 14px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        min-width: 160px;
+        transition: all 0.2s ease;
+        flex-shrink: 0;
+    }
+    .btn-add-node:hover { background: rgba(0, 240, 255, 0.2); transform: scale(1.02); }
+
+    /* ── Live Explanation Feedback Box ── */
+    .feedback-box {
+        background: #171A21;
+        border: 1px solid #2A303C;
+        border-left: 4px solid var(--cyber-teal);
+        padding: 14px 18px;
+        border-radius: 4px;
+        margin-bottom: 25px;
+        font-size: 13px;
+        line-height: 1.6;
+        color: var(--text-light);
+    }
 
     /* ── Footer actions ── */
     .module-actions-bar {
@@ -168,10 +238,7 @@
         text-decoration: none;
         display: inline-block;
     }
-    .nav-btn.primary {
-        border-color: var(--constant-gold);
-        color: var(--constant-gold);
-    }
+    .nav-btn.primary { border-color: var(--constant-gold); color: var(--constant-gold); }
     .nav-btn:hover { opacity: 0.8; }
 </style>
 
@@ -179,10 +246,9 @@
 <div class="grid-info-header">
     <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;">
         <span style="color:var(--cyber-teal); font-weight:bold; letter-spacing:1px;">
-            STEP-GRID WORKSPACE &nbsp;·&nbsp; {{ problem_id }} &nbsp;·&nbsp; PART {{ part_label|upper }}
+            ACTIVE STEP-GRID BUILDER &nbsp;·&nbsp; {{ problem_id }} &nbsp;·&nbsp; PART {{ part_label|upper }}
         </span>
-        <a href="{% url 'preparation_ledger' problem_id %}"
-           style="color:var(--text-muted); font-size:12px; text-decoration:none;">
+        <a href="{% url 'preparation_ledger' problem_id %}" style="color:var(--text-muted); font-size:12px; text-decoration:none;">
             ← Back to Ledger
         </a>
     </div>
@@ -206,38 +272,69 @@
     {% endfor %}
 </div>
 
-<!-- ── Conversion chain canvas ── -->
+<!-- ── Educational Strategy Guide ── -->
+<details class="edu-expander" open>
+    <summary>💡 GUIDED STRATEGY: Understanding Numerators & Denominators</summary>
+    <div class="edu-content">
+        <p style="margin: 0 0 8px 0;">
+            To solve this conversion, construct factors where unwanted units cancel diagonally across fraction boundaries:
+        </p>
+        <ul style="margin: 0; padding-left: 20px; color: var(--text-muted);">
+            <li>
+                <strong>Molar Mass Factors (g ↔ mol):</strong> Standardized per <strong>1 mole</strong>.
+                <br><em>• Grams to Moles:</em> Place <strong>1 mol</strong> in the <strong>numerator</strong> (top) and the substance’s molar mass (g) in the <strong>denominator</strong> (bottom).
+                <br><em>• Moles to Grams:</em> Place the molar mass (g) in the <strong>numerator</strong> and <strong>1 mol</strong> in the <strong>denominator</strong>.
+            </li>
+            <li style="margin-top: 8px;">
+                <strong>Mole Ratios (mol A → mol B):</strong> Values in both numerator and denominator can be <strong>1 or greater</strong>, depending directly on the stoichiometric coefficients from your balanced equation.
+            </li>
+        </ul>
+    </div>
+</details>
+
+<!-- ── Dynamic Guidance & Explanation Console ── -->
+<div class="feedback-box" id="explanationConsole">
+    <strong style="color:var(--cyber-teal);">TUTOR CONSOLE:</strong>
+    <span id="explanationText">
+        Click <strong>"+ Add Step Factor"</strong> to begin constructing your conversion step-grid. Select units that cancel out the starting unit (<code>{{ given_unit }} {{ given_formula }}</code>).
+    </span>
+</div>
+
+<!-- ── Interactive Conversion Chain Canvas ── -->
 <div class="bridge-builder-chasm" id="chainCanvas">
 
-    <!-- Starting node -->
+    <!-- Given Starting Node -->
     <div class="starting-node">
         <span style="font-size:18px; font-weight:bold; display:block;">
-            {{ given_quantity }}
-            {% if given_unit == 'g' %}g{% else %}mol{% endif %}
+            <span id="givenQuantityValue">{{ suspended_quantity|default:given_quantity }}</span> 
+            <span id="givenUnitText">{{ given_unit }}</span>
         </span>
         <span style="color:var(--text-muted); font-size:12px;">{{ given_formula }} (Given)</span>
     </div>
 
-    <!-- Fraction nodes rendered by JS from nodes_json -->
+    <!-- Dynamic Container where Student-Constructed Cards will live -->
     <div id="nodeContainer" style="display:contents;"></div>
 
-    <!-- Equal sign + result (revealed on completion) -->
+    <!-- Interactive Add Button -->
+    <button class="btn-add-node" id="btnAddNode" onclick="appendUserStep()">
+        + Add Step Factor
+    </button>
+
+    <!-- Terminal Yield Node -->
     <span class="operator-sign" id="op_eq" style="display:none;">＝</span>
     <div class="terminal-yield-node" id="yieldNode">
-        <span style="font-size:18px; font-weight:bold; display:block; color:var(--constant-gold);"
-              id="yieldValue">—</span>
+        <span style="font-size:18px; font-weight:bold; display:block; color:var(--constant-gold);" id="yieldValue">—</span>
         <span style="color:var(--text-muted); font-size:12px;">
-            {% if target_unit == 'g' %}g{% else %}mol{% endif %} {{ target_formula }} (Yield)
+            {{ target_unit }} {{ target_formula }} (Calculated Yield)
         </span>
     </div>
 
 </div>
 
-<!-- ── Footer navigation (shown after chain complete) ── -->
+<!-- ── Footer navigation ── -->
 <div class="module-actions-bar" id="actionsBar">
     {% if prev_part %}
-    <a class="nav-btn"
-       href="{% url 'step_grid_workspace' problem_id prev_part.part_label %}">
+    <a class="nav-btn" href="{% url 'step_grid_workspace' problem_id prev_part.part_label %}">
         ← Part {{ prev_part.part_label|upper }}
     </a>
     {% else %}
@@ -245,8 +342,7 @@
     {% endif %}
 
     {% if next_part %}
-    <a class="nav-btn primary"
-       href="{% url 'step_grid_workspace' problem_id next_part.part_label %}">
+    <a class="nav-btn primary" href="{% url 'step_grid_workspace' problem_id next_part.part_label %}">
         Next: Part {{ next_part.part_label|upper }} ──>
     </a>
     {% else %}
@@ -258,298 +354,327 @@
 
 <script>
 // ─────────────────────────────────────────────────────────────────────────────
-// Data injected by Django
+// Configuration & Ground Truth Data
 // ─────────────────────────────────────────────────────────────────────────────
 const PROBLEM_ID      = "{{ problem_id }}";
 const PART_LABEL      = "{{ part_label }}";
-const NODE_COUNT      = {{ node_count }};
+const REQUIRED_NODES  = {{ node_count }};
 const CORRECT_ANSWER  = parseFloat("{{ correct_answer }}");
-const GIVEN_QTY       = parseFloat("{{ given_quantity }}");
+const GIVEN_QTY       = parseFloat("{{ suspended_quantity|default:given_quantity }}");
 const GIVEN_UNIT      = "{{ given_unit }}";
 const TARGET_UNIT     = "{{ target_unit }}";
 const GIVEN_FORMULA   = "{{ given_formula }}";
 const TARGET_FORMULA  = "{{ target_formula }}";
 
-// Full node spec: [{num_value, num_unit, den_value, den_unit}, ...]
+// Expected specs injected from Django Backend
 const NODES_SPEC = {{ nodes_json|safe }};
 
-// ─────────────────────────────────────────────────────────────────────────────
-// XP helpers
-// ─────────────────────────────────────────────────────────────────────────────
+// Persistence Storage Key
+const STORE_KEY = `cq_m2_${PROBLEM_ID}_${PART_LABEL}`;
 
-function updateHeaderXP(data) {
-    // Targets the IDs added to base.html
-    const levelEl = document.getElementById('xp-level-display');
-    const xpEl    = document.getElementById('xp-total-display');
-    const barEl   = document.getElementById('xp-bar-fill');
+// Dynamically compile unique units from JSON specs in pure JavaScript
+function extractUniqueUnits() {
+    const unitsSet = new Set();
+    
+    if (GIVEN_UNIT && GIVEN_FORMULA) {
+        unitsSet.add(`${GIVEN_UNIT}_${GIVEN_FORMULA}`);
+    }
 
-    if (levelEl) levelEl.textContent = `LVL ${data.level}`;
-    if (xpEl)    xpEl.textContent    = `XP: ${data.total_xp}`;
-    if (barEl)   barEl.style.width   = `${data.progress_pct}%`;
+    NODES_SPEC.forEach(node => {
+        if (node.num_unit) unitsSet.add(node.num_unit);
+        if (node.den_unit) unitsSet.add(node.den_unit);
+    });
+
+    const options = ['<option value="">-- Select Unit --</option>'];
+    unitsSet.forEach(unit => {
+        const readableLabel = unit.replace(/_/g, ' ');
+        options.push(`<option value="${unit}">${readableLabel}</option>`);
+    });
+
+    return options.join('');
 }
 
+const UNIT_OPTIONS_HTML = extractUniqueUnits();
+
+let activeNodeIndex = 0;
+
+// ─────────────────────────────────────────────────────────────────────────────
+// State Persistence Helpers (Save / Restore)
+// ─────────────────────────────────────────────────────────────────────────────
+function saveState() {
+    const state = { steps: [], activeIndex: activeNodeIndex, yieldRevealed: false };
+    
+    for (let i = 0; i < activeNodeIndex; i++) {
+        const numVal  = document.getElementById(`num_val_${i}`)?.value || '';
+        const numUnit = document.getElementById(`num_unit_${i}`)?.value || '';
+        const denVal  = document.getElementById(`den_val_${i}`)?.value || '';
+        const denUnit = document.getElementById(`den_unit_${i}`)?.value || '';
+        const card    = document.getElementById(`node_${i}`);
+        const isVerified = card ? card.classList.contains('verified-link') : false;
+
+        state.steps.push({ numVal, numUnit, denVal, denUnit, isVerified });
+    }
+
+    state.yieldRevealed = document.getElementById('yieldNode').style.display !== 'none';
+
+    try {
+        localStorage.setItem(STORE_KEY, JSON.stringify(state));
+    } catch(e) {}
+}
+
+function restoreState() {
+    let state;
+    try {
+        state = JSON.parse(localStorage.getItem(STORE_KEY));
+    } catch(e) {}
+
+    if (!state || !state.steps || state.steps.length === 0) return;
+
+    // Clear existing index to rebuild sequentially
+    activeNodeIndex = 0;
+
+    state.steps.forEach((stepData, idx) => {
+        appendUserStep(false);
+
+        const numValEl  = document.getElementById(`num_val_${idx}`);
+        const numUnitEl = document.getElementById(`num_unit_${idx}`);
+        const denValEl  = document.getElementById(`den_val_${idx}`);
+        const denUnitEl = document.getElementById(`den_unit_${idx}`);
+
+        if (numValEl)  numValEl.value  = stepData.numVal;
+        if (numUnitEl) numUnitEl.value = stepData.numUnit;
+        if (denValEl)  denValEl.value  = stepData.denVal;
+        if (denUnitEl) denUnitEl.value = stepData.denUnit;
+
+        if (stepData.isVerified) {
+            const card = document.getElementById(`node_${idx}`);
+            if (card) {
+                card.classList.remove('active-link', 'error-link');
+                card.classList.add('verified-link');
+            }
+            if (numValEl)  numValEl.disabled = true;
+            if (numUnitEl) numUnitEl.disabled = true;
+            if (denValEl)  denValEl.disabled = true;
+            if (denUnitEl) denUnitEl.disabled = true;
+
+            const btn = document.getElementById(`btn_${idx}`);
+            if (btn) btn.style.display = 'none';
+
+            applyUnitCancellationVisual(idx);
+            activeNodeIndex = idx + 1;
+        }
+    });
+
+    if (state.yieldRevealed || activeNodeIndex === REQUIRED_NODES) {
+        revealFinalYield();
+        updateConsole(`🎉 <strong>Problem Completed Previously:</strong> Review your step factors and cancellation chain above.`);
+    } else {
+        document.getElementById('btnAddNode').style.display = 'flex';
+    }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Dynamically Append a Step Grid Card
+// ─────────────────────────────────────────────────────────────────────────────
+function appendUserStep(isInteractive = true) {
+    if (activeNodeIndex >= REQUIRED_NODES) {
+        if (isInteractive) showToast("You have reached the maximum required steps for this conversion.", "info");
+        return;
+    }
+
+    const container = document.getElementById('nodeContainer');
+
+    const op = document.createElement('span');
+    op.className = 'operator-sign';
+    op.id = `op_${activeNodeIndex}`;
+    op.textContent = '✖';
+    container.appendChild(op);
+
+    const card = document.createElement('div');
+    card.className = 'fraction-card active-link';
+    card.id = `node_${activeNodeIndex}`;
+
+    const currentIdx = activeNodeIndex;
+
+    card.innerHTML = `
+        <div class="slot-container">
+            <input type="number" class="slot-input" id="num_val_${currentIdx}" placeholder="Val" step="any">
+            <select class="unit-select" id="num_unit_${currentIdx}">
+                ${UNIT_OPTIONS_HTML}
+            </select>
+        </div>
+        <div class="fraction-divider"></div>
+        <div class="slot-container">
+            <input type="number" class="slot-input" id="den_val_${currentIdx}" placeholder="Val" step="any">
+            <select class="unit-select" id="den_unit_${currentIdx}">
+                ${UNIT_OPTIONS_HTML}
+            </select>
+        </div>
+        <button class="btn-verify-node" id="btn_${currentIdx}" onclick="validateStudentStep(${currentIdx})">
+            Verify Step ${currentIdx + 1}
+        </button>
+    `;
+
+    container.appendChild(card);
+
+    document.getElementById('btnAddNode').style.display = 'none';
+
+    if (isInteractive) {
+        updateConsole(`Construct Step ${currentIdx + 1}: Select the numerator/denominator units and enter their numerical values to cancel out units properly.`);
+    }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Validate Student's Custom Step Construction
+// ─────────────────────────────────────────────────────────────────────────────
+async function validateStudentStep(idx) {
+    const numVal  = parseFloat(document.getElementById(`num_val_${idx}`).value);
+    const numUnit = document.getElementById(`num_unit_${idx}`).value;
+    const denVal  = parseFloat(document.getElementById(`den_val_${idx}`).value);
+    const denUnit = document.getElementById(`den_unit_${idx}`).value;
+
+    const expectedSpec = NODES_SPEC[idx];
+
+    // 1. Completeness Check
+    if (isNaN(numVal) || isNaN(denVal) || !numUnit || !denUnit) {
+        showToast("Please provide both values and units for numerator and denominator.", "err");
+        updateConsole("⚠️ Incomplete Step: Every conversion factor requires numerical quantities AND units for both numerator and denominator.");
+        return;
+    }
+
+    // 2. Unit Cancellation Explanation & Verification
+    const previousUnit = idx === 0 ? `${GIVEN_UNIT}_${GIVEN_FORMULA}` : NODES_SPEC[idx - 1].num_unit;
+    
+    if (denUnit !== previousUnit) {
+        updateConsole(`❌ <strong>Unit Mismatch Error:</strong> Your denominator unit (<code>${denUnit.replace(/_/g, ' ')}</code>) does not cancel with the previous unit (<code>${previousUnit.replace(/_/g, ' ')}</code>). Dimensional analysis requires identical units across the fraction boundary so they simplify to 1.`);
+        flashCardError(idx);
+        return;
+    }
+
+    // 3. Target Unit & Quantity Precision Verification
+    const isNumValCorrect = Math.abs(numVal - expectedSpec.num_value) < 0.01;
+    const isDenValCorrect = Math.abs(denVal - expectedSpec.den_value) < 0.01;
+    const isNumUnitCorrect = numUnit === expectedSpec.num_unit;
+
+    if (!isNumUnitCorrect) {
+        updateConsole(`❌ <strong>Incorrect Target Unit:</strong> Selecting <code>${numUnit.replace(/_/g, ' ')}</code> does not advance toward the desired yield unit. Choose the unit that converts closer to <code>${TARGET_UNIT} ${TARGET_FORMULA}</code>.`);
+        flashCardError(idx);
+        return;
+    }
+
+    if (!isNumValCorrect || !isDenValCorrect) {
+        let denExplanation = denVal === 1 
+            ? "Molar mass conversion factors express grams per <strong>1 mole</strong>."
+            : `Stoichiometric conversions use chemical coefficients (e.g. <strong>${expectedSpec.den_value}</strong>) from the balanced equation.`;
+            
+        updateConsole(`❌ <strong>Value Calculation Error:</strong> Re-check your values. <em>Reason: ${denExplanation}</em>`);
+        flashCardError(idx);
+        return;
+    }
+
+    // ── STEP IS FULLY CORRECT ──
+    const card = document.getElementById(`node_${idx}`);
+    card.classList.remove('active-link', 'error-link');
+    card.classList.add('verified-link');
+
+    // Lock Step Inputs
+    document.getElementById(`num_val_${idx}`).disabled = true;
+    document.getElementById(`num_unit_${idx}`).disabled = true;
+    document.getElementById(`den_val_${idx}`).disabled = true;
+    document.getElementById(`den_unit_${idx}`).disabled = true;
+    document.getElementById(`btn_${idx}`).style.display = 'none';
+
+    // Apply Strike-through Visual ONLY to Cancelled Unit
+    applyUnitCancellationVisual(idx);
+
+    activeNodeIndex++;
+    saveState();
+
+    await awardXP(activeNodeIndex === REQUIRED_NODES);
+
+    let explanationNote = denVal === 1 
+        ? "Denominator is <strong>1</strong> because standard molar mass is defined per single mole." 
+        : `Denominator is <strong>${denVal}</strong> because it uses the balanced equation coefficient for ${denUnit.replace(/_/g, ' ')}.`;
+
+    if (activeNodeIndex < REQUIRED_NODES) {
+        document.getElementById('btnAddNode').style.display = 'flex';
+        updateConsole(`✓ <strong>Step ${idx + 1} Confirmed!</strong> ${explanationNote} Click <strong>"+ Add Step Factor"</strong> to build the next step.`);
+    } else {
+        revealFinalYield();
+        updateConsole(`🎉 <strong>Conversion Chain Complete!</strong> ${explanationNote} All intermediate units cancelled out cleanly, leaving only <code>${TARGET_UNIT} ${TARGET_FORMULA}</code>.`);
+    }
+}
+
+function applyUnitCancellationVisual(idx) {
+    if (idx === 0) {
+        const givenUnitEl = document.getElementById('givenUnitText');
+        if (givenUnitEl) givenUnitEl.classList.add('unit-cancelled');
+    } else {
+        const prevNumSelect = document.getElementById(`num_unit_${idx - 1}`);
+        if (prevNumSelect) prevNumSelect.classList.add('unit-cancelled');
+    }
+    const currentDenSelect = document.getElementById(`den_unit_${idx}`);
+    if (currentDenSelect) currentDenSelect.classList.add('unit-cancelled');
+}
+
+function flashCardError(idx) {
+    const card = document.getElementById(`node_${idx}`);
+    card.classList.remove('active-link');
+    card.classList.add('error-link');
+    setTimeout(() => {
+        card.classList.remove('error-link');
+        card.classList.add('active-link');
+    }, 1200);
+}
+
+function updateConsole(msg) {
+    document.getElementById('explanationText').innerHTML = msg;
+}
+
+function revealFinalYield() {
+    document.getElementById('btnAddNode').style.display = 'none';
+    document.getElementById('op_eq').style.display = 'inline';
+    const yieldNode = document.getElementById('yieldNode');
+    yieldNode.style.display = 'block';
+
+    document.getElementById('yieldValue').textContent = `${CORRECT_ANSWER.toFixed(4)} ${TARGET_UNIT}`;
+    document.getElementById('actionsBar').style.display = 'flex';
+}
+
+// Automatically save input changes
+document.addEventListener('input', e => {
+    if (e.target.classList.contains('slot-input') || e.target.classList.contains('unit-select')) {
+        saveState();
+    }
+});
+
+// Restore previous state on page load
+restoreState();
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Gamification XP System Integration
+// ─────────────────────────────────────────────────────────────────────────────
 async function awardXP(isFinalNode) {
-    // XP_PER_NODE_CORRECT = 25, XP_PER_PART_COMPLETE = 50 (mirrors models.py)
     const xpAmount = 25 + (isFinalNode ? 50 : 0);
     try {
         const res = await fetch('/award-xp/', {
-            method:  'POST',
+            method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body:    JSON.stringify({
+            body: JSON.stringify({
                 xp_amount: xpAmount,
-                reason: `node_correct_${PROBLEM_ID}_${PART_LABEL}`,
+                reason: `step_grid_constructed_${PROBLEM_ID}_${PART_LABEL}`,
             }),
         });
         if (!res.ok) return;
         const data = await res.json();
         if (data.success) {
-            updateHeaderXP(data);
-            const msg = data.level > (parseInt(document.getElementById('xp-level-display')
-                            ?.textContent?.replace('LVL ', '')) || 1)
-                ? `⬆ LEVEL UP! Now LVL ${data.level} — +${data.xp_awarded} XP`
-                : `+${data.xp_awarded} XP`;
-            showToast(msg, 'ok');
+            showToast(`+${data.xp_awarded} XP — Step Constructed!`, 'ok');
         }
     } catch (err) {
-        // XP grant is best-effort — never block the learning flow
-        console.warn('[XP] Award request failed silently:', err);
+        console.warn('[XP] Award request failed:', err);
     }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Persistence helpers
-// ─────────────────────────────────────────────────────────────────────────────
-const STORE_KEY = `cq_m2_${PROBLEM_ID}_${PART_LABEL}`;
-
-function saveState() {
-    const state = { inputs: {}, verified: [] };
-    NODES_SPEC.forEach((_, idx) => {
-        const nEl = document.getElementById(`num_${idx}`);
-        const dEl = document.getElementById(`den_${idx}`);
-        if (nEl) state.inputs[`num_${idx}`] = nEl.value;
-        if (dEl) state.inputs[`den_${idx}`] = dEl.value;
-        const card = document.getElementById(`node_${idx}`);
-        if (card && card.classList.contains('verified-link')) {
-            state.verified.push(idx);
-        }
-    });
-    state.yieldRevealed = document.getElementById('yieldNode').style.display !== 'none';
-    try { localStorage.setItem(STORE_KEY, JSON.stringify(state)); } catch(e) {}
-}
-
-function restoreState() {
-    let state;
-    try { state = JSON.parse(localStorage.getItem(STORE_KEY)); } catch(e) {}
-    if (!state) return;
-
-    Object.entries(state.inputs || {}).forEach(([id, val]) => {
-        const el = document.getElementById(id);
-        if (el && val !== undefined) el.value = val;
-    });
-
-    (state.verified || []).forEach(idx => {
-        const card  = document.getElementById(`node_${idx}`);
-        const nEl   = document.getElementById(`num_${idx}`);
-        const dEl   = document.getElementById(`den_${idx}`);
-        const btnEl = document.getElementById(`btn_${idx}`);
-        if (!card) return;
-        card.classList.remove('active-link', 'locked-link', 'error-link');
-        card.classList.add('verified-link');
-        if (nEl)   nEl.disabled  = true;
-        if (dEl)   dEl.disabled  = true;
-        if (btnEl) btnEl.style.display = 'none';
-        verifiedCount++;
-
-        const nextOp   = document.getElementById(`op_${idx + 1}`);
-        const nextCard = document.getElementById(`node_${idx + 1}`);
-        if (nextOp)   nextOp.style.display = 'inline';
-        if (nextCard) {
-            nextCard.style.display = 'flex';
-            nextCard.classList.remove('locked-link');
-            nextCard.classList.add('active-link');
-        }
-    });
-
-    if (state.yieldRevealed) {
-        revealFinalYield();
-    }
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Build fraction-card nodes dynamically
-// ─────────────────────────────────────────────────────────────────────────────
-const container   = document.getElementById('nodeContainer');
-let verifiedCount = 0;
-
-NODES_SPEC.forEach((spec, idx) => {
-    const isFirst  = idx === 0;
-    const isLocked = !isFirst;
-
-    const op = document.createElement('span');
-    op.className = 'operator-sign';
-    op.id        = `op_${idx}`;
-    op.textContent = '✖';
-    if (isLocked) op.style.display = 'none';
-    container.appendChild(op);
-
-    const card = document.createElement('div');
-    card.className = `fraction-card ${isFirst ? 'active-link' : 'locked-link'}`;
-    card.id        = `node_${idx}`;
-
-    function fmtUnit(u) {
-        return u.replace(/_/g, ' ').replace(/(\d+)/g, '<sub>$1</sub>');
-    }
-
-    card.innerHTML = `
-        <div class="slot-container">
-            <input type="number" class="slot-input" id="num_${idx}" placeholder="Val" step="any">
-            <span class="unit-label" title="${spec.num_unit}">${fmtUnit(spec.num_unit)}</span>
-        </div>
-        <div class="fraction-divider"></div>
-        <div class="slot-container">
-            <input type="number" class="slot-input" id="den_${idx}" placeholder="Val" step="any">
-            <span class="unit-label muted" title="${spec.den_unit}">${fmtUnit(spec.den_unit)}</span>
-        </div>
-        <button class="btn-verify-node" id="btn_${idx}" onclick="verifyNode(${idx})">
-            Validate Link ${idx + 1}
-        </button>
-    `;
-    container.appendChild(card);
-});
-
-restoreState();
-
-document.addEventListener('input', e => {
-    if (e.target.classList.contains('slot-input')) saveState();
-});
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Verify a single node
-// ─────────────────────────────────────────────────────────────────────────────
-async function verifyNode(idx) {
-    const numVal = document.getElementById(`num_${idx}`).value.trim();
-    const denVal = document.getElementById(`den_${idx}`).value.trim();
-    const spec   = NODES_SPEC[idx];
-
-    if (numVal === '' || denVal === '') {
-        showToast('Fill in both numerator and denominator before validating.', 'err');
-        return;
-    }
-
-    const numFloat = parseFloat(numVal);
-    const denFloat = parseFloat(denVal);
-
-    if (isNaN(numFloat) || isNaN(denFloat)) {
-        showToast('Numeric values only — no letters or symbols.', 'err');
-        return;
-    }
-
-    const numOk = Math.abs(numFloat - spec.num_value) < 0.01;
-    const denOk = Math.abs(denFloat - spec.den_value) < 0.01;
-    const isOk  = numOk && denOk;
-
-    const card = document.getElementById(`node_${idx}`);
-
-    if (isOk) {
-        // Lock inputs
-        document.getElementById(`num_${idx}`).disabled = true;
-        document.getElementById(`den_${idx}`).disabled = true;
-        document.getElementById(`btn_${idx}`).style.display = 'none';
-
-        card.classList.remove('active-link', 'error-link');
-        card.classList.add('verified-link');
-
-        verifiedCount++;
-        saveState();
-
-        const isFinalNode = (verifiedCount === NODE_COUNT);
-
-        // Unlock next node if it exists
-        if (idx + 1 < NODES_SPEC.length) {
-            const nextOp   = document.getElementById(`op_${idx + 1}`);
-            const nextCard = document.getElementById(`node_${idx + 1}`);
-            if (nextOp)   nextOp.style.display = 'inline';
-            if (nextCard) {
-                nextCard.style.display = 'flex';
-                setTimeout(() => {
-                    nextCard.classList.remove('locked-link');
-                    nextCard.classList.add('active-link');
-                }, 40);
-            }
-        }
-
-        if (isFinalNode) {
-            revealFinalYield();
-        }
-
-        // ── Award XP (awaited so toast fires after XP response, not before)
-        await awardXP(isFinalNode);
-
-        // Post telemetry non-blocking (fire-and-forget after XP is already awarded)
-        fetch('/api/validate-step-node/', {
-            method:  'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body:    JSON.stringify({
-                problem_id:    PROBLEM_ID,
-                part_label:    PART_LABEL,
-                node_index:    idx,
-                num_value:     numFloat,
-                num_unit:      spec.num_unit,
-                den_value:     denFloat,
-                den_unit:      spec.den_unit,
-                is_final_node: isFinalNode,
-            }),
-        }).catch(() => {});
-
-    } else {
-        card.classList.remove('active-link', 'verified-link');
-        card.classList.add('error-link');
-        setTimeout(() => {
-            card.classList.remove('error-link');
-            card.classList.add('active-link');
-        }, 1200);
-
-        const wrongFields = [];
-        if (!numOk) wrongFields.push('numerator');
-        if (!denOk) wrongFields.push('denominator');
-        showToast(`Node ${idx + 1}: incorrect ${wrongFields.join(' and ')} — check your conversion factor.`, 'err');
-
-        // Post telemetry for failed attempt
-        fetch('/api/validate-step-node/', {
-            method:  'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body:    JSON.stringify({
-                problem_id:    PROBLEM_ID,
-                part_label:    PART_LABEL,
-                node_index:    idx,
-                num_value:     numFloat,
-                num_unit:      spec.num_unit,
-                den_value:     denFloat,
-                den_unit:      spec.den_unit,
-                is_final_node: false,
-            }),
-        }).catch(() => {});
-    }
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Reveal the computed yield and enable navigation
-// ─────────────────────────────────────────────────────────────────────────────
-function revealFinalYield() {
-    document.getElementById('op_eq').style.display    = 'inline';
-    const yieldNode = document.getElementById('yieldNode');
-    yieldNode.style.display = 'block';
-
-    const unit = TARGET_UNIT === 'g' ? 'g' : 'mol';
-    document.getElementById('yieldValue').textContent =
-        `${CORRECT_ANSWER.toFixed(4)} ${unit}`;
-
-    document.getElementById('actionsBar').style.display = 'flex';
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Toast helper
-// ─────────────────────────────────────────────────────────────────────────────
 let _toastTimeout;
 function showToast(msg, type = 'info') {
     let toast = document.getElementById('_cq_toast');
@@ -566,11 +691,9 @@ function showToast(msg, type = 'info') {
     }
     toast.textContent = msg;
     toast.style.opacity = '1';
-    toast.style.background = type === 'ok'  ? '#065F46' :
-                              type === 'err' ? '#7F1D1D' : '#1E222B';
-    toast.style.color      = type === 'ok'  ? '#A7F3D0' :
-                              type === 'err' ? '#FCA5A5' : '#E2E8F0';
-    toast.style.border     = `1px solid ${type === 'ok' ? 'var(--combo-green)' : type === 'err' ? 'var(--coral-red)' : '#2A303C'}`;
+    toast.style.background = type === 'ok' ? '#065F46' : type === 'err' ? '#7F1D1D' : '#1E222B';
+    toast.style.color = type === 'ok' ? '#A7F3D0' : type === 'err' ? '#FCA5A5' : '#E2E8F0';
+    toast.style.border = `1px solid ${type === 'ok' ? 'var(--combo-green)' : type === 'err' ? 'var(--coral-red)' : '#2A303C'}`;
     clearTimeout(_toastTimeout);
     _toastTimeout = setTimeout(() => { toast.style.opacity = '0'; }, 3200);
 }

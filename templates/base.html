@@ -80,16 +80,16 @@
             border-top: 1px solid #2A303C;
         }
 
-        /* ── Canned Constants Tray (Shifted to Left) ── */
+        /* ── Canned Constants Tray ── */
         #cq-tray {
             position: fixed;
             bottom: 20px;
-            left: 20px; /* Changed from right: 20px */
+            left: 20px;
             z-index: 8000;
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             display: flex;
             flex-direction: column;
-            align-items: flex-start; /* Changed from flex-end to align with the left edge */
+            align-items: flex-start;
             gap: 0;
         }
 
@@ -145,6 +145,14 @@
         #cq-tray-body::-webkit-scrollbar { width: 4px; }
         #cq-tray-body::-webkit-scrollbar-track { background: #12151C; }
         #cq-tray-body::-webkit-scrollbar-thumb { background: #2A303C; border-radius: 2px; }
+
+        .cq-section-label {
+            font-size: 10px;
+            font-weight: bold;
+            color: var(--text-muted);
+            margin: 8px 0 3px 2px;
+            letter-spacing: 0.5px;
+        }
 
         .cq-const-row {
             display: flex;
@@ -282,10 +290,10 @@
     &copy; 2026 ChemQuest Framework &mdash; Procedural Assessment Engine
 </footer>
 
-<!-- ── Canned Constants Tray (persistent across all modules) ── -->
+<!-- ── Canned Constants Tray ── -->
 <div id="cq-tray" aria-label="Canned Constants reference tray">
 
-    <div id="cq-tray-panel" role="region" aria-label="Locked molar mass constants">
+    <div id="cq-tray-panel" role="region" aria-label="Locked molar mass and stoichiometric constants">
         <div id="cq-tray-panel-header">
             <span>CANNED CONSTANTS</span>
             <small id="cq-tray-prob-id">—</small>
@@ -307,13 +315,6 @@
 
 <script>
 (function initCqTray() {
-    // ── Derive problem_id from current URL path ──────────────────────────────
-    // Handles all ChemQuest URL patterns:
-    //   /ledger/PROB_101/
-    //   /workspace/PROB_101/a/
-    //   /limiting-workspace/PROB_101/
-    //   /limiting-workspace/PROB_101/a/
-    //   /dashboard/ and /problem_lobby/ → no problem_id, show empty state
     function getProblemIdFromUrl() {
         const path = window.location.pathname;
         const patterns = [
@@ -328,73 +329,108 @@
         return null;
     }
 
-    // ── Read locked molar masses from Module 1 localStorage cache ────────────
-    // Module 1 saves state under key: cq_m1_${PROBLEM_ID}
-    // state.masses = { "H2": "2.016", "O2": "31.998", ... }
-    // Only entries that were validated (border class = correct) are truly locked,
-    // but since we save on every keystroke we filter by checking the massStatus
-    // badge text — instead we re-validate: any numeric value present is shown.
-    // The source of truth is whatever the student locked (lockAndProceed passed).
-    // We use a separate localStorage key written at lock-time for reliability.
     function getLockedConstants(probId) {
-        // Primary source: explicit lock record written by lockAndProceed()
+        const combined = { molarMasses: {}, coefficients: {} };
+
+        // Read Molar Masses locked from Module 1
         const lockKey = `cq_constants_locked_${probId}`;
         try {
             const locked = JSON.parse(localStorage.getItem(lockKey));
-            if (locked && Object.keys(locked).length > 0) return locked;
-        } catch(e) {}
-
-        // Fallback: read from full Module 1 state cache (masses that have values)
-        const stateKey = `cq_m1_${probId}`;
-        try {
-            const state = JSON.parse(localStorage.getItem(stateKey));
-            if (state && state.masses) {
-                const result = {};
-                Object.entries(state.masses).forEach(([formula, val]) => {
-                    const num = parseFloat(val);
-                    if (!isNaN(num) && num > 0) result[formula] = num;
-                });
-                if (Object.keys(result).length > 0) return result;
+            if (locked && Object.keys(locked).length > 0) {
+                combined.molarMasses = locked;
             }
         } catch(e) {}
 
-        return {};
+        // Read Dynamic Moles / Coefficients from Module 1 state
+        const stateKey = `cq_m1_${probId}`;
+        try {
+            const state = JSON.parse(localStorage.getItem(stateKey));
+            if (state) {
+                // Read coefficients
+                const coeffs = state.coefficients || state.reaction_moles || state.moles;
+                if (coeffs && typeof coeffs === 'object') {
+                    Object.entries(coeffs).forEach(([formula, val]) => {
+                        const num = parseFloat(val);
+                        if (!isNaN(num) && num > 0) combined.coefficients[formula] = num;
+                    });
+                }
+                // Fallback for Molar Masses if lockKey was missing
+                if (Object.keys(combined.molarMasses).length === 0 && state.masses) {
+                    Object.entries(state.masses).forEach(([formula, val]) => {
+                        const num = parseFloat(val);
+                        if (!isNaN(num) && num > 0) combined.molarMasses[formula] = num;
+                    });
+                }
+            }
+        } catch(e) {}
+
+        return combined;
     }
 
-    function renderTray(constants, probId) {
+    function renderTray(data, probId) {
         const body      = document.getElementById('cq-tray-body');
         const countEl   = document.getElementById('cq-tray-tab-count');
         const probLabel = document.getElementById('cq-tray-prob-id');
         if (!body) return;
 
-        const entries = Object.entries(constants);
-        countEl.textContent = entries.length;
+        const masses = Object.entries(data.molarMasses || {});
+        const coeffs = Object.entries(data.coefficients || {});
+        const totalCount = masses.length + coeffs.length;
 
+        countEl.textContent = totalCount;
         if (probLabel) probLabel.textContent = probId || '—';
 
-        // Clear existing rows (keep #cq-tray-empty in DOM, just hide it)
-        body.querySelectorAll('.cq-const-row').forEach(r => r.remove());
+        // Clear existing rows & section headers
+        body.querySelectorAll('.cq-const-row, .cq-section-label').forEach(r => r.remove());
         const emptyEl = document.getElementById('cq-tray-empty');
 
-        if (entries.length === 0) {
+        if (totalCount === 0) {
             if (emptyEl) emptyEl.style.display = 'block';
             return;
         }
 
         if (emptyEl) emptyEl.style.display = 'none';
 
-        entries.forEach(([formula, mass]) => {
-            const row = document.createElement('div');
-            row.className = 'cq-const-row';
-            row.innerHTML = `
-                <span class="cq-const-formula">${formula}</span>
-                <span>
-                    <span class="cq-const-value">${parseFloat(mass).toFixed(4)}</span>
-                    <span class="cq-const-unit">g/mol</span>
-                </span>
-            `;
-            body.appendChild(row);
-        });
+        const addSectionLabel = (label) => {
+            const lbl = document.createElement('div');
+            lbl.className = 'cq-section-label';
+            lbl.textContent = label;
+            body.appendChild(lbl);
+        };
+
+        // Render Reaction Moles / Stoichiometric Coefficients
+        if (coeffs.length > 0) {
+            addSectionLabel('STOICHIOMETRIC MOLES');
+            coeffs.forEach(([formula, coeff]) => {
+                const row = document.createElement('div');
+                row.className = 'cq-const-row';
+                row.innerHTML = `
+                    <span class="cq-const-formula">${formula}</span>
+                    <span>
+                        <span class="cq-const-value" style="color: var(--cyber-teal);">${coeff}</span>
+                        <span class="cq-const-unit">mol</span>
+                    </span>
+                `;
+                body.appendChild(row);
+            });
+        }
+
+        // Render Molar Masses
+        if (masses.length > 0) {
+            addSectionLabel('MOLAR MASSES');
+            masses.forEach(([formula, mass]) => {
+                const row = document.createElement('div');
+                row.className = 'cq-const-row';
+                row.innerHTML = `
+                    <span class="cq-const-formula">${formula}</span>
+                    <span>
+                        <span class="cq-const-value">${parseFloat(mass).toFixed(4)}</span>
+                        <span class="cq-const-unit">g/mol</span>
+                    </span>
+                `;
+                body.appendChild(row);
+            });
+        }
     }
 
     // ── Toggle open/close ────────────────────────────────────────────────────
@@ -413,32 +449,26 @@
     // ── Boot ─────────────────────────────────────────────────────────────────
     const probId = getProblemIdFromUrl();
     
-    // Check if the current page belongs to Module 1, 2, or 3
     function isAllowedModule() {
         const path = window.location.pathname;
-        // Adjust these keywords/patterns to match your exact module routing structures
-        return path.includes('/ledger/') ||                // Module 1: Preparation Ledger
-               path.includes('/workspace/') ||             // Module 2: Standard Workspace
-               path.includes('/limiting-workspace/');     // Module 3: Limiting Workspace
+        return path.includes('/ledger/') ||
+               path.includes('/workspace/') ||
+               path.includes('/limiting-workspace/');
     }
 
     const trayElement = document.getElementById('cq-tray');
 
     if (probId && isAllowedModule()) {
-        // If it's a valid module path, load constants and render them
         const constants = getLockedConstants(probId);
         renderTray(constants, probId);
     } else {
-        // If not in modules 1, 2, or 3 (e.g., dashboard, lobby, settings), remove it entirely
-        if (trayElement) {
-            trayElement.remove();
-        }
+        if (trayElement) trayElement.remove();
     }
 
-    // ── Re-render when Module 1 writes the lock record ───────────────────────
+    // ── Re-render on LocalStorage updates ────────────────────────────────────
     window.addEventListener('storage', function(e) {
-        if (!probId || !isAllowedModule()) return; // Added guard clause here too
-        if (e.key === `cq_constants_locked_${probId}` || e.key === `cq_m1_${probId}`) {
+        if (!probId || !isAllowedModule()) return;
+        if (!e.key || e.key === `cq_constants_locked_${probId}` || e.key === `cq_m1_${probId}`) {
             const fresh = getLockedConstants(probId);
             renderTray(fresh, probId);
         }
