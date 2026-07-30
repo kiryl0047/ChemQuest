@@ -87,10 +87,11 @@
         display: flex;
         align-items: center;
         gap: 10px;
+        flex-wrap: wrap;
     }
 
     .coeff-input {
-        width: 48px;
+        width: 52px;
         background: var(--bg-slate);
         border: 2px solid var(--text-muted);
         color: #FFF;
@@ -145,10 +146,11 @@
         display: flex;
         align-items: center;
         gap: 15px;
+        flex-wrap: wrap;
     }
 
     .mass-input {
-        width: 110px;
+        width: 120px;
         background: var(--bg-dark);
         border: 1px solid #2A303C;
         color: var(--constant-gold);
@@ -430,8 +432,11 @@ async function awardXP(xpAmount, reason) {
     try {
         const res = await fetch('/award-xp/', {
             method:  'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body:    JSON.stringify({ xp_amount: xpAmount, reason }),
+            headers: { 
+                'Content-Type': 'application/json',
+                'X-CSRFToken': '{{ csrf_token }}'
+            },
+            body: JSON.stringify({ xp_amount: xpAmount, reason }),
         });
         if (!res.ok) return;
         const data = await res.json();
@@ -857,7 +862,10 @@ async function checkBalancing() {
 
     const resp = await fetch('/api/verify-balancing/', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+            'Content-Type': 'application/json',
+            'X-CSRFToken': '{{ csrf_token }}'
+        },
         body: JSON.stringify({ problem_id: PROBLEM_ID, coefficients: submitted }),
     });
     const data = await resp.json();

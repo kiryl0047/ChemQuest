@@ -215,8 +215,11 @@
         try {
             const res = await fetch('/award-xp/', {
                 method:  'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body:    JSON.stringify({ xp_amount: xpAmount, reason }),
+                headers: { 
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': '{{ csrf_token }}'
+                },
+                body: JSON.stringify({ xp_amount: xpAmount, reason }),
             });
             if (!res.ok) return;
             const data = await res.json();
@@ -234,7 +237,6 @@
         initializeProgressionGrid();
     });
 
-    // Add at the top of the <script> block if base.html doesn't provide this globally
     function showToast(message, type) {
         const existing = document.getElementById('chemquest-toast');
         if (existing) existing.remove();
@@ -421,11 +423,12 @@
                 method: 'POST',
                 headers: { 
                     'Content-Type': 'application/json',
+                    'X-CSRFToken': '{{ csrf_token }}',
                     'X-Requested-With': 'XMLHttpRequest'
                 },
                 body: JSON.stringify({
                     action: 'verify_lane',
-                    part_label: cleanLabel, // Keeps backend query keys happy
+                    part_label: cleanLabel,
                     nodes: nodesData
                 })
             });
@@ -437,7 +440,6 @@
             const res = await response.json();
             if (res.success && res.is_correct) {
                 showToast(res.message, 'ok');
-                // Reveal the correct answer if the backend supplies one
                 if (res.correct_answer !== undefined && res.correct_answer !== null) {
                     injectAnswerReveal(cleanLabel, res.correct_answer, res.answer_label || null);
                 }
@@ -466,7 +468,10 @@
         try {
             const response = await fetch(window.location.href, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: { 
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': '{{ csrf_token }}'
+                },
                 body: JSON.stringify({
                     action: 'verify_deduction',
                     limiting_reagent: reagent,
@@ -478,7 +483,6 @@
             if (res.success) {
                 showToast(res.message, 'ok');
                 await awardXP(100, 'limiting_reagent_deduction');
-                // Clean progression keys on complete mastery success
                 const cards = document.querySelectorAll('#pipelineContainer .part-lane-card');
                 cards.forEach(c => {
                     const l = c.id.replace('card_', '');

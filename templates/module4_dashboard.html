@@ -29,6 +29,15 @@
     .metric-card.alert-card .metric-num {
         color: var(--coral-red);
     }
+    .metric-subtext {
+        font-size: 11px;
+        color: var(--text-muted);
+        margin-top: 6px;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+    
+    /* Diagnostic Panel & Progress Bars */
     .diagnostic-panel {
         background: #171A21;
         border: 1px solid #2A303C;
@@ -36,31 +45,70 @@
         padding: 25px;
         margin-bottom: 30px;
     }
+    .diagnostic-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 20px;
+        flex-wrap: wrap;
+        gap: 10px;
+    }
     .bar-lane {
         margin-bottom: 18px;
     }
     .bar-info {
         display: flex;
         justify-content: space-between;
+        align-items: center;
         font-size: 13px;
-        margin-bottom: 6px;
+        margin-bottom: 8px;
         font-weight: bold;
     }
     .bar-bg {
-        background: var(--bg-dark);
+        background: var(--bg-dark, #0d0e12);
         height: 10px;
         border-radius: 5px;
         overflow: hidden;
     }
     .bar-fill {
         height: 100%;
-        background: var(--cyber-teal);
         border-radius: 5px;
         transition: width 0.5s ease-in-out;
     }
+    
+    /* Tiered Progress Colors */
+    .bar-fill.high-accuracy {
+        background: var(--cyber-teal);
+        box-shadow: 0 0 8px rgba(0, 229, 255, 0.3);
+    }
+    .bar-fill.mid-accuracy {
+        background: var(--constant-gold);
+        box-shadow: 0 0 8px rgba(255, 214, 0, 0.3);
+    }
     .bar-fill.low-accuracy {
         background: var(--coral-red);
+        box-shadow: 0 0 8px rgba(255, 61, 0, 0.3);
     }
+    .bar-fill.unattempted {
+        background: #2A303C;
+    }
+
+    /* Status Badges */
+    .status-badge {
+        font-size: 10px;
+        padding: 2px 8px;
+        border-radius: 12px;
+        text-transform: uppercase;
+        font-weight: 700;
+        letter-spacing: 0.5px;
+        display: inline-block;
+    }
+    .status-mastered { background: rgba(0, 229, 255, 0.12); color: var(--cyber-teal); border: 1px solid var(--cyber-teal); }
+    .status-developing { background: rgba(255, 214, 0, 0.12); color: var(--constant-gold); border: 1px solid var(--constant-gold); }
+    .status-critical { background: rgba(255, 61, 0, 0.12); color: var(--coral-red); border: 1px solid var(--coral-red); }
+    .status-unmapped { background: rgba(255, 255, 255, 0.05); color: var(--text-muted); border: 1px solid #2A303C; }
+
+    /* Queue Section */
     .queue-title {
         border-left: 4px solid var(--constant-gold);
         padding-left: 12px;
@@ -104,35 +152,61 @@
     <div class="metric-card">
         <div>TOTAL SECURED VECTOR NODES</div>
         <div class="metric-num">{{ total_verified }}</div>
+        <div class="metric-subtext">Verified Solves</div>
     </div>
     <div class="metric-card">
         <div>GLOBAL SUBMISSION ACCURACY</div>
         <div class="metric-num">{{ accuracy }}%</div>
+        <div class="metric-subtext">Overall Precision Target: &ge; 80%</div>
     </div>
     <div class="metric-card alert-card">
         <div>CRITICAL CONCEPT BOTTLENECK</div>
         <div class="metric-num" style="font-size: 22px; margin-top: 22px;">{{ weakest_concept }}</div>
+        <div class="metric-subtext">Requires Remediate Action</div>
     </div>
 </div>
 
 <div class="diagnostic-panel">
-    <h3 style="margin-top: 0; margin-bottom: 20px; color: var(--cyber-teal);">Dimensional Analysis Mastery Diagnostics</h3>
+    <div class="diagnostic-header">
+        <h3 style="margin: 0; color: var(--cyber-teal);">Dimensional Analysis Mastery Diagnostics</h3>
+    </div>
     
     {% for type_key, data in concept_metrics.items %}
     <div class="bar-lane">
         <div class="bar-info">
-            <span>{{ data.label }}</span>
+            <div style="display: flex; align-items: center; gap: 10px;">
+                <span>{{ data.label }}</span>
+                {% if data.score is not None %}
+                    {% if data.score >= 80 %}
+                        <span class="status-badge status-mastered">Mastered</span>
+                    {% elif data.score >= 60 %}
+                        <span class="status-badge status-developing">Developing</span>
+                    {% else %}
+                        <span class="status-badge status-critical">Needs Review</span>
+                    {% endif %}
+                {% else %}
+                    <span class="status-badge status-unmapped">Unmapped</span>
+                {% endif %}
+            </div>
             <span>
                 {% if data.score is not None %}
-                    {{ data.score }}% Efficiency ({{ data.successes }} Clear / {{ data.failures }} Missed)
+                    <strong>{{ data.score }}%</strong> Efficiency ({{ data.successes }} Clear / {{ data.failures }} Missed)
                 {% else %}
-                    No Diagnostic Telemetry Data Found
+                    <span style="color: var(--text-muted); font-weight: normal;">No Diagnostic Telemetry</span>
                 {% endif %}
             </span>
         </div>
         <div class="bar-bg">
-            <div class="bar-fill {% if data.score < 60 %}low-accuracy{% endif %}" 
-                 style="width: {% if data.score is not None %}{{ data.score }}{% else %}0{% endif %}%;">
+            <div class="bar-fill 
+                {% if data.score is not None %}
+                    {% if data.score >= 80 %}high-accuracy
+                    {% elif data.score >= 60 %}mid-accuracy
+                    {% else %}low-accuracy
+                    {% endif %}
+                {% else %}
+                    unattempted
+                {% endif %}" 
+                 style="width: {% if data.score is not None %}{{ data.score }}{% else %}100{% endif %}%;">
             </div>
         </div>
     </div>
@@ -143,7 +217,7 @@
     {% if has_history %}
         Strategic Optimization Targets (Recommended Re-Entry)
     {% else %}
-        Foundational Launch targets (Recommended Onboarding)
+        Foundational Launch Targets (Recommended Onboarding)
     {% endif %}
 </h3>
 
@@ -151,7 +225,12 @@
     {% for problem in recommended_problems %}
     <div class="reentry-card">
         <div>
-            <h4 style="margin: 0 0 6px 0; color: #FFF;">{{ problem.title }}</h4>
+            <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 6px;">
+                <h4 style="margin: 0; color: #FFF;">{{ problem.title }}</h4>
+                {% if problem.concept_label %}
+                    <span class="status-badge status-unmapped">{{ problem.concept_label }}</span>
+                {% endif %}
+            </div>
             <p style="margin: 0; font-size: 13px; color: var(--text-muted);">{{ problem.prompt|truncatechars:120 }}</p>
         </div>
         <a href="{% url 'preparation_ledger' problem.problem_id %}" class="btn-reenter">

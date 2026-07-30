@@ -659,7 +659,10 @@ async function awardXP(isFinalNode) {
     try {
         const res = await fetch('/award-xp/', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: { 
+                'Content-Type': 'application/json',
+                'X-CSRFToken': '{{ csrf_token }}'
+            },
             body: JSON.stringify({
                 xp_amount: xpAmount,
                 reason: `step_grid_constructed_${PROBLEM_ID}_${PART_LABEL}`,
