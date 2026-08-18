@@ -10,7 +10,7 @@ from django.db.models import Sum, Avg, Count, Q
 
 from .models import (
     StoichiometryProblem, ProblemPart, StudentTelemetryLog,
-    UserProfile, NODE_COUNT,
+    Substance, UserProfile, NODE_COUNT,
     XP_PER_NODE_CORRECT, XP_PER_PART_COMPLETE,
     XP_PER_BALANCE, XP_PER_LIMITING_TRACK, XP_PER_DEDUCTION,
 )
@@ -506,6 +506,16 @@ def award_node_xp(request):
 # API: Verify balancing
 # ===========================================================================
 
+import re
+import math
+from functools import reduce
+
+def _parse_substance_atoms(formula):
+    atoms = {}
+    for elem, count in re.findall(r'([A-Z][a-z]*)(\d*)', formula):
+        atoms[elem] = atoms.get(elem, 0) + (int(count) if count else 1)
+    return atoms
+
 @csrf_exempt
 def verify_balancing_backend(request):
     if request.method != 'POST':
@@ -521,15 +531,34 @@ def verify_balancing_backend(request):
 
     try:
         problem  = StoichiometryProblem.objects.get(problem_id=prob_id)
-        expected = problem.correct_coefficients.split(',')
-        is_correct = (
-            len(submitted) == len(expected) and
-            all(str(s).strip() == str(e).strip() for s, e in zip(submitted, expected))
+        expected_strs = [s.strip() for s in problem.correct_coefficients.split(',') if s.strip()]
+        expected_ints = [int(s) for s in expected_strs]
+
+        try:
+            submitted_ints = [int(str(s).strip()) for s in submitted]
+        except (ValueError, TypeError):
+            submitted_ints = []
+
+        is_exact_match = (
+            len(submitted_ints) == len(expected_ints) and
+            submitted_ints == expected_ints
         )
+
+        # Check for multiple-ratio trap (e.g. 4, 2, 4 instead of 2, 1, 2)
+        is_multiple_ratio = False
+        scale_factor = 1
+        if not is_exact_match and len(submitted_ints) == len(expected_ints) and all(x > 0 for x in submitted_ints):
+            ratios = [sub / exp for sub, exp in zip(submitted_ints, expected_ints)]
+            if len(set(ratios)) == 1 and ratios[0] > 1 and ratios[0].is_integer():
+                is_multiple_ratio = True
+                scale_factor = int(ratios[0])
+
+        is_correct = is_exact_match
 
         log, _ = StudentTelemetryLog.objects.get_or_create(
             problem_id=prob_id,
             part_label='balance',
+            sub_step='1A',
             module_phase=1,
             defaults={'attempts_count': 0},
         )
@@ -539,19 +568,178 @@ def verify_balancing_backend(request):
             log.user = request.user
         log.save()
 
+        # Build diagnostic feedback and progressive hints
+        hint = ""
+        if is_correct:
+            message = 'Chamber Stabilized! Reaction is perfectly balanced in the simplest whole-number ratio.'
+        elif is_multiple_ratio:
+            message = f'Atom balance achieved, but stoichiometry requires the SIMPLEST whole-number integer ratio!'
+            hint = f"All your coefficients ({', '.join(map(str, submitted_ints))}) share a common divisor of {scale_factor}. Divide each coefficient by {scale_factor} to find the simplest whole-number ratio."
+        else:
+            # Calculate atom imbalance for targeted diagnosis
+            reactants = problem.reactants
+            products  = problem.products
+            left_atoms = {}
+            right_atoms = {}
+
+            if len(submitted_ints) == len(reactants) + len(products):
+                for i, r in enumerate(reactants):
+                    c = submitted_ints[i]
+                    for el, cnt in _parse_substance_atoms(r['formula']).items():
+                        left_atoms[el] = left_atoms.get(el, 0) + c * cnt
+                for j, p in enumerate(products):
+                    c = submitted_ints[len(reactants) + j]
+                    for el, cnt in _parse_substance_atoms(p['formula']).items():
+                        right_atoms[el] = right_atoms.get(el, 0) + c * cnt
+
+                mismatches = []
+                all_elements = sorted(set(list(left_atoms.keys()) + list(right_atoms.keys())))
+                for el in all_elements:
+                    l_count = left_atoms.get(el, 0)
+                    r_count = right_atoms.get(el, 0)
+                    if l_count != r_count:
+                        mismatches.append((el, l_count, r_count))
+
+                if mismatches:
+                    err_summaries = [f"{el}: Left has {l}, Right has {r}" for el, l, r in mismatches]
+                    message = f"Reaction Imbalance! {'; '.join(err_summaries[:2])}."
+
+                    # Progressive Hint Generation based on attempt count
+                    first_el, l_c, r_c = mismatches[0]
+                    if log.attempts_count == 1:
+                        if l_c > r_c:
+                            hint = f"Try increasing the coefficient of the product containing {first_el} to supply more {first_el} atoms on the right side."
+                        else:
+                            hint = f"Try increasing the coefficient of the reactant containing {first_el} to supply more {first_el} atoms on the left side."
+                    elif log.attempts_count == 2:
+                        hint = "Inspection Strategy: Balance metals and carbon first, then hydrogen, and save pure diatomic molecules (like O2 or N2) for last since adjusting them won't alter other elements."
+                    else:
+                        hint = "Check the odd/even atom parity: If an element appears with an odd subscript in a product but as a diatomic reactant (like O2), try doubling the odd compound's coefficient to make it even."
+                else:
+                    message = 'Reaction Imbalance Detected! Enter positive integers for all reactants and products.'
+                    hint = 'Fill in all coefficient boxes with positive whole numbers (1, 2, 3...).'
+            else:
+                message = 'Please provide coefficients for all reactants and products.'
+                hint = 'Enter an integer coefficient in every box.'
+
         return JsonResponse({
-            'success':  is_correct,
-            'attempts': log.attempts_count,
+            'success':   is_correct,
+            'attempts':  log.attempts_count,
             'xp_reward': XP_PER_BALANCE if is_correct else 0,
-            'message':  (
-                'Chamber Stabilized! Reaction is perfectly balanced.'
-                if is_correct else
-                'Reaction Imbalance Detected! Try checking atom ratios.'
-            ),
+            'message':   message,
+            'hint':      hint,
         })
 
     except StoichiometryProblem.DoesNotExist:
         return JsonResponse({'success': False, 'message': 'Problem not found.'})
+
+
+# ===========================================================================
+# API: Verify molar masses  (Sub-Step 1B)
+# ===========================================================================
+
+@csrf_exempt
+def verify_molar_mass_backend(request):
+    """
+    POST { problem_id, molar_masses: { formula: value, ... } }
+    Validates each submitted molar mass against the Substance table.
+    Logs telemetry with part_label='molar_mass', sub_step='1B'.
+    Returns { success, results: { formula: { correct, expected } }, hint, xp_reward }
+    """
+    if request.method != 'POST':
+        return JsonResponse({'success': False, 'message': 'Invalid request method.'})
+
+    try:
+        data = json.loads(request.body)
+    except json.JSONDecodeError:
+        return JsonResponse({'success': False, 'message': 'Invalid JSON.'})
+
+    prob_id       = data.get('problem_id', '')
+    submitted_map = data.get('molar_masses', {})
+
+    if not prob_id or not submitted_map:
+        return JsonResponse({'success': False, 'message': 'Missing problem_id or molar_masses.'})
+
+    try:
+        problem = StoichiometryProblem.objects.get(problem_id=prob_id)
+    except StoichiometryProblem.DoesNotExist:
+        return JsonResponse({'success': False, 'message': 'Problem not found.'})
+
+    TOLERANCE = 0.5
+    results   = {}
+    all_ok    = True
+
+    for formula, submitted_val in submitted_map.items():
+        try:
+            entered = float(submitted_val)
+        except (TypeError, ValueError):
+            results[formula] = {'correct': False, 'expected': None}
+            all_ok = False
+            continue
+
+        try:
+            substance = Substance.objects.get(formula=formula)
+            expected  = substance.molar_mass
+        except Substance.DoesNotExist:
+            results[formula] = {'correct': False, 'expected': None}
+            all_ok = False
+            continue
+
+        is_match = abs(entered - expected) <= TOLERANCE
+        results[formula] = {
+            'correct':  is_match,
+            'expected': round(expected, 3),
+        }
+        if not is_match:
+            all_ok = False
+
+    # Telemetry
+    log, _ = StudentTelemetryLog.objects.get_or_create(
+        problem_id=prob_id,
+        part_label='molar_mass',
+        sub_step='1B',
+        module_phase=1,
+        defaults={'attempts_count': 0},
+    )
+    if not all_ok:
+        log.attempts_count += 1
+    log.is_correct = all_ok
+    if request.user.is_authenticated:
+        log.user = request.user
+    log.save()
+
+    xp_reward = XP_PER_BALANCE if all_ok else 0
+
+    # Build contextual hints for incorrect molar masses
+    molar_mass_hints = []
+    if not all_ok:
+        for formula, res in results.items():
+            if not res['correct']:
+                atoms = _parse_substance_atoms(formula)
+                breakdown_parts = []
+                for el, cnt in atoms.items():
+                    try:
+                        el_sub = Substance.objects.get(formula=el)
+                        el_mass = el_sub.molar_mass
+                        breakdown_parts.append(f"{cnt}×{el} ({el_mass:.3f})")
+                    except Substance.DoesNotExist:
+                        breakdown_parts.append(f"{cnt}×{el}")
+                calc_str = " + ".join(breakdown_parts)
+                molar_mass_hints.append(f"For {formula}: Sum {calc_str} using atomic masses from the databank.")
+
+    hint = " ".join(molar_mass_hints[:2]) if molar_mass_hints else ""
+
+    return JsonResponse({
+        'success':   all_ok,
+        'results':   results,
+        'xp_reward': xp_reward,
+        'message': (
+            'Molecular constants verified! All molar masses locked.'
+            if all_ok else
+            'Molar mass mismatch detected — check highlighted compounds.'
+        ),
+        'hint':      hint,
+    })
 
 
 # ===========================================================================

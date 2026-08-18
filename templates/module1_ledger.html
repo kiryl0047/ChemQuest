@@ -117,10 +117,182 @@
         transition: all 0.2s ease;
         font-size: 14px;
     }
-    .btn-action:hover {
+    .btn-action:hover:not(:disabled) {
         background: var(--cyber-teal);
         color: var(--bg-dark);
         box-shadow: 0 0 10px rgba(0, 240, 255, 0.5);
+    }
+    .btn-action:disabled {
+        opacity: 0.35;
+        cursor: not-allowed;
+        border-color: #4B5563 !important;
+        color: #6B7280 !important;
+        box-shadow: none !important;
+        pointer-events: none;
+    }
+
+    /* ── Live Atom Conservation HUD ── */
+    .atom-hud-container {
+        background: #141820;
+        border: 1px solid #2A303C;
+        border-radius: 6px;
+        padding: 16px 20px;
+        margin-top: -15px;
+        margin-bottom: 30px;
+        box-shadow: inset 0 0 20px rgba(0,0,0,0.3);
+    }
+    .atom-hud-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 12px;
+        border-bottom: 1px solid rgba(255,255,255,0.06);
+        padding-bottom: 8px;
+        flex-wrap: wrap;
+        gap: 8px;
+    }
+    .atom-hud-title {
+        font-size: 11px;
+        font-weight: 800;
+        letter-spacing: 1.5px;
+        color: var(--cyber-teal);
+        text-transform: uppercase;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+    .atom-hud-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+        gap: 12px;
+    }
+    .atom-card {
+        background: var(--bg-dark);
+        border: 1px solid #2A303C;
+        border-radius: 5px;
+        padding: 10px 14px;
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        transition: border-color 0.2s, box-shadow 0.2s;
+    }
+    .atom-card.balanced {
+        border-color: rgba(0, 230, 118, 0.5);
+        box-shadow: 0 0 12px rgba(0, 230, 118, 0.12);
+    }
+    .atom-card.imbalanced {
+        border-color: rgba(255, 61, 0, 0.4);
+    }
+    .atom-card-top {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+    .atom-sym-badge {
+        font-weight: 900;
+        font-size: 14px;
+        width: 28px;
+        height: 28px;
+        border-radius: 4px;
+        background: rgba(0, 240, 255, 0.1);
+        border: 1px solid var(--cyber-teal);
+        color: var(--cyber-teal);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+    .atom-counts-row {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        font-size: 12px;
+        color: var(--text-light);
+    }
+    .atom-count-val {
+        font-weight: bold;
+        font-size: 15px;
+    }
+    .atom-meter-track {
+        height: 6px;
+        background: #252B37;
+        border-radius: 3px;
+        overflow: hidden;
+        display: flex;
+    }
+    .atom-meter-left {
+        height: 100%;
+        background: var(--cyber-teal);
+        transition: width 0.25s ease;
+    }
+    .atom-meter-right {
+        height: 100%;
+        background: var(--constant-gold);
+        transition: width 0.25s ease;
+    }
+    .atom-status-badge {
+        font-size: 9px;
+        font-weight: bold;
+        letter-spacing: 0.5px;
+        padding: 2px 6px;
+        border-radius: 3px;
+    }
+    .atom-status-badge.ok {
+        background: rgba(0, 230, 118, 0.15);
+        color: var(--combo-green);
+        border: 1px solid rgba(0, 230, 118, 0.3);
+    }
+    .atom-status-badge.err {
+        background: rgba(255, 61, 0, 0.15);
+        color: #FCA5A5;
+        border: 1px solid rgba(255, 61, 0, 0.3);
+    }
+    .atom-status-badge.idle {
+        background: rgba(255, 255, 255, 0.05);
+        color: var(--text-muted);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+    .chamber-blueprint-box {
+        display: none;
+        margin-top: 15px;
+        padding: 14px 18px;
+        background: rgba(0, 230, 118, 0.04);
+        border: 1px solid rgba(0, 230, 118, 0.25);
+        border-radius: 6px;
+        font-size: 13px;
+        line-height: 1.6;
+    }
+
+    /* ── Tactical Hint Box ── */
+    .tactical-hint-box {
+        background: rgba(255, 214, 0, 0.06);
+        border: 1px solid rgba(255, 214, 0, 0.35);
+        border-left: 4px solid var(--constant-gold);
+        border-radius: 5px;
+        padding: 12px 16px;
+        margin-top: 14px;
+        margin-bottom: 16px;
+        animation: hintFadeIn 0.3s ease-in-out;
+    }
+    .hint-header {
+        font-size: 11px;
+        font-weight: 800;
+        letter-spacing: 1px;
+        color: var(--constant-gold);
+        margin-bottom: 6px;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        text-transform: uppercase;
+    }
+    .hint-body {
+        font-size: 13px;
+        color: var(--text-light);
+        line-height: 1.5;
+    }
+
+    @keyframes hintFadeIn {
+        from { opacity: 0; transform: translateY(-4px); }
+        to { opacity: 1; transform: translateY(0); }
     }
 
     /* ── Molar Mass Section ── */
@@ -290,32 +462,48 @@
 {% endif %}
 {% endwith %}
 
-<!-- ── Step 1: Balance ── -->
-<h3 style="color: var(--cyber-teal); margin-bottom: 12px;">
-    1. Stabilize the Chemical Chamber
+<!-- ── Sub-Step 1A: Balance ── -->
+<h3 style="color: var(--cyber-teal); margin-bottom: 12px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+    <span class="type-badge badge-reactant" style="font-size: 11px;">SUB-STEP 1A</span>
+    Stabilize the Chemical Chamber (Reaction Balancing)
     <span class="balance-status" id="balanceStatus">PENDING</span>
 </h3>
 
 <!-- Dynamic Concept Check with Reactant/Product Indicators -->
 <details class="edu-expander" id="guideBalancing">
-    <summary>💡 CONCEPT CHECK: Balancing Strategy for this Reaction</summary>
+    <summary>💡 CONCEPT CHECK: How to Balance This Reaction (Simple 3-Step Guide)</summary>
     <div class="edu-content">
-        <p style="margin: 0 0 8px 0;">
-            To satisfy the <strong>Law of Conservation of Mass</strong>, total atoms on the left must equal total atoms on the right.
-        </p>
-        <ul style="margin: 0; padding-left: 20px; color: var(--text-muted);">
-            <li>
-                <span class="type-badge badge-reactant">Reactants (Left)</span>: Multiply your coefficient by the subscripts in 
-                {% for r in reactants %}<code>{{ r.formula }}</code>{% if not forloop.last %}, {% endif %}{% endfor %}.
-            </li>
-            <li style="margin-top: 4px;">
-                <span class="type-badge badge-product">Products (Right)</span>: Multiply your coefficient by the subscripts in 
-                {% for p in products %}<code>{{ p.formula }}</code>{% if not forloop.last %}, {% endif %}{% endfor %}.
-            </li>
-            <li style="margin-top: 4px;">
-                <strong>Strategy Tip:</strong> Balance distinct element types one at a time before adjusting compounds with repeating elements.
-            </li>
-        </ul>
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 12px; margin-top: 6px;">
+            <div style="background: rgba(0, 240, 255, 0.05); border: 1px solid rgba(0, 240, 255, 0.2); border-radius: 5px; padding: 10px 14px;">
+                <div style="font-weight: 800; color: var(--cyber-teal); margin-bottom: 4px; font-size: 13px;">
+                    1️⃣ The Core Rule
+                </div>
+                <p style="margin: 0; font-size: 12px; color: var(--text-light); line-height: 1.5;">
+                    The <strong>Law of Conservation of Mass</strong> states that atoms cannot be created or destroyed. Total atoms on the <strong>Left (Reactants)</strong> must equal the <strong>Right (Products)</strong>.
+                </p>
+            </div>
+
+            <div style="background: rgba(0, 240, 255, 0.05); border: 1px solid rgba(0, 240, 255, 0.2); border-radius: 5px; padding: 10px 14px;">
+                <div style="font-weight: 800; color: var(--cyber-teal); margin-bottom: 4px; font-size: 13px;">
+                    2️⃣ Multiplication Rule
+                </div>
+                <p style="margin: 0; font-size: 12px; color: var(--text-light); line-height: 1.5;">
+                    The big number you enter (<strong>Coefficient</strong>) multiplies every subscript in the formula.
+                    <br><em>Example:</em> <code>2 H₂O</code> = <strong>4 H atoms</strong> (2×2) and <strong>2 O atoms</strong> (2×1).
+                </p>
+            </div>
+
+            <div style="background: rgba(0, 240, 255, 0.05); border: 1px solid rgba(0, 240, 255, 0.2); border-radius: 5px; padding: 10px 14px;">
+                <div style="font-weight: 800; color: var(--cyber-teal); margin-bottom: 4px; font-size: 13px;">
+                    3️⃣ Strategy Order
+                </div>
+                <p style="margin: 0; font-size: 12px; color: var(--text-light); line-height: 1.5;">
+                    • <strong>Step 1:</strong> Balance unique elements/metals first.<br>
+                    • <strong>Step 2:</strong> Balance Hydrogen (H).<br>
+                    • <strong>Step 3:</strong> Balance pure elements (like O₂ or N₂) <strong>last</strong>!
+                </p>
+            </div>
+        </div>
     </div>
 </details>
 
@@ -346,32 +534,82 @@
     </button>
 </div>
 
-<!-- ── Step 2: Molar Masses (locked until balanced) ── -->
+<!-- ── Live Atom Conservation HUD ── -->
+<div class="atom-hud-container" id="atomInventoryHud">
+    <div class="atom-hud-header">
+        <div class="atom-hud-title">
+            <span>⚡</span>
+            <span>Live Atom Conservation Inventory</span>
+        </div>
+        <span class="atom-status-badge idle" id="hudGlobalStatus">Awaiting Coefficients</span>
+    </div>
+    <div class="atom-hud-grid" id="hudElementGrid">
+        <!-- Rendered dynamically by updateAtomInventory() -->
+    </div>
+    <div class="tactical-hint-box" id="balanceHintBox" style="display: none;">
+        <div class="hint-header">
+            <span>💡 Tactical Balancing Hint (<span id="balanceAttemptLabel">Attempt 1</span>)</span>
+        </div>
+        <div id="balanceHintText" class="hint-body"></div>
+    </div>
+    <div class="chamber-blueprint-box" id="chamberBlueprintBox">
+        <div style="font-weight: bold; color: var(--combo-green); margin-bottom: 6px; display: flex; align-items: center; gap: 6px;">
+            <span>🔬</span>
+            <span>REACTION CONSERVATION BLUEPRINT — STABILIZATION EXPLANATION</span>
+        </div>
+        <div id="chamberBlueprintContent" style="color: var(--text-light);">
+            <!-- Populated dynamically on Chamber Stabilization -->
+        </div>
+    </div>
+</div>
+
+<!-- ── Sub-Step 1B: Molar Masses (locked until balanced) ── -->
 <div class="mass-section" id="massSection">
-    <h3 style="color: var(--constant-gold);">2. Harvest Canned Constants (Molar Masses)</h3>
+    <h3 style="color: var(--constant-gold); margin-bottom: 12px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+        <span class="type-badge badge-product" style="font-size: 11px;">SUB-STEP 1B</span>
+        Harvest Canned Constants (Molar Mass Lookup)
+        <span class="balance-status" id="massOverviewStatus">LOCKED</span>
+    </h3>
 
     <!-- Dynamic Problem-Aligned Concept Check: Molar Mass -->
     <details class="edu-expander" id="guideMolarMass" style="border-color: rgba(255, 184, 0, 0.3); background: rgba(255, 184, 0, 0.05);">
-        <summary style="color: var(--constant-gold);">💡 CONCEPT CHECK: Calculating Compound Molar Mass</summary>
+        <summary style="color: var(--constant-gold);">💡 CONCEPT CHECK: How to Calculate Compound Molar Mass</summary>
         <div class="edu-content">
-            <p style="margin: 0 0 8px 0;">
-                The molar mass of a molecule is calculated by summing the exact atomic mass of every individual atom present in its molecular formula:
-            </p>
-            <ul style="margin: 0; padding-left: 20px; color: var(--text-muted);">
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 12px; margin-top: 6px;">
+                <div style="background: rgba(255, 184, 0, 0.05); border: 1px solid rgba(255, 184, 0, 0.25); border-radius: 5px; padding: 10px 14px;">
+                    <div style="font-weight: 800; color: var(--constant-gold); margin-bottom: 4px; font-size: 13px;">
+                        🛒 The "Recipe" Formula
+                    </div>
+                    <p style="margin: 0; font-size: 12px; color: var(--text-light); line-height: 1.5;">
+                        Molar mass is the total mass of <strong>1 mole</strong> of a substance. Find each element's atomic mass in the databank and sum them up:
+                        <br>
+                        <code>Total Mass = ∑ (Atom Count × Atomic Mass)</code>
+                    </p>
+                </div>
+
+                <div style="background: rgba(255, 184, 0, 0.05); border: 1px solid rgba(255, 184, 0, 0.25); border-radius: 5px; padding: 10px 14px;">
+                    <div style="font-weight: 800; color: var(--constant-gold); margin-bottom: 4px; font-size: 13px;">
+                        ⚠️ Important Rule
+                    </div>
+                    <p style="margin: 0; font-size: 12px; color: var(--text-light); line-height: 1.5;">
+                        <strong>Do NOT</strong> multiply by the balancing coefficients ($2, 3\dots$) from Step 1A! Molar mass always measures <strong>1 single mole</strong> of the chemical formula alone.
+                    </p>
+                </div>
+            </div>
+
+            <div style="margin-top: 10px; padding: 8px 12px; background: rgba(0,0,0,0.25); border-radius: 4px; font-size: 12px; color: var(--text-muted);">
+                <strong style="color: var(--text-light);">Formula Blueprints for this reaction:</strong>
                 {% for formula in target_substances %}
-                <li>
-                    <strong>For <code>{{ formula }}</code>:</strong> Locate each atom type in the Atomic Databank below, multiply its relative mass (g/mol) by its subscript count in <code>{{ formula }}</code>, and sum the totals together.
-                </li>
+                <span style="display: inline-block; margin-right: 12px; margin-top: 4px; color: var(--constant-gold);">
+                    • <code>{{ formula }}</code>
+                </span>
                 {% endfor %}
-                <li style="margin-top: 4px;">
-                    <em>Note: Do not multiply by the chemical equation coefficients here—molar mass measures 1 mole of the substance alone.</em>
-                </li>
-            </ul>
+            </div>
         </div>
     </details>
 
     <p style="color: var(--text-muted); margin-top: -5px; font-size: 14px;">
-        Use the atomic databank to compute the <strong>exact sum mass</strong> for each compound, then press Lock.
+        Use the atomic databank to compute the <strong>exact sum mass</strong> for each compound, then verify constants to unlock progression.
     </p>
 
     {% for formula in target_substances %}
@@ -383,19 +621,38 @@
             <input type="number" step="0.001" class="mass-input"
                    id="mass_{{ formula }}"
                    data-formula="{{ formula }}"
-                   placeholder="0.000">
+                   placeholder="0.000"
+                   disabled>
             <span style="color: var(--text-muted);">g/mol</span>
             <span class="balance-status" id="massStatus_{{ formula }}">—</span>
         </div>
     </div>
     {% endfor %}
 
-    <button class="btn-action"
-            style="margin-top: 20px; border-color: var(--constant-gold); color: var(--constant-gold);"
-            id="btnLockConstants"
-            onclick="lockAndProceed()">
-        Lock Constants &amp; Proceed to Workspace ──>
-    </button>
+    <!-- Tactical Hint Box for Sub-Step 1B -->
+    <div class="tactical-hint-box" id="massHintBox" style="display: none;">
+        <div class="hint-header">
+            <span>💡 Molar Mass Calculation Hint</span>
+        </div>
+        <div id="massHintText" class="hint-body"></div>
+    </div>
+
+    <div style="display: flex; align-items: center; gap: 15px; margin-top: 20px; flex-wrap: wrap;">
+        <button class="btn-action"
+                style="border-color: var(--constant-gold); color: var(--constant-gold);"
+                id="btnLockConstants"
+                onclick="verifyMolarMasses()">
+            Verify Molar Masses
+        </button>
+
+        <button class="btn-action"
+                style="border-color: var(--combo-green); color: var(--combo-green); background: rgba(0, 230, 153, 0.08);"
+                id="btn-next-module"
+                disabled
+                onclick="proceedToWorkspace()">
+            {% if is_limiting_problem %}Proceed to Limiting Workspace ──>{% else %}Proceed to Module 2 Workspace ──>{% endif %}
+        </button>
+    </div>
 
     <!-- Atomic Databank — Full Periodic Table -->
     <div class="periodic-popover" id="periodicTableContainer">
@@ -509,12 +766,181 @@ const FORMULA_ATOM_MAP = {
 
 const MASS_TOLERANCE = 0.000;
 
-function computeMolarMass(formula) {
-    const atoms = FORMULA_ATOM_MAP[formula];
-    if (!atoms) return null;
-    return Object.entries(atoms).reduce((sum, [el, count]) => {
-        return sum + (IUPAC_MASSES[el] || 0) * count;
-    }, 0);
+function parseFormulaAtoms(formula) {
+    if (FORMULA_ATOM_MAP[formula]) {
+        return FORMULA_ATOM_MAP[formula];
+    }
+    const atoms = {};
+    const regex = /([A-Z][a-z]*)(\d*)/g;
+    let match;
+    while ((match = regex.exec(formula)) !== null) {
+        if (match[1]) {
+            const el = match[1];
+            const count = match[2] ? parseInt(match[2], 10) : 1;
+            atoms[el] = (atoms[el] || 0) + count;
+        }
+    }
+    return atoms;
+}
+
+function updateAtomInventory() {
+    const leftAtoms = {};
+    const rightAtoms = {};
+    const allElementsSet = new Set();
+
+    let hasAnyInput = false;
+
+    // Reactants
+    REACTANT_FORMULAS.forEach((formula, i) => {
+        const input = document.getElementById(`coeff_r${i}`);
+        const val = input ? parseFloat(input.value) : 0;
+        const coeff = (!isNaN(val) && val > 0) ? val : 0;
+        if (coeff > 0) hasAnyInput = true;
+
+        const atoms = parseFormulaAtoms(formula);
+        Object.entries(atoms).forEach(([el, cnt]) => {
+            allElementsSet.add(el);
+            leftAtoms[el] = (leftAtoms[el] || 0) + coeff * cnt;
+        });
+    });
+
+    // Products
+    PRODUCT_FORMULAS.forEach((formula, i) => {
+        const input = document.getElementById(`coeff_p${i}`);
+        const val = input ? parseFloat(input.value) : 0;
+        const coeff = (!isNaN(val) && val > 0) ? val : 0;
+        if (coeff > 0) hasAnyInput = true;
+
+        const atoms = parseFormulaAtoms(formula);
+        Object.entries(atoms).forEach(([el, cnt]) => {
+            allElementsSet.add(el);
+            rightAtoms[el] = (rightAtoms[el] || 0) + coeff * cnt;
+        });
+    });
+
+    const allElements = Array.from(allElementsSet).sort();
+    const gridEl = document.getElementById('hudElementGrid');
+    const globalStatusEl = document.getElementById('hudGlobalStatus');
+    if (!gridEl) return;
+
+    gridEl.innerHTML = '';
+    let allBalanced = true;
+
+    allElements.forEach(el => {
+        const lCount = leftAtoms[el] || 0;
+        const rCount = rightAtoms[el] || 0;
+        const total = lCount + rCount;
+
+        const card = document.createElement('div');
+        const isElBalanced = (lCount > 0 && lCount === rCount);
+        if (!isElBalanced) allBalanced = false;
+
+        card.className = `atom-card ${isElBalanced ? 'balanced' : (hasAnyInput ? 'imbalanced' : '')}`;
+
+        let statusBadge = '';
+        if (!hasAnyInput || (lCount === 0 && rCount === 0)) {
+            statusBadge = `<span class="atom-status-badge idle">PENDING</span>`;
+        } else if (isElBalanced) {
+            statusBadge = `<span class="atom-status-badge ok">✓ BALANCED (${lCount})</span>`;
+        } else if (lCount > rCount) {
+            statusBadge = `<span class="atom-status-badge err">▲ RIGHT DEFICIT (-${lCount - rCount})</span>`;
+        } else {
+            statusBadge = `<span class="atom-status-badge err">▲ LEFT DEFICIT (-${rCount - lCount})</span>`;
+        }
+
+        let lPct = 50;
+        let rPct = 50;
+        if (total > 0) {
+            lPct = Math.round((lCount / total) * 100);
+            rPct = 100 - lPct;
+        }
+
+        card.innerHTML = `
+            <div class="atom-card-top">
+                <div style="display:flex; align-items:center; gap:8px;">
+                    <span class="atom-sym-badge">${el}</span>
+                    <span style="font-weight:bold; font-size:13px; color:var(--text-light);">${el} Atoms</span>
+                </div>
+                ${statusBadge}
+            </div>
+            <div class="atom-counts-row">
+                <span style="color:var(--cyber-teal);">Reactants: <span class="atom-count-val">${lCount}</span></span>
+                <span style="color:var(--text-muted); font-size:11px;">vs</span>
+                <span style="color:var(--constant-gold);">Products: <span class="atom-count-val">${rCount}</span></span>
+            </div>
+            <div class="atom-meter-track">
+                <div class="atom-meter-left" style="width: ${lPct}%;"></div>
+                <div class="atom-meter-right" style="width: ${rPct}%;"></div>
+            </div>
+        `;
+        gridEl.appendChild(card);
+    });
+
+    if (globalStatusEl) {
+        if (!hasAnyInput) {
+            globalStatusEl.className = 'atom-status-badge idle';
+            globalStatusEl.textContent = 'Awaiting Coefficients';
+        } else if (allBalanced && allElements.length > 0) {
+            globalStatusEl.className = 'atom-status-badge ok';
+            globalStatusEl.textContent = '● Conservation Satisfied (All Atoms Match)';
+        } else {
+            globalStatusEl.className = 'atom-status-badge err';
+            globalStatusEl.textContent = '▲ Imbalance Present';
+        }
+    }
+}
+
+function renderConservationBlueprint() {
+    const box = document.getElementById('chamberBlueprintBox');
+    const content = document.getElementById('chamberBlueprintContent');
+    if (!box || !content) return;
+
+    let html = `
+        <p style="margin: 0 0 8px 0;">
+            <strong>Conservation Law Verified:</strong> The reaction is balanced in its minimal whole-number ratio. Every atom introduced on the reactant side is accounted for in the product stream:
+        </p>
+        <ul style="margin: 0; padding-left: 20px;">
+    `;
+
+    const allElementsSet = new Set();
+    REACTANT_FORMULAS.forEach(f => Object.keys(parseFormulaAtoms(f)).forEach(el => allElementsSet.add(el)));
+    PRODUCT_FORMULAS.forEach(f => Object.keys(parseFormulaAtoms(f)).forEach(el => allElementsSet.add(el)));
+
+    Array.from(allElementsSet).sort().forEach(el => {
+        let leftExpr = [];
+        let leftTotal = 0;
+        REACTANT_FORMULAS.forEach((f, i) => {
+            const coeff = parseFloat(document.getElementById(`coeff_r${i}`)?.value || 1);
+            const cnt = parseFormulaAtoms(f)[el] || 0;
+            if (cnt > 0) {
+                leftExpr.push(`${coeff} × ${cnt} (${f})`);
+                leftTotal += coeff * cnt;
+            }
+        });
+
+        let rightExpr = [];
+        let rightTotal = 0;
+        PRODUCT_FORMULAS.forEach((f, i) => {
+            const coeff = parseFloat(document.getElementById(`coeff_p${i}`)?.value || 1);
+            const cnt = parseFormulaAtoms(f)[el] || 0;
+            if (cnt > 0) {
+                rightExpr.push(`${coeff} × ${cnt} (${f})`);
+                rightTotal += coeff * cnt;
+            }
+        });
+
+        html += `<li><strong>${el}:</strong> ${leftExpr.join(' + ')} = <strong>${leftTotal} ${el} atoms</strong> on Left ⟷ ${rightExpr.join(' + ')} = <strong>${rightTotal} ${el} atoms</strong> on Right.</li>`;
+    });
+
+    html += `
+        </ul>
+        <p style="margin: 8px 0 0 0; color: var(--text-muted); font-size: 12px;">
+            <em>Key Takeaway: Stoichiometric coefficients represent fundamental mole-to-mole ratios that allow direct unit cancellations in Module 2.</em>
+        </p>
+    `;
+
+    content.innerHTML = html;
+    box.style.display = 'block';
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -522,8 +948,21 @@ function computeMolarMass(formula) {
 // ─────────────────────────────────────────────────────────────────────────────
 const STORE_KEY = `cq_m1_${PROBLEM_ID}`;
 
+function updateTransitionButtonState() {
+    const nextBtn = document.getElementById('btn-next-module');
+    if (!nextBtn) return;
+    if (balancingCleared && molarMassCleared) {
+        nextBtn.disabled = false;
+        nextBtn.style.cursor = 'pointer';
+        nextBtn.style.boxShadow = '0 0 12px rgba(0, 230, 153, 0.4)';
+    } else {
+        nextBtn.disabled = true;
+        nextBtn.style.boxShadow = 'none';
+    }
+}
+
 function saveState() {
-    const state = { coeffs: {}, masses: {}, coefficients: {}, balancingCleared };
+    const state = { coeffs: {}, masses: {}, coefficients: {}, balancingCleared, molarMassCleared };
     
     REACTANT_FORMULAS.forEach((formula, i) => {
         const el = document.getElementById(`coeff_r${i}`);
@@ -566,8 +1005,10 @@ function restoreState() {
     if (state.balancingCleared) {
         balancingCleared = true;
         const statusEl = document.getElementById('balanceStatus');
-        statusEl.textContent = 'STABILIZED';
-        statusEl.className   = 'balance-status ok';
+        if (statusEl) {
+            statusEl.textContent = 'STABILIZED';
+            statusEl.className   = 'balance-status ok';
+        }
         REACTANT_FORMULAS.forEach((_, i) => {
             const el = document.getElementById(`coeff_r${i}`);
             if (el) { el.disabled = true; el.style.color = 'var(--combo-green)'; }
@@ -576,33 +1017,69 @@ function restoreState() {
             const el = document.getElementById(`coeff_p${i}`);
             if (el) { el.disabled = true; el.style.color = 'var(--combo-green)'; }
         });
-        document.getElementById('btnBalance').style.display = 'none';
-        document.getElementById('massSection').classList.add('unlocked');
+        const btnBal = document.getElementById('btnBalance');
+        if (btnBal) btnBal.style.display = 'none';
+
+        const massSec = document.getElementById('massSection');
+        if (massSec) massSec.classList.add('unlocked');
+
+        const massOverview = document.getElementById('massOverviewStatus');
+        if (massOverview && !state.molarMassCleared) {
+            massOverview.textContent = 'PENDING';
+            massOverview.className = 'balance-status';
+        }
+
+        // Enable mass inputs
+        document.querySelectorAll('.mass-input').forEach(input => {
+            input.disabled = false;
+        });
+
+        Object.entries(state.masses || {}).forEach(([formula, val]) => {
+            const input = document.getElementById(`mass_${formula}`);
+            if (input && val) input.value = val;
+        });
+    }
+
+    if (state.molarMassCleared && balancingCleared) {
+        molarMassCleared = true;
+        const massOverview = document.getElementById('massOverviewStatus');
+        if (massOverview) {
+            massOverview.textContent = 'VERIFIED';
+            massOverview.className = 'balance-status ok';
+        }
+        const btnLock = document.getElementById('btnLockConstants');
+        if (btnLock) btnLock.style.display = 'none';
 
         Object.entries(state.masses || {}).forEach(([formula, val]) => {
             const input    = document.getElementById(`mass_${formula}`);
             const statusEl = document.getElementById(`massStatus_${formula}`);
             if (!input || !val) return;
             input.value = val;
-            const expected = computeMolarMass(formula);
-            if (expected !== null && Math.abs(parseFloat(val) - expected) <= MASS_TOLERANCE) {
-                input.className      = 'mass-input correct';
-                input.disabled       = true;
-                statusEl.textContent = `✓ ${expected.toFixed(3)}`;
-                statusEl.className   = 'balance-status ok';
-            } else if (val) {
-                input.value = val;
+            input.className = 'mass-input correct';
+            input.disabled = true;
+            if (statusEl) {
+                statusEl.textContent = `✓ ${parseFloat(val).toFixed(3)}`;
+                statusEl.className = 'balance-status ok';
             }
         });
     }
+
+    if (state.balancingCleared) {
+        renderConservationBlueprint();
+    }
+
+    updateAtomInventory();
+    updateTransitionButtonState();
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Periodic Databank Initialization
+// Periodic Databank Initialization & Live Input Listeners
 // ─────────────────────────────────────────────────────────────────────────────
 document.addEventListener('input', e => {
-    if (e.target.classList.contains('coeff-input') ||
-        e.target.classList.contains('mass-input')) {
+    if (e.target.classList.contains('coeff-input')) {
+        updateAtomInventory();
+        saveState();
+    } else if (e.target.classList.contains('mass-input')) {
         saveState();
     }
 });
@@ -847,9 +1324,10 @@ document.addEventListener('input', e => {
 })();
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Step 1: Verify Balancing
+// Sub-Step 1A: Verify Balancing
 // ─────────────────────────────────────────────────────────────────────────────
 let balancingCleared = false;
+let molarMassCleared = false;
 
 async function checkBalancing() {
     const submitted = [];
@@ -860,119 +1338,226 @@ async function checkBalancing() {
         submitted.push(document.getElementById(`coeff_p${i}`)?.value?.trim() || '');
     });
 
-    const resp = await fetch('/api/verify-balancing/', {
-        method: 'POST',
-        headers: { 
-            'Content-Type': 'application/json',
-            'X-CSRFToken': '{{ csrf_token }}'
-        },
-        body: JSON.stringify({ problem_id: PROBLEM_ID, coefficients: submitted }),
-    });
-    const data = await resp.json();
-
-    const statusEl = document.getElementById('balanceStatus');
-
-    if (data.success) {
-        balancingCleared = true;
-        statusEl.textContent = 'STABILIZED';
-        statusEl.className   = 'balance-status ok';
-
-        await awardXP(30, 'equation_balanced');
-
-        REACTANT_FORMULAS.forEach((_, i) => {
-            const el = document.getElementById(`coeff_r${i}`);
-            if (el) { el.disabled = true; el.style.color = 'var(--combo-green)'; }
+    try {
+        const resp = await fetch('/api/verify-balancing/', {
+            method: 'POST',
+            headers: { 
+                'Content-Type': 'application/json',
+                'X-CSRFToken': '{{ csrf_token }}'
+            },
+            body: JSON.stringify({ problem_id: PROBLEM_ID, coefficients: submitted }),
         });
-        PRODUCT_FORMULAS.forEach((_, i) => {
-            const el = document.getElementById(`coeff_p${i}`);
-            if (el) { el.disabled = true; el.style.color = 'var(--combo-green)'; }
-        });
-        document.getElementById('btnBalance').style.display = 'none';
+        const data = await resp.json();
 
-        document.getElementById('massSection').classList.add('unlocked');
-        saveState();
-        showToast(data.message, 'ok');
-    } else {
-        statusEl.textContent = 'IMBALANCED';
-        statusEl.className   = 'balance-status err';
-        flashError('equationBuilder');
-        showToast(data.message, 'err');
+        const statusEl = document.getElementById('balanceStatus');
+
+        if (data.success) {
+            balancingCleared = true;
+            if (statusEl) {
+                statusEl.textContent = 'STABILIZED';
+                statusEl.className   = 'balance-status ok';
+            }
+
+            if (data.xp_reward) {
+                await awardXP(data.xp_reward, 'equation_balanced');
+            }
+
+            REACTANT_FORMULAS.forEach((_, i) => {
+                const el = document.getElementById(`coeff_r${i}`);
+                if (el) { el.disabled = true; el.style.color = 'var(--combo-green)'; }
+            });
+            PRODUCT_FORMULAS.forEach((_, i) => {
+                const el = document.getElementById(`coeff_p${i}`);
+                if (el) { el.disabled = true; el.style.color = 'var(--combo-green)'; }
+            });
+            const btnBal = document.getElementById('btnBalance');
+            if (btnBal) btnBal.style.display = 'none';
+
+            // Unlock Sub-Step 1B
+            const massSec = document.getElementById('massSection');
+            if (massSec) massSec.classList.add('unlocked');
+
+            document.querySelectorAll('.mass-input').forEach(input => {
+                input.disabled = false;
+            });
+
+            const massOverview = document.getElementById('massOverviewStatus');
+            if (massOverview && !molarMassCleared) {
+                massOverview.textContent = 'PENDING';
+                massOverview.className = 'balance-status';
+            }
+
+            // Hide hint on success
+            const hintBox = document.getElementById('balanceHintBox');
+            if (hintBox) hintBox.style.display = 'none';
+
+            renderConservationBlueprint();
+            updateAtomInventory();
+            updateTransitionButtonState();
+            saveState();
+            showToast(data.message, 'ok');
+        } else {
+            if (statusEl) {
+                statusEl.textContent = 'IMBALANCED';
+                statusEl.className   = 'balance-status err';
+            }
+
+            // Display tactical hint on error
+            if (data.hint) {
+                const hintBox = document.getElementById('balanceHintBox');
+                const hintText = document.getElementById('balanceHintText');
+                const attemptLabel = document.getElementById('balanceAttemptLabel');
+                if (hintBox && hintText) {
+                    hintText.textContent = data.hint;
+                    if (attemptLabel) attemptLabel.textContent = `Attempt ${data.attempts || 1}`;
+                    hintBox.style.display = 'block';
+                }
+            }
+
+            flashError('equationBuilder');
+            showToast(data.message, 'err');
+        }
+    } catch (err) {
+        console.error('[Balancing] Verification error:', err);
+        showToast('Error validating equation. Please try again.', 'err');
     }
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Step 2: Validate Molar Mass
+// Sub-Step 1B: Validate Molar Mass (Backend Verified)
 // ─────────────────────────────────────────────────────────────────────────────
-async function lockAndProceed() {
+async function verifyMolarMasses() {
     if (!balancingCleared) {
-        showToast('Stabilize the chemical chamber first!', 'err');
+        showToast('Stabilize the chemical chamber first (Sub-Step 1A)!', 'err');
         return;
     }
 
     const formulas = [{% for formula in target_substances %}"{{ formula }}"{% if not forloop.last %}, {% endif %}{% endfor %}];
-    let allOk = true;
+    const molarMasses = {};
+    let hasEmpty = false;
 
     formulas.forEach(formula => {
-        const input     = document.getElementById(`mass_${formula}`);
-        const statusEl  = document.getElementById(`massStatus_${formula}`);
-        const entered   = parseFloat(input.value);
-        const expected  = computeMolarMass(formula);
-
-        if (isNaN(entered) || expected === null) {
-            input.className   = 'mass-input incorrect';
-            statusEl.textContent = 'MISSING';
-            statusEl.className   = 'balance-status err';
-            allOk = false;
-            return;
-        }
-
-        if (Math.abs(entered - expected) <= MASS_TOLERANCE) {
-            input.className      = 'mass-input correct';
-            input.disabled       = true;
-            statusEl.textContent = `✓ ${expected.toFixed(3)}`;
-            statusEl.className   = 'balance-status ok';
-        } else {
-            input.className      = 'mass-input incorrect';
-            statusEl.textContent = `✗ Incorrect`;
-            statusEl.className   = 'balance-status err';
-            allOk = false;
-        }
+        const input = document.getElementById(`mass_${formula}`);
+        const val = input ? input.value.trim() : '';
+        if (!val) hasEmpty = true;
+        molarMasses[formula] = val;
     });
 
-    if (allOk) {
-        saveState();
+    if (hasEmpty) {
+        showToast('Please enter molar masses for all substances.', 'err');
+        flashError('massSection');
+        return;
+    }
 
-        const lockedRecord = {};
-        formulas.forEach(formula => {
-            const val = parseFloat(document.getElementById(`mass_${formula}`)?.value);
-            if (!isNaN(val)) lockedRecord[formula] = val;
+    try {
+        const resp = await fetch('/api/verify-molar-mass/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': '{{ csrf_token }}'
+            },
+            body: JSON.stringify({ problem_id: PROBLEM_ID, molar_masses: molarMasses }),
         });
-        try {
-            localStorage.setItem(
-                `cq_constants_locked_${PROBLEM_ID}`,
-                JSON.stringify(lockedRecord)
-            );
-        } catch(e) {}
 
-        await awardXP(30, 'constants_locked');
+        const data = await resp.json();
 
-        const isLimiting = "{{ is_limiting_problem }}".toLowerCase() === "true";
-        
-        let targetUrl = NEXT_URL;
-        let destName  = 'Step-Grid Workspace';
+        if (data.results) {
+            Object.entries(data.results).forEach(([formula, res]) => {
+                const input = document.getElementById(`mass_${formula}`);
+                const statusEl = document.getElementById(`massStatus_${formula}`);
+                if (!input || !statusEl) return;
 
-        if (isLimiting) {
-            destName  = 'Limiting Reagent Workspace';
-            targetUrl = "{% url 'limiting_workspace' prob_id=problem_id %}";
+                if (res.correct) {
+                    input.className = 'mass-input correct';
+                    input.disabled = true;
+                    statusEl.textContent = `✓ ${res.expected !== null ? res.expected.toFixed(3) : ''}`;
+                    statusEl.className = 'balance-status ok';
+                } else {
+                    input.className = 'mass-input incorrect';
+                    statusEl.textContent = '✗ Mismatch';
+                    statusEl.className = 'balance-status err';
+                }
+            });
         }
 
-        showToast(`Constants locked! Launching ${destName}…`, 'ok');
-        setTimeout(() => {
-            window.location.href = targetUrl;
-        }, 900);
-    } else {
-        showToast('Provide the exact molar mass values highlighted in red.', 'err');
+        if (data.success) {
+            molarMassCleared = true;
+
+            const massOverview = document.getElementById('massOverviewStatus');
+            if (massOverview) {
+                massOverview.textContent = 'VERIFIED';
+                massOverview.className = 'balance-status ok';
+            }
+
+            const btnLock = document.getElementById('btnLockConstants');
+            if (btnLock) btnLock.style.display = 'none';
+
+            // Hide molar mass hint box on success
+            const massHintBox = document.getElementById('massHintBox');
+            if (massHintBox) massHintBox.style.display = 'none';
+
+            // Store locked record in localStorage for subsequent modules
+            const lockedRecord = {};
+            formulas.forEach(formula => {
+                const val = parseFloat(document.getElementById(`mass_${formula}`)?.value);
+                if (!isNaN(val)) lockedRecord[formula] = val;
+            });
+            try {
+                localStorage.setItem(
+                    `cq_constants_locked_${PROBLEM_ID}`,
+                    JSON.stringify(lockedRecord)
+                );
+            } catch(e) {}
+
+            if (data.xp_reward) {
+                await awardXP(data.xp_reward, 'constants_locked');
+            }
+
+            updateTransitionButtonState();
+            saveState();
+            showToast(data.message, 'ok');
+        } else {
+            // Show tactical molar mass hint on error
+            if (data.hint) {
+                const massHintBox = document.getElementById('massHintBox');
+                const massHintText = document.getElementById('massHintText');
+                if (massHintBox && massHintText) {
+                    massHintText.textContent = data.hint;
+                    massHintBox.style.display = 'block';
+                }
+            }
+
+            flashError('massSection');
+            showToast(data.message || 'Molar mass mismatch detected.', 'err');
+        }
+    } catch (err) {
+        console.error('[Molar Mass] Verification error:', err);
+        showToast('Error validating molar masses. Please try again.', 'err');
     }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Workspace Progression Transition
+// ─────────────────────────────────────────────────────────────────────────────
+function proceedToWorkspace() {
+    if (!balancingCleared || !molarMassCleared) {
+        showToast('Complete Sub-Steps 1A and 1B before proceeding!', 'err');
+        return;
+    }
+
+    const isLimiting = "{{ is_limiting_problem }}".toLowerCase() === "true";
+    let targetUrl = NEXT_URL;
+    let destName = 'Step-Grid Workspace';
+
+    if (isLimiting) {
+        destName = 'Limiting Reagent Workspace';
+        targetUrl = "{% url 'limiting_workspace' prob_id=problem_id %}";
+    }
+
+    showToast(`Launching ${destName}…`, 'ok');
+    setTimeout(() => {
+        window.location.href = targetUrl;
+    }, 500);
 }
 
 function flashError(elementId) {
@@ -988,6 +1573,7 @@ function flashError(elementId) {
 }
 
 restoreState();
+updateAtomInventory();
 
 let _toastTimeout;
 function showToast(msg, type = 'info') {

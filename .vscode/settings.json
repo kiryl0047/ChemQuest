@@ -1,0 +1,5 @@
+{
+    "livePreview.portNumber": 3000,
+    "livePreview.serverRoot": "",
+    "livePreview.hostIP": "http://127.0.0.1:8000/"
+}

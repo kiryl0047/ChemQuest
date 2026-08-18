@@ -98,6 +98,31 @@
         pointer-events: none;
         filter: blur(1.5px);
     }
+
+    /* Explanation Accordion Box */
+    .edu-expander {
+        background: rgba(255, 61, 0, 0.04);
+        border: 1px solid rgba(255, 61, 0, 0.25);
+        border-radius: 6px;
+        padding: 12px 16px;
+        margin-bottom: 25px;
+        font-size: 13px;
+        color: var(--text-light);
+        line-height: 1.6;
+    }
+    .edu-expander summary {
+        cursor: pointer;
+        font-weight: bold;
+        color: var(--coral-red);
+        letter-spacing: 0.5px;
+        user-select: none;
+    }
+    .edu-expander summary:hover { color: #FFF; }
+    .edu-content {
+        margin-top: 10px;
+        border-top: 1px dashed rgba(255, 255, 255, 0.1);
+        padding-top: 10px;
+    }
 </style>
 
 <div class="container" style="max-width: 1100px; margin: 0 auto; padding: 20px;">
@@ -108,6 +133,43 @@
         </span>
         <p style="margin-top: 10px; color: var(--text-muted); line-height: 1.6;">{{ prompt }}</p>
     </div>
+
+    <!-- ── Educational Strategy Guide ── -->
+    <details class="edu-expander" open>
+        <summary>💡 CONCEPT CHECK: How Limiting Reagents Work (The Sandwich Analogy)</summary>
+        <div class="edu-content">
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 12px; margin-top: 6px;">
+                <div style="background: rgba(255, 61, 0, 0.05); border: 1px solid rgba(255, 61, 0, 0.2); border-radius: 5px; padding: 10px 14px;">
+                    <div style="font-weight: 800; color: var(--coral-red); margin-bottom: 4px; font-size: 13px;">
+                        🥪 The Kitchen Analogy
+                    </div>
+                    <p style="margin: 0; font-size: 12px; color: var(--text-light); line-height: 1.5;">
+                        If you have <strong>10 bread slices</strong> but only <strong>2 cheese slices</strong>, you can only make <strong>2 sandwiches</strong>. The cheese runs out first and stops all production — making it the <strong>Limiting Reagent</strong>.
+                    </p>
+                </div>
+
+                <div style="background: rgba(255, 61, 0, 0.05); border: 1px solid rgba(255, 61, 0, 0.2); border-radius: 5px; padding: 10px 14px;">
+                    <div style="font-weight: 800; color: var(--coral-red); margin-bottom: 4px; font-size: 13px;">
+                        1️⃣ Step 1: Calculate Product from Each Reactant
+                    </div>
+                    <p style="margin: 0; font-size: 12px; color: var(--text-light); line-height: 1.5;">
+                        Complete the dimensional analysis lanes below for each reactant to calculate how much product (<code>{{ target_formula }}</code>) each one could produce.
+                    </p>
+                </div>
+
+                <div style="background: rgba(255, 61, 0, 0.05); border: 1px solid rgba(255, 61, 0, 0.2); border-radius: 5px; padding: 10px 14px;">
+                    <div style="font-weight: 800; color: var(--coral-red); margin-bottom: 4px; font-size: 13px;">
+                        2️⃣ Step 2: Pick the Smaller Yield
+                    </div>
+                    <p style="margin: 0; font-size: 12px; color: var(--text-light); line-height: 1.5;">
+                        • The reactant that produces the <strong>LOWEST product amount</strong> is your <strong>Limiting Reagent</strong>.
+                        <br>
+                        • That lowest amount is your true <strong>Theoretical Yield</strong>!
+                    </p>
+                </div>
+            </div>
+        </div>
+    </details>
 
     <div id="pipelineContainer">
         {% for part in processed_parts %}

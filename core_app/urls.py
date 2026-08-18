@@ -28,6 +28,7 @@ urlpatterns = [
     path('award-xp/', views.award_node_xp, name='award_node_xp'),
 
     # API endpoints
-    path('api/verify-balancing/',  views.verify_balancing_backend, name='verify_balancing'),
-    path('api/validate-step-node/', views.validate_step_node,      name='validate_step_node'),
+    path('api/verify-balancing/',   views.verify_balancing_backend,  name='verify_balancing'),
+    path('api/verify-molar-mass/',  views.verify_molar_mass_backend, name='verify_molar_mass'),
+    path('api/validate-step-node/', views.validate_step_node,        name='validate_step_node'),
 ]

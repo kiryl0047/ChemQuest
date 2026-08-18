@@ -115,6 +115,7 @@ class StudentTelemetryLog(models.Model):
                                        null=True, blank=True)
     problem_id     = models.CharField(max_length=50)
     part_label     = models.CharField(max_length=10, default='a')
+    sub_step       = models.CharField(max_length=10, default='', blank=True)
     module_phase   = models.IntegerField(default=1)
     is_correct     = models.BooleanField(default=False)
     attempts_count = models.IntegerField(default=0)
