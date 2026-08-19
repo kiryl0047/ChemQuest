@@ -335,6 +335,90 @@
     .mass-input.correct { border-color: var(--combo-green); }
     .mass-input.incorrect { border-color: var(--coral-red); }
 
+    /* ── Focus Highlight ── */
+    .mass-row-wrapper.pt-focus {
+        border-left: 3px solid var(--cyber-teal);
+        background: rgba(0, 240, 255, 0.03);
+    }
+
+    /* ── Scratchpad ── */
+    .mass-scratchpad {
+        display: none;
+        margin-top: 6px;
+        padding: 6px 10px;
+        background: rgba(0, 240, 255, 0.04);
+        border: 1px dashed rgba(0, 240, 255, 0.25);
+        border-radius: 4px;
+        font-size: 12px;
+        color: var(--text-muted);
+    }
+    .mass-scratchpad.active { display: block; }
+    .mass-scratchpad .sp-item {
+        display: inline-block;
+        background: rgba(0, 240, 255, 0.1);
+        border: 1px solid rgba(0, 240, 255, 0.25);
+        color: var(--cyber-teal);
+        padding: 1px 6px;
+        border-radius: 3px;
+        margin: 1px 3px;
+        font-weight: bold;
+        cursor: pointer;
+        transition: background 0.15s, text-decoration 0.15s;
+    }
+    .mass-scratchpad .sp-item:hover {
+        background: rgba(255, 61, 0, 0.15);
+        border-color: rgba(255, 61, 0, 0.3);
+        color: var(--coral-red);
+        text-decoration: line-through;
+    }
+    .mass-scratchpad .sp-total {
+        color: var(--constant-gold);
+        font-weight: bold;
+        margin-left: 6px;
+    }
+    .mass-scratchpad .sp-hint {
+        color: var(--text-muted);
+        font-style: italic;
+        font-size: 11px;
+    }
+
+    /* ── Diagnostic Feedback ── */
+    .mass-diag {
+        display: none;
+        margin-top: 6px;
+        padding: 6px 10px;
+        background: rgba(255, 61, 0, 0.08);
+        border: 1px solid rgba(255, 61, 0, 0.25);
+        border-radius: 4px;
+        font-size: 12px;
+        color: #FCA5A5;
+        line-height: 1.5;
+    }
+
+    /* ── Mastery Bar & Quick-Harvest ── */
+    .mastery-label {
+        font-size: 11px;
+        font-weight: bold;
+        color: var(--text-muted);
+        white-space: nowrap;
+    }
+    .mastery-bar {
+        height: 6px;
+        background: #2A303C;
+        border-radius: 3px;
+        overflow: hidden;
+    }
+    .mastery-bar-fill {
+        height: 100%;
+        background: linear-gradient(90deg, var(--cyber-teal), var(--constant-gold));
+        border-radius: 3px;
+        transition: width 0.4s ease;
+    }
+    .btn-quick-harvest:disabled {
+        opacity: 0.4;
+        cursor: not-allowed;
+    }
+
     /* ── Periodic Databank ── */
     .periodic-popover {
         background: var(--bg-dark);
@@ -613,7 +697,7 @@
     </p>
 
     {% for formula in target_substances %}
-    <div class="mass-row-wrapper">
+    <div class="mass-row-wrapper" id="massWrapper_{{ formula }}">
         <div class="mass-row">
             <span style="min-width: 75px; font-weight: bold; font-size: 18px; color: var(--text-light);">
                 {{ formula }}:
@@ -622,9 +706,17 @@
                    id="mass_{{ formula }}"
                    data-formula="{{ formula }}"
                    placeholder="0.000"
-                   disabled>
-            <span style="color: var(--text-muted);">g/mol</span>
+                   disabled
+                   onfocus="onMassFocus('{{ formula }}')"
+                   onblur="onMassBlur('{{ formula }}')">
+            <span style="color: var(--text-muted); font-weight: bold;">g/mol</span>
             <span class="balance-status" id="massStatus_{{ formula }}">—</span>
+        </div>
+        <div class="mass-diag" id="massDiag_{{ formula }}"></div>
+        <div class="mass-scratchpad" id="scratchpad_{{ formula }}">
+            <span class="sp-hint">Click elements above to accumulate:</span>
+            <span class="sp-items" id="spItems_{{ formula }}"></span>
+            <span class="sp-total" id="spTotal_{{ formula }}"></span>
         </div>
     </div>
     {% endfor %}
@@ -637,7 +729,19 @@
         <div id="massHintText" class="hint-body"></div>
     </div>
 
-    <div style="display: flex; align-items: center; gap: 15px; margin-top: 20px; flex-wrap: wrap;">
+    <div style="display: flex; align-items: center; gap: 15px; margin-top: 12px; flex-wrap: wrap;">
+        <span class="mastery-label" id="masteryLabel">Mastery: 0 / 5</span>
+        <div class="mastery-bar" style="flex: 1; max-width: 180px;">
+            <div class="mastery-bar-fill" id="masteryFill" style="width: 0%;"></div>
+        </div>
+        <button class="btn-action btn-quick-harvest" id="btnQuickHarvest"
+                style="border-color: var(--text-muted); color: var(--text-muted); font-size: 12px;"
+                disabled onclick="quickHarvest()">
+            &#9889; Quick-Harvest Constants
+        </button>
+    </div>
+
+    <div style="display: flex; align-items: center; gap: 15px; margin-top: 8px; flex-wrap: wrap;">
         <button class="btn-action"
                 style="border-color: var(--constant-gold); color: var(--constant-gold);"
                 id="btnLockConstants"
@@ -1070,6 +1174,7 @@ function restoreState() {
 
     updateAtomInventory();
     updateTransitionButtonState();
+    updateMasteryUI();
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -1083,6 +1188,164 @@ document.addEventListener('input', e => {
         saveState();
     }
 });
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Scratchpad: Focus Tracking & Element Accumulation
+// ─────────────────────────────────────────────────────────────────────────────
+let currentMassFormula = null;
+
+function onMassFocus(formula) {
+    currentMassFormula = formula;
+    const w = document.getElementById(`massWrapper_${formula}`);
+    if (w) w.classList.add('pt-focus');
+    const sp = document.getElementById(`scratchpad_${formula}`);
+    if (sp) sp.classList.add('active');
+}
+
+function onMassBlur(formula) {
+    currentMassFormula = null;
+    const w = document.getElementById(`massWrapper_${formula}`);
+    if (w) w.classList.remove('pt-focus');
+}
+
+function accumulateToScratchpad(formula, sym, mass) {
+    const itemsEl = document.getElementById(`spItems_${formula}`);
+    const totalEl = document.getElementById(`spTotal_${formula}`);
+    if (!itemsEl || !totalEl) return;
+    const tag = document.createElement('span');
+    tag.className = 'sp-item';
+    tag.textContent = `${sym} (${mass})`;
+    tag.dataset.mass = mass;
+    tag.addEventListener('click', () => {
+        tag.remove();
+        let running = parseFloat(totalEl.dataset.total || '0');
+        running = Math.max(0, running - mass);
+        totalEl.dataset.total = running;
+        totalEl.textContent = running > 0 ? `= ${running.toFixed(3)}` : '';
+        const input = document.getElementById(`mass_${formula}`);
+        if (input && !input.disabled) {
+            const cur = parseFloat(input.value) || 0;
+            const newVal = Math.max(0, cur - mass);
+            input.value = newVal > 0 ? newVal.toFixed(3) : '';
+            input.dispatchEvent(new Event('input'));
+        }
+    });
+    itemsEl.appendChild(tag);
+    let running = parseFloat(totalEl.dataset.total || '0');
+    running += mass;
+    totalEl.dataset.total = running;
+    totalEl.textContent = `= ${running.toFixed(3)}`;
+}
+
+function clearScratchpad(formula) {
+    const itemsEl = document.getElementById(`spItems_${formula}`);
+    const totalEl = document.getElementById(`spTotal_${formula}`);
+    if (itemsEl) itemsEl.innerHTML = '';
+    if (totalEl) { totalEl.textContent = ''; totalEl.dataset.total = '0'; }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Targeted Diagnostic Error Feedback (Client-Side)
+// ─────────────────────────────────────────────────────────────────────────────
+function diagnoseMassError(formula, entered) {
+    const atoms = parseFormulaAtoms(formula);
+    let expected = 0;
+    Object.entries(atoms).forEach(([sym, count]) => {
+        expected += (IUPAC_MASSES[sym] || 0) * count;
+    });
+
+    const coeffMap = {};
+    REACTANT_FORMULAS.forEach((f, i) => { coeffMap[f] = parseInt(CORRECT_COEFFS[i]) || 1; });
+    PRODUCT_FORMULAS.forEach((f, i) => {
+        coeffMap[f] = parseInt(CORRECT_COEFFS[REACTANT_FORMULAS.length + i]) || 1;
+    });
+    const coeff = coeffMap[formula] || 1;
+    if (coeff > 1 && Math.abs(entered - expected * coeff) <= 0.5) {
+        return `&#9888;&#65039; You multiplied by the balancing coefficient (${coeff}). ` +
+               `Molar mass is for <strong>1 mole</strong> of ${formula}, not ${coeff} moles. ` +
+               `Correct sum: ${expected.toFixed(3)} g/mol.`;
+    }
+
+    const foundEls = [];
+    const missingEls = [];
+    let partialSum = 0;
+    const sortedAtoms = Object.entries(atoms).sort((a, b) => a[0].localeCompare(b[0]));
+    sortedAtoms.forEach(([sym, count]) => {
+        const elMass = (IUPAC_MASSES[sym] || 0) * count;
+        partialSum += elMass;
+        if (entered >= partialSum - 0.3) {
+            foundEls.push(`${count}&times;${sym}`);
+        } else {
+            missingEls.push(`${count}&times;${sym} (${sym}: ${(IUPAC_MASSES[sym] || 0).toFixed(3)})`);
+        }
+    });
+    if (missingEls.length > 0 && missingEls.length < Object.keys(atoms).length) {
+        return `&#128269; Partial sum detected. You included ${foundEls.join(', ')} but are missing ${missingEls.join(', ')}. ` +
+               `Full sum: ${expected.toFixed(3)} g/mol.`;
+    }
+
+    const diff = Math.abs(entered - expected);
+    if (diff <= 2.0 && diff > 0.5) {
+        return `&#128207; Close! Expected ${expected.toFixed(3)} g/mol. ` +
+               `You may have rounded intermediate values &mdash; use exact IUPAC masses.`;
+    }
+
+    return `Expected <strong>${expected.toFixed(3)}</strong> g/mol. ` +
+           `Check each element's atomic mass and subscript count.`;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Gamified Mastery Tracker & Quick-Harvest
+// ─────────────────────────────────────────────────────────────────────────────
+const MASTERY_THRESHOLD = 5;
+
+function loadMastery() {
+    try { return JSON.parse(localStorage.getItem('cq_mass_mastery')) || { count: 0 }; }
+    catch { return { count: 0 }; }
+}
+
+function saveMastery(data) {
+    try { localStorage.setItem('cq_mass_mastery', JSON.stringify(data)); } catch {}
+}
+
+function updateMasteryUI() {
+    const { count } = loadMastery();
+    const label = document.getElementById('masteryLabel');
+    const fill = document.getElementById('masteryFill');
+    const btn = document.getElementById('btnQuickHarvest');
+    const massUnlocked = document.getElementById('massSection')?.classList.contains('unlocked');
+
+    if (label) label.textContent = `Mastery: ${count} / ${MASTERY_THRESHOLD}`;
+    if (fill) fill.style.width = `${Math.min(count / MASTERY_THRESHOLD, 1) * 100}%`;
+    if (btn) {
+        const ready = count >= MASTERY_THRESHOLD && massUnlocked && !molarMassCleared;
+        btn.disabled = !ready;
+        btn.style.borderColor = ready ? 'var(--constant-gold)' : 'var(--text-muted)';
+        btn.style.color = ready ? 'var(--constant-gold)' : 'var(--text-muted)';
+    }
+}
+
+function incrementMastery() {
+    const data = loadMastery();
+    data.count = (data.count || 0) + 1;
+    saveMastery(data);
+    updateMasteryUI();
+}
+
+function quickHarvest() {
+    ALL_FORMULAS.forEach(formula => {
+        const input = document.getElementById(`mass_${formula}`);
+        if (!input || input.disabled) return;
+        const atoms = parseFormulaAtoms(formula);
+        let sum = 0;
+        Object.entries(atoms).forEach(([sym, count]) => {
+            sum += (IUPAC_MASSES[sym] || 0) * count;
+        });
+        input.value = sum.toFixed(3);
+        input.dispatchEvent(new Event('input'));
+    });
+    showToast('All molar masses auto-filled. Click Verify to lock.', 'ok');
+}
 
 (function buildPeriodicTable() {
     const CATS = {
@@ -1246,7 +1509,17 @@ document.addEventListener('input', e => {
                 <span class="pt-tip-mass">${mass} g/mol</span>
                 <span class="pt-tip-cat">${CATS[cat]?.label || cat}</span>
             </div>`;
+        div.addEventListener('mousedown', e => e.preventDefault());
         div.addEventListener('click', () => {
+            if (currentMassFormula) {
+                accumulateToScratchpad(currentMassFormula, sym, mass);
+                const input = document.getElementById(`mass_${currentMassFormula}`);
+                if (input && !input.disabled) {
+                    const cur = parseFloat(input.value) || 0;
+                    input.value = (cur + mass).toFixed(3);
+                    input.dispatchEvent(new Event('input'));
+                }
+            }
             navigator.clipboard?.writeText(String(mass)).catch(() => {});
             ptToast(`${sym}: ${mass} g/mol copied`);
             div.classList.add('pt-hl');
@@ -1472,6 +1745,8 @@ async function verifyMolarMasses() {
                     input.disabled = true;
                     statusEl.textContent = `✓ ${res.expected !== null ? res.expected.toFixed(3) : ''}`;
                     statusEl.className = 'balance-status ok';
+                    const diagEl = document.getElementById(`massDiag_${formula}`);
+                    if (diagEl) diagEl.style.display = 'none';
                 } else {
                     input.className = 'mass-input incorrect';
                     statusEl.textContent = '✗ Mismatch';
@@ -1513,12 +1788,39 @@ async function verifyMolarMasses() {
                 await awardXP(data.xp_reward, 'constants_locked');
             }
 
+            incrementMastery();
+
             updateTransitionButtonState();
             saveState();
             showToast(data.message, 'ok');
         } else {
-            // Show tactical molar mass hint on error
-            if (data.hint) {
+            // Client-side diagnostic feedback
+            const diagParts = [];
+            formulas.forEach(formula => {
+                const input = document.getElementById(`mass_${formula}`);
+                const diagEl = document.getElementById(`massDiag_${formula}`);
+                if (!input || !diagEl) return;
+                const entered = parseFloat(input.value);
+                if (isNaN(entered)) return;
+                const res = data.results?.[formula];
+                if (res && !res.correct) {
+                    diagEl.innerHTML = diagnoseMassError(formula, entered);
+                    diagEl.style.display = 'block';
+                    diagParts.push(diagnoseMassError(formula, entered));
+                } else {
+                    diagEl.style.display = 'none';
+                }
+            });
+
+            // Populate hint box with diagnostics (override server hint if available)
+            if (diagParts.length > 0) {
+                const massHintBox = document.getElementById('massHintBox');
+                const massHintText = document.getElementById('massHintText');
+                if (massHintBox && massHintText) {
+                    massHintText.innerHTML = diagParts.join('<br><br>');
+                    massHintBox.style.display = 'block';
+                }
+            } else if (data.hint) {
                 const massHintBox = document.getElementById('massHintBox');
                 const massHintText = document.getElementById('massHintText');
                 if (massHintBox && massHintText) {
