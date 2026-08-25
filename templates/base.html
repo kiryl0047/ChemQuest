@@ -247,6 +247,11 @@
             <span>
                 <a href="{% url 'student_dashboard' %}" style="color:var(--text-muted); font-size:13px; text-decoration: none;">{{ request.user.username }}</a>
             </span>
+            {% if request.user.is_staff %}
+            <span>
+                <a href="{% url 'instructor_dashboard' %}" style="color:var(--combo-green); font-size:13px; text-decoration:none; border:1px solid var(--combo-green); padding:3px 9px; border-radius:3px;">Instructor</a>
+            </span>
+            {% endif %}
         {% endif %}
 
         <span id="xp-level-display">LVL {{ user_level }}</span>
@@ -329,44 +334,6 @@
         return null;
     }
 
-    function getLockedConstants(probId) {
-        const combined = { molarMasses: {}, coefficients: {} };
-
-        // Read Molar Masses locked from Module 1
-        const lockKey = `cq_constants_locked_${probId}`;
-        try {
-            const locked = JSON.parse(localStorage.getItem(lockKey));
-            if (locked && Object.keys(locked).length > 0) {
-                combined.molarMasses = locked;
-            }
-        } catch(e) {}
-
-        // Read Dynamic Moles / Coefficients from Module 1 state
-        const stateKey = `cq_m1_${probId}`;
-        try {
-            const state = JSON.parse(localStorage.getItem(stateKey));
-            if (state) {
-                // Read coefficients
-                const coeffs = state.coefficients || state.reaction_moles || state.moles;
-                if (coeffs && typeof coeffs === 'object') {
-                    Object.entries(coeffs).forEach(([formula, val]) => {
-                        const num = parseFloat(val);
-                        if (!isNaN(num) && num > 0) combined.coefficients[formula] = num;
-                    });
-                }
-                // Fallback for Molar Masses if lockKey was missing
-                if (Object.keys(combined.molarMasses).length === 0 && state.masses) {
-                    Object.entries(state.masses).forEach(([formula, val]) => {
-                        const num = parseFloat(val);
-                        if (!isNaN(num) && num > 0) combined.molarMasses[formula] = num;
-                    });
-                }
-            }
-        } catch(e) {}
-
-        return combined;
-    }
-
     function renderTray(data, probId) {
         const body      = document.getElementById('cq-tray-body');
         const countEl   = document.getElementById('cq-tray-tab-count');
@@ -380,7 +347,6 @@
         countEl.textContent = totalCount;
         if (probLabel) probLabel.textContent = probId || '—';
 
-        // Clear existing rows & section headers
         body.querySelectorAll('.cq-const-row, .cq-section-label').forEach(r => r.remove());
         const emptyEl = document.getElementById('cq-tray-empty');
 
@@ -398,7 +364,6 @@
             body.appendChild(lbl);
         };
 
-        // Render Reaction Moles / Stoichiometric Coefficients
         if (coeffs.length > 0) {
             addSectionLabel('STOICHIOMETRIC MOLES');
             coeffs.forEach(([formula, coeff]) => {
@@ -415,7 +380,6 @@
             });
         }
 
-        // Render Molar Masses
         if (masses.length > 0) {
             addSectionLabel('MOLAR MASSES');
             masses.forEach(([formula, mass]) => {
@@ -433,7 +397,6 @@
         }
     }
 
-    // ── Toggle open/close ────────────────────────────────────────────────────
     let trayOpen = false;
     window.cqTrayToggle = function() {
         trayOpen = !trayOpen;
@@ -446,9 +409,6 @@
         tab.setAttribute('aria-expanded', String(trayOpen));
     };
 
-    // ── Boot ─────────────────────────────────────────────────────────────────
-    const probId = getProblemIdFromUrl();
-    
     function isAllowedModule() {
         const path = window.location.pathname;
         return path.includes('/ledger/') ||
@@ -456,23 +416,26 @@
                path.includes('/limiting-workspace/');
     }
 
+    async function refreshTray(probId) {
+        try {
+            const res = await fetch(`/api/constants/${probId}/`, {
+                headers: { 'X-Requested-With': 'XMLHttpRequest' },
+            });
+            if (!res.ok) return;
+            const data = await res.json();
+            renderTray({ molarMasses: data.molarMasses || {}, coefficients: data.coefficients || {} }, probId);
+        } catch (err) { /* tray stays empty on failure */ }
+    }
+    window.cqRefreshTray = refreshTray;
+
+    const probId = getProblemIdFromUrl();
     const trayElement = document.getElementById('cq-tray');
 
     if (probId && isAllowedModule()) {
-        const constants = getLockedConstants(probId);
-        renderTray(constants, probId);
+        refreshTray(probId);
     } else {
         if (trayElement) trayElement.remove();
     }
-
-    // ── Re-render on LocalStorage updates ────────────────────────────────────
-    window.addEventListener('storage', function(e) {
-        if (!probId || !isAllowedModule()) return;
-        if (!e.key || e.key === `cq_constants_locked_${probId}` || e.key === `cq_m1_${probId}`) {
-            const fresh = getLockedConstants(probId);
-            renderTray(fresh, probId);
-        }
-    });
 })();
 </script>
 

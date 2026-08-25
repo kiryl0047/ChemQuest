@@ -11,7 +11,6 @@
         font-size: 14px;
     }
 
-    /* ── Educational Strategy Accordion ── */
     .edu-expander {
         background: rgba(0, 240, 255, 0.05);
         border: 1px solid rgba(0, 240, 255, 0.2);
@@ -39,7 +38,6 @@
         padding-top: 10px;
     }
 
-    /* ── Part navigation strip ── */
     .part-strip {
         display: flex;
         gap: 8px;
@@ -65,7 +63,6 @@
         background: rgba(0,240,255,0.07);
     }
 
-    /* ── Chain canvas ── */
     .bridge-builder-chasm {
         display: flex;
         align-items: center;
@@ -89,19 +86,9 @@
         flex-shrink: 0;
     }
 
-    .terminal-yield-node {
-        border-color: var(--constant-gold);
-        display: none;
-    }
+    .terminal-yield-node { border-color: var(--constant-gold); display: none; }
+    .operator-sign { font-size: 22px; color: var(--text-muted); font-weight: bold; flex-shrink: 0; }
 
-    .operator-sign {
-        font-size: 22px;
-        color: var(--text-muted);
-        font-weight: bold;
-        flex-shrink: 0;
-    }
-
-    /* ── Student-Constructed Fraction Cards ── */
     .fraction-card {
         background: var(--bg-slate);
         border: 2px solid var(--text-muted);
@@ -120,11 +107,7 @@
     .fraction-card.verified-link { border-color: var(--combo-green); box-shadow: 0 0 14px rgba(0,230,118,0.25); }
     .fraction-card.error-link    { border-color: var(--coral-red); box-shadow: 0 0 14px rgba(255,61,0,0.35); }
 
-    .slot-container {
-        display: flex;
-        align-items: center;
-        gap: 6px;
-    }
+    .slot-container { display: flex; align-items: center; gap: 6px; }
 
     .slot-input {
         background: var(--bg-dark);
@@ -160,29 +143,26 @@
         width: 100%;
         margin: 2px 0;
     }
-    .fraction-card.active-link .fraction-divider   { background: var(--cyber-teal); }
-    .fraction-card.verified-link .fraction-divider { background: var(--combo-green); }
 
-    /* Strike-through effect ONLY for canceled units */
     .unit-cancelled {
         text-decoration: line-through;
         color: var(--coral-red) !important;
         opacity: 0.6;
     }
 
-    .btn-verify-node {
+    .btn-verify-node, .btn-audit-chain {
         background: transparent;
         border: 1px solid var(--cyber-teal);
         color: var(--cyber-teal);
         font-size: 12px;
-        padding: 6px;
+        padding: 8px 16px;
         cursor: pointer;
         border-radius: 4px;
         font-weight: bold;
         transition: all 0.2s ease;
-        margin-top: 4px;
     }
-    .btn-verify-node:hover { background: var(--cyber-teal); color: var(--bg-dark); }
+    .btn-verify-node:hover, .btn-audit-chain:hover:not(:disabled) { background: var(--cyber-teal); color: var(--bg-dark); }
+    .btn-audit-chain:disabled { opacity: 0.35; cursor: not-allowed; }
 
     .btn-add-node {
         background: rgba(0, 240, 255, 0.1);
@@ -202,7 +182,6 @@
     }
     .btn-add-node:hover { background: rgba(0, 240, 255, 0.2); transform: scale(1.02); }
 
-    /* ── Live Explanation Feedback Box ── */
     .feedback-box {
         background: #171A21;
         border: 1px solid #2A303C;
@@ -215,7 +194,30 @@
         color: var(--text-light);
     }
 
-    /* ── Footer actions ── */
+    .node-report-row {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        margin-right: 14px;
+        font-size: 12px;
+        font-weight: bold;
+    }
+    .report-chip { padding: 2px 8px; border-radius: 10px; font-size: 10px; letter-spacing: 0.5px; }
+    .report-ok   { background: rgba(0,230,118,0.15); color: var(--combo-green); border: 1px solid rgba(0,230,118,0.4); }
+    .report-bad  { background: rgba(255,61,0,0.15); color: #FCA5A5; border: 1px solid rgba(255,61,0,0.4); }
+
+    .lock-banner {
+        display: none;
+        background: rgba(255, 61, 0, 0.08);
+        border: 1px solid rgba(255, 61, 0, 0.45);
+        border-left: 4px solid var(--coral-red);
+        border-radius: 5px;
+        padding: 14px 18px;
+        margin-bottom: 20px;
+        font-size: 13px;
+        line-height: 1.6;
+    }
+
     .module-actions-bar {
         display: none;
         justify-content: space-between;
@@ -247,6 +249,7 @@
     <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;">
         <span style="color:var(--cyber-teal); font-weight:bold; letter-spacing:1px;">
             ACTIVE STEP-GRID BUILDER &nbsp;·&nbsp; {{ problem_id }} &nbsp;·&nbsp; PART {{ part_label|upper }}
+            {% if goes_to_module3 %}&nbsp;<span style="color:var(--coral-red);">→ LIMITING STAGE NEXT</span>{% endif %}
         </span>
         <a href="{% url 'preparation_ledger' problem_id %}" style="color:var(--text-muted); font-size:12px; text-decoration:none;">
             ← Back to Ledger
@@ -257,7 +260,6 @@
     </p>
 </div>
 
-<!-- ── Part navigation pills ── -->
 <div class="part-strip">
     <span style="font-size:11px; color:var(--text-muted); font-weight:bold; letter-spacing:1px;">PARTS:</span>
     {% for p in all_parts %}
@@ -272,7 +274,6 @@
     {% endfor %}
 </div>
 
-<!-- ── Educational Strategy Guide ── -->
 <details class="edu-expander" open>
     <summary>💡 CONCEPT CHECK: The Diagonal Unit Cancellation Method</summary>
     <div class="edu-content">
@@ -312,35 +313,38 @@
     </div>
 </details>
 
-<!-- ── Dynamic Guidance & Explanation Console ── -->
+<!-- ── Tutor Console ── -->
 <div class="feedback-box" id="explanationConsole">
     <strong style="color:var(--cyber-teal);">TUTOR CONSOLE:</strong>
     <span id="explanationText">
-        Click <strong>"+ Add Step Factor"</strong> to begin constructing your conversion step-grid. Select units that cancel out the starting unit (<code>{{ given_unit }} {{ given_formula }}</code>).
+        Build your conversion chain: fill in a value and choose units for each of the
+        (<span id="requiredNodeCount">{{ node_count }}</span> total) pre-placed step-factor cards,
+        so units cancel diagonally, then run the full chain audit.
     </span>
+    <div id="nodeReports" style="margin-top:10px;"></div>
+</div>
+
+<!-- ── Step-Lock Banner ── -->
+<div class="lock-banner" id="lockBanner">
+    <strong style="color:var(--coral-red);">⏳ STEP LOCK ENGAGED</strong>
+    <span id="lockBannerText"></span>
 </div>
 
 <!-- ── Interactive Conversion Chain Canvas ── -->
 <div class="bridge-builder-chasm" id="chainCanvas">
-
-    <!-- Given Starting Node -->
     <div class="starting-node">
         <span style="font-size:18px; font-weight:bold; display:block;">
-            <span id="givenQuantityValue">{{ suspended_quantity|default:given_quantity }}</span> 
-            <span id="givenUnitText">{{ given_unit }}</span>
+            {{ given_quantity }} <span>{{ given_unit }}</span>
         </span>
         <span style="color:var(--text-muted); font-size:12px;">{{ given_formula }} (Given)</span>
     </div>
 
-    <!-- Dynamic Container where Student-Constructed Cards will live -->
     <div id="nodeContainer" style="display:contents;"></div>
 
-    <!-- Interactive Add Button -->
     <button class="btn-add-node" id="btnAddNode" onclick="appendUserStep()">
         + Add Step Factor
     </button>
 
-    <!-- Terminal Yield Node -->
     <span class="operator-sign" id="op_eq" style="display:none;">＝</span>
     <div class="terminal-yield-node" id="yieldNode">
         <span style="font-size:18px; font-weight:bold; display:block; color:var(--constant-gold);" id="yieldValue">—</span>
@@ -348,10 +352,15 @@
             {{ target_unit }} {{ target_formula }} (Calculated Yield)
         </span>
     </div>
-
 </div>
 
-<!-- ── Footer navigation ── -->
+<div style="display:flex; gap:12px; align-items:center; margin-bottom:10px;">
+    <button class="btn-audit-chain" id="btnAuditChain" onclick="auditFullChain()" disabled>
+        🔍 Audit Full Chain
+    </button>
+    <span style="font-size:12px; color:var(--text-muted);" id="chainProgressLabel"></span>
+</div>
+
 <div class="module-actions-bar" id="actionsBar">
     {% if prev_part %}
     <a class="nav-btn" href="{% url 'step_grid_workspace' problem_id prev_part.part_label %}">
@@ -365,6 +374,10 @@
     <a class="nav-btn primary" href="{% url 'step_grid_workspace' problem_id next_part.part_label %}">
         Next: Part {{ next_part.part_label|upper }} ──>
     </a>
+    {% elif goes_to_module3 %}
+    <a class="nav-btn primary" href="{% url 'limiting_workspace' problem_id %}">
+        Proceed to Limiting Workspace ──>
+    </a>
     {% else %}
     <a class="nav-btn primary" href="{% url 'problem_lobby' %}">
         ✓ Problem Complete — Return to Lobby
@@ -373,261 +386,287 @@
 </div>
 
 <script>
-// ─────────────────────────────────────────────────────────────────────────────
-// Configuration & Ground Truth Data
-// ─────────────────────────────────────────────────────────────────────────────
 const PROBLEM_ID      = "{{ problem_id }}";
 const PART_LABEL      = "{{ part_label }}";
 const REQUIRED_NODES  = {{ node_count }};
-const CORRECT_ANSWER  = parseFloat("{{ correct_answer }}");
-const GIVEN_QTY       = parseFloat("{{ suspended_quantity|default:given_quantity }}");
 const GIVEN_UNIT      = "{{ given_unit }}";
 const TARGET_UNIT     = "{{ target_unit }}";
 const GIVEN_FORMULA   = "{{ given_formula }}";
 const TARGET_FORMULA  = "{{ target_formula }}";
 
-// Expected specs injected from Django Backend
-const NODES_SPEC = {{ nodes_json|safe }};
+const UNITS_SPEC = {{ nodes_json|safe }};
+let VERIFIED_CHAIN = {{ verified_chain_json|safe }};
+let laneCleared  = {{ lane_cleared|yesno:'true,false' }};
+const STEP_LOCK_THRESHOLD = {{ step_lock_threshold }};
 
-// Persistence Storage Key
 const STORE_KEY = `cq_m2_${PROBLEM_ID}_${PART_LABEL}`;
-
-// Dynamically compile unique units from JSON specs in pure JavaScript
+let activeNodeIndex = 0;
+let lockedUntil = null;
 function extractUniqueUnits() {
     const unitsSet = new Set();
-    
-    if (GIVEN_UNIT && GIVEN_FORMULA) {
-        unitsSet.add(`${GIVEN_UNIT}_${GIVEN_FORMULA}`);
-    }
-
-    NODES_SPEC.forEach(node => {
+    if (GIVEN_UNIT && GIVEN_FORMULA) unitsSet.add(`${GIVEN_UNIT}_${GIVEN_FORMULA}`);
+    UNITS_SPEC.forEach(node => {
         if (node.num_unit) unitsSet.add(node.num_unit);
         if (node.den_unit) unitsSet.add(node.den_unit);
     });
-
     const options = ['<option value="">-- Select Unit --</option>'];
     unitsSet.forEach(unit => {
-        const readableLabel = unit.replace(/_/g, ' ');
-        options.push(`<option value="${unit}">${readableLabel}</option>`);
+        options.push(`<option value="${unit}">${unit.replace(/_/g, ' ')}</option>`);
     });
-
     return options.join('');
 }
-
 const UNIT_OPTIONS_HTML = extractUniqueUnits();
 
-let activeNodeIndex = 0;
-
 // ─────────────────────────────────────────────────────────────────────────────
-// State Persistence Helpers (Save / Restore)
+// Draft persistence (non-authoritative convenience cache)
 // ─────────────────────────────────────────────────────────────────────────────
-function saveState() {
-    const state = { steps: [], activeIndex: activeNodeIndex, yieldRevealed: false };
-    
-    for (let i = 0; i < activeNodeIndex; i++) {
-        const numVal  = document.getElementById(`num_val_${i}`)?.value || '';
-        const numUnit = document.getElementById(`num_unit_${i}`)?.value || '';
-        const denVal  = document.getElementById(`den_val_${i}`)?.value || '';
-        const denUnit = document.getElementById(`den_unit_${i}`)?.value || '';
-        const card    = document.getElementById(`node_${i}`);
-        const isVerified = card ? card.classList.contains('verified-link') : false;
-
-        state.steps.push({ numVal, numUnit, denVal, denUnit, isVerified });
-    }
-
-    state.yieldRevealed = document.getElementById('yieldNode').style.display !== 'none';
-
-    try {
-        localStorage.setItem(STORE_KEY, JSON.stringify(state));
-    } catch(e) {}
-}
-
-function restoreState() {
-    let state;
-    try {
-        state = JSON.parse(localStorage.getItem(STORE_KEY));
-    } catch(e) {}
-
-    if (!state || !state.steps || state.steps.length === 0) return;
-
-    // Clear existing index to rebuild sequentially
-    activeNodeIndex = 0;
-
-    state.steps.forEach((stepData, idx) => {
-        appendUserStep(false);
-
-        const numValEl  = document.getElementById(`num_val_${idx}`);
-        const numUnitEl = document.getElementById(`num_unit_${idx}`);
-        const denValEl  = document.getElementById(`den_val_${idx}`);
-        const denUnitEl = document.getElementById(`den_unit_${idx}`);
-
-        if (numValEl)  numValEl.value  = stepData.numVal;
-        if (numUnitEl) numUnitEl.value = stepData.numUnit;
-        if (denValEl)  denValEl.value  = stepData.denVal;
-        if (denUnitEl) denUnitEl.value = stepData.denUnit;
-
-        if (stepData.isVerified) {
-            const card = document.getElementById(`node_${idx}`);
-            if (card) {
-                card.classList.remove('active-link', 'error-link');
-                card.classList.add('verified-link');
-            }
-            if (numValEl)  numValEl.disabled = true;
-            if (numUnitEl) numUnitEl.disabled = true;
-            if (denValEl)  denValEl.disabled = true;
-            if (denUnitEl) denUnitEl.disabled = true;
-
-            const btn = document.getElementById(`btn_${idx}`);
-            if (btn) btn.style.display = 'none';
-
-            applyUnitCancellationVisual(idx);
-            activeNodeIndex = idx + 1;
-        }
+function saveDraft() {
+    if (laneCleared) return;
+    const state = { steps: [] };
+    document.querySelectorAll('#nodeContainer .fraction-card').forEach(card => {
+        const idx = parseInt(card.id.replace('node_', ''), 10);
+        state.steps.push({
+            numVal:  document.getElementById(`num_val_${idx}`)?.value || '',
+            numUnit: document.getElementById(`num_unit_${idx}`)?.value || '',
+            denVal:  document.getElementById(`den_val_${idx}`)?.value || '',
+            denUnit: document.getElementById(`den_unit_${idx}`)?.value || '',
+        });
     });
+    try { localStorage.setItem(STORE_KEY, JSON.stringify(state)); } catch(e) {}
+}
 
-    if (state.yieldRevealed || activeNodeIndex === REQUIRED_NODES) {
-        revealFinalYield();
-        updateConsole(`🎉 <strong>Problem Completed Previously:</strong> Review your step factors and cancellation chain above.`);
-    } else {
-        document.getElementById('btnAddNode').style.display = 'flex';
-    }
+function restoreDraft() {
+    let state;
+    try { state = JSON.parse(localStorage.getItem(STORE_KEY)); } catch(e) {}
+    if (!state || !state.steps) return false;
+
+    let restored = false;
+    state.steps.forEach((stepData, idx) => {
+        if (idx >= REQUIRED_NODES) return;
+        const numValEl  = document.getElementById(`num_val_${idx}`);
+        if (!numValEl) return;
+        numValEl.value = stepData.numVal || '';
+        const nu = document.getElementById(`num_unit_${idx}`);
+        const dv = document.getElementById(`den_val_${idx}`);
+        const du = document.getElementById(`den_unit_${idx}`);
+        if (nu) nu.value = stepData.numUnit || '';
+        if (dv) dv.value = stepData.denVal || '';
+        if (du) du.value = stepData.denUnit || '';
+        restored = true;
+    });
+    return restored;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Dynamically Append a Step Grid Card
+// Card construction
 // ─────────────────────────────────────────────────────────────────────────────
 function appendUserStep(isInteractive = true) {
     if (activeNodeIndex >= REQUIRED_NODES) {
-        if (isInteractive) showToast("You have reached the maximum required steps for this conversion.", "info");
+        showToast(`This conversion needs exactly ${REQUIRED_NODES} step factor(s).`, 'info');
         return;
     }
 
     const container = document.getElementById('nodeContainer');
+    const idx = activeNodeIndex;
 
     const op = document.createElement('span');
     op.className = 'operator-sign';
-    op.id = `op_${activeNodeIndex}`;
+    op.id = `op_${idx}`;
     op.textContent = '✖';
     container.appendChild(op);
 
     const card = document.createElement('div');
     card.className = 'fraction-card active-link';
-    card.id = `node_${activeNodeIndex}`;
-
-    const currentIdx = activeNodeIndex;
+    card.id = `node_${idx}`;
 
     card.innerHTML = `
         <div class="slot-container">
-            <input type="number" class="slot-input" id="num_val_${currentIdx}" placeholder="Val" step="any">
-            <select class="unit-select" id="num_unit_${currentIdx}">
-                ${UNIT_OPTIONS_HTML}
-            </select>
+            <input type="number" class="slot-input" id="num_val_${idx}" placeholder="Val" step="any">
+            <select class="unit-select" id="num_unit_${idx}">${UNIT_OPTIONS_HTML}</select>
         </div>
         <div class="fraction-divider"></div>
         <div class="slot-container">
-            <input type="number" class="slot-input" id="den_val_${currentIdx}" placeholder="Val" step="any">
-            <select class="unit-select" id="den_unit_${currentIdx}">
-                ${UNIT_OPTIONS_HTML}
-            </select>
+            <input type="number" class="slot-input" id="den_val_${idx}" placeholder="Val" step="any">
+            <select class="unit-select" id="den_unit_${idx}">${UNIT_OPTIONS_HTML}</select>
         </div>
-        <button class="btn-verify-node" id="btn_${currentIdx}" onclick="validateStudentStep(${currentIdx})">
-            Verify Step ${currentIdx + 1}
-        </button>
     `;
-
     container.appendChild(card);
 
-    document.getElementById('btnAddNode').style.display = 'none';
+    activeNodeIndex++;
+    updateAuditControls();
 
     if (isInteractive) {
-        updateConsole(`Construct Step ${currentIdx + 1}: Select the numerator/denominator units and enter their numerical values to cancel out units properly.`);
+        updateConsole(`Step ${activeNodeIndex} card added. Choose numerator/denominator units so they cancel diagonally.`);
+    }
+}
+
+function collectSubmittedNodes() {
+    const nodes = [];
+    for (let i = 0; i < activeNodeIndex; i++) {
+        nodes.push({
+            num_value: parseFloat(document.getElementById(`num_val_${i}`)?.value),
+            num_unit:  document.getElementById(`num_unit_${i}`)?.value || '',
+            den_value: parseFloat(document.getElementById(`den_val_${i}`)?.value),
+            den_unit:  document.getElementById(`den_unit_${i}`)?.value || '',
+        });
+    }
+    return nodes;
+}
+
+function lockAllCards() {
+    for (let i = 0; i < activeNodeIndex; i++) {
+        ['num_val', 'num_unit', 'den_val', 'den_unit'].forEach(f => {
+            const el = document.getElementById(`${f}_${i}`);
+            if (el) el.disabled = true;
+        });
+        const card = document.getElementById(`node_${i}`);
+        if (card) {
+            card.classList.remove('active-link', 'error-link');
+            card.classList.add('verified-link');
+        }
+        applyUnitCancellationVisual(i);
     }
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Validate Student's Custom Step Construction
+// Chain audit (all grading server-side)
 // ─────────────────────────────────────────────────────────────────────────────
-async function validateStudentStep(idx) {
-    const numVal  = parseFloat(document.getElementById(`num_val_${idx}`).value);
-    const numUnit = document.getElementById(`num_unit_${idx}`).value;
-    const denVal  = parseFloat(document.getElementById(`den_val_${idx}`).value);
-    const denUnit = document.getElementById(`den_unit_${idx}`).value;
+async function auditFullChain() {
+    if (laneCleared) return;
 
-    const expectedSpec = NODES_SPEC[idx];
+    const payload = {
+        problem_id: PROBLEM_ID,
+        part_label: PART_LABEL,
+        nodes: collectSubmittedNodes(),
+    };
 
-    // 1. Completeness Check
-    if (isNaN(numVal) || isNaN(denVal) || !numUnit || !denUnit) {
-        showToast("Please provide both values and units for numerator and denominator.", "err");
-        updateConsole("⚠️ Incomplete Step: Every conversion factor requires numerical quantities AND units for both numerator and denominator.");
-        return;
-    }
-
-    // 2. Unit Cancellation Explanation & Verification
-    const previousUnit = idx === 0 ? `${GIVEN_UNIT}_${GIVEN_FORMULA}` : NODES_SPEC[idx - 1].num_unit;
-    
-    if (denUnit !== previousUnit) {
-        updateConsole(`❌ <strong>Unit Mismatch Error:</strong> Your denominator unit (<code>${denUnit.replace(/_/g, ' ')}</code>) does not cancel with the previous unit (<code>${previousUnit.replace(/_/g, ' ')}</code>). Dimensional analysis requires identical units across the fraction boundary so they simplify to 1.`);
-        flashCardError(idx);
-        return;
-    }
-
-    // 3. Target Unit & Quantity Precision Verification
-    const isNumValCorrect = Math.abs(numVal - expectedSpec.num_value) < 0.01;
-    const isDenValCorrect = Math.abs(denVal - expectedSpec.den_value) < 0.01;
-    const isNumUnitCorrect = numUnit === expectedSpec.num_unit;
-
-    if (!isNumUnitCorrect) {
-        updateConsole(`❌ <strong>Incorrect Target Unit:</strong> Selecting <code>${numUnit.replace(/_/g, ' ')}</code> does not advance toward the desired yield unit. Choose the unit that converts closer to <code>${TARGET_UNIT} ${TARGET_FORMULA}</code>.`);
-        flashCardError(idx);
-        return;
-    }
-
-    if (!isNumValCorrect || !isDenValCorrect) {
-        let denExplanation = denVal === 1 
-            ? "Molar mass conversion factors express grams per <strong>1 mole</strong>."
-            : `Stoichiometric conversions use chemical coefficients (e.g. <strong>${expectedSpec.den_value}</strong>) from the balanced equation.`;
-            
-        updateConsole(`❌ <strong>Value Calculation Error:</strong> Re-check your values. <em>Reason: ${denExplanation}</em>`);
-        flashCardError(idx);
-        return;
-    }
-
-    // ── STEP IS FULLY CORRECT ──
-    const card = document.getElementById(`node_${idx}`);
-    card.classList.remove('active-link', 'error-link');
-    card.classList.add('verified-link');
-
-    // Lock Step Inputs
-    document.getElementById(`num_val_${idx}`).disabled = true;
-    document.getElementById(`num_unit_${idx}`).disabled = true;
-    document.getElementById(`den_val_${idx}`).disabled = true;
-    document.getElementById(`den_unit_${idx}`).disabled = true;
-    document.getElementById(`btn_${idx}`).style.display = 'none';
-
-    // Apply Strike-through Visual ONLY to Cancelled Unit
-    applyUnitCancellationVisual(idx);
-
-    activeNodeIndex++;
-    saveState();
-
-    await awardXP(activeNodeIndex === REQUIRED_NODES);
-
-    let explanationNote = denVal === 1 
-        ? "Denominator is <strong>1</strong> because standard molar mass is defined per single mole." 
-        : `Denominator is <strong>${denVal}</strong> because it uses the balanced equation coefficient for ${denUnit.replace(/_/g, ' ')}.`;
-
-    if (activeNodeIndex < REQUIRED_NODES) {
-        document.getElementById('btnAddNode').style.display = 'flex';
-        updateConsole(`✓ <strong>Step ${idx + 1} Confirmed!</strong> ${explanationNote} Click <strong>"+ Add Step Factor"</strong> to build the next step.`);
-    } else {
-        revealFinalYield();
-        updateConsole(`🎉 <strong>Conversion Chain Complete!</strong> ${explanationNote} All intermediate units cancelled out cleanly, leaving only <code>${TARGET_UNIT} ${TARGET_FORMULA}</code>.`);
+    try {
+        const resp = await fetch('/api/audit-chain/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': '{{ csrf_token }}'
+            },
+            body: JSON.stringify(payload),
+        });
+        const data = await resp.json();
+        handleAuditResponse(data);
+    } catch (err) {
+        console.error('[Chain Audit] error:', err);
+        showToast('Error auditing chain. Please try again.', 'err');
     }
 }
 
+function handleAuditResponse(data) {
+    if (data.already_cleared) {
+        laneCleared = true;
+        renderVerifiedReplay();
+        return;
+    }
+
+    if (data.locked) {
+        engageStepLock(data.retry_after || 30, data.message);
+        return;
+    }
+
+    renderNodeReports(data.reports || []);
+
+    if (data.success && data.all_ok) {
+        laneCleared = true;
+        try { localStorage.removeItem(STORE_KEY); } catch(e) {}
+        lockAllCards();
+        revealFinalYield(data.correct_answer);
+        updateConsole(`🎉 <strong>Conversion Chain Complete!</strong> All intermediate units cancelled out cleanly, leaving only <code>${TARGET_UNIT} ${TARGET_FORMULA}</code>.`);
+        showToast(data.message, 'ok');
+        return;
+    }
+
+    flashFailingCards(data.reports || []);
+    let consoleMsg = `<strong style="color:#FCA5A5;">Audit failed.</strong> ${data.message || ''}`;
+    if (data.rolling_accuracy !== undefined && data.rolling_accuracy !== null && data.rolling_accuracy < STEP_LOCK_THRESHOLD) {
+        consoleMsg += `<br><em>Rolling accuracy: ${data.rolling_accuracy}% — at risk of step lock (threshold ${STEP_LOCK_THRESHOLD}%). Slow down and use the strategy guide.</em>`;
+    }
+    updateConsole(consoleMsg);
+}
+
+function flashFailingCards(reports) {
+    reports.forEach(rep => {
+        if (rep.unit_ok === false || rep.value_ok === false) {
+            const card = document.getElementById(`node_${rep.index}`);
+            if (!card) return;
+            card.classList.remove('active-link');
+            card.classList.add('error-link');
+            setTimeout(() => {
+                card.classList.remove('error-link');
+                card.classList.add('active-link');
+            }, 1400);
+        }
+    });
+}
+
+function renderNodeReports(reports) {
+    const holder = document.getElementById('nodeReports');
+    if (!holder) return;
+    holder.innerHTML = reports.map(rep => {
+        const unitChip = rep.unit_ok === null
+            ? ''
+            : `<span class="report-chip ${rep.unit_ok ? 'report-ok' : 'report-bad'}">UNITS ${rep.unit_ok ? '✓' : '✗'}</span>`;
+        const valChip = rep.value_ok === null || rep.unit_ok === false
+            ? `<span class="report-chip report-bad">VALUE —</span>`
+            : `<span class="report-chip ${rep.value_ok ? 'report-ok' : 'report-bad'}">VALUE ${rep.value_ok ? '✓' : '✗'}</span>`;
+        return `<span class="node-report-row">Step ${rep.index + 1}: ${unitChip}${valChip}</span>`;
+    }).join('');
+}
+
+function engageStepLock(seconds, message) {
+    lockedUntil = Date.now() + seconds * 1000;
+    const banner = document.getElementById('lockBanner');
+    const textEl = document.getElementById('lockBannerText');
+    banner.style.display = 'block';
+    textEl.textContent = ` ${message}`;
+
+    const tick = () => {
+        const remaining = Math.ceil((lockedUntil - Date.now()) / 1000);
+        if (remaining <= 0) {
+            banner.style.display = 'none';
+            lockedUntil = null;
+            updateAuditControls();
+            updateConsole('Step lock released. Re-read the concept check, rebuild your chain carefully, then audit.');
+            return;
+        }
+        textEl.textContent = ` Inputs are locked for ${remaining}s. Rolling accuracy fell below ${STEP_LOCK_THRESHOLD}% — review the strategy guide above.`;
+        setTimeout(tick, 500);
+    };
+    tick();
+    updateAuditControls();
+}
+
+function updateAuditControls() {
+    const addBtn = document.getElementById('btnAddNode');
+    const auditBtn = document.getElementById('btnAuditChain');
+    const label = document.getElementById('chainProgressLabel');
+
+    if (laneCleared) {
+        addBtn.style.display = 'none';
+        auditBtn.style.display = 'none';
+        label.textContent = 'Part verified.';
+        document.getElementById('actionsBar').style.display = 'flex';
+        return;
+    }
+
+    addBtn.style.display = activeNodeIndex < REQUIRED_NODES ? 'flex' : 'none';
+    const complete = activeNodeIndex === REQUIRED_NODES;
+    auditBtn.disabled = !complete || !!lockedUntil;
+    auditBtn.style.display = activeNodeIndex > 0 ? 'inline-block' : 'none';
+    label.textContent = `${activeNodeIndex} / ${REQUIRED_NODES} cards placed${complete ? ' — ready to audit' : ''}`;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Visual helpers
+// ─────────────────────────────────────────────────────────────────────────────
 function applyUnitCancellationVisual(idx) {
     if (idx === 0) {
-        const givenUnitEl = document.getElementById('givenUnitText');
+        const givenUnitEl = document.querySelector('.starting-node span span');
         if (givenUnitEl) givenUnitEl.classList.add('unit-cancelled');
     } else {
         const prevNumSelect = document.getElementById(`num_unit_${idx - 1}`);
@@ -637,66 +676,58 @@ function applyUnitCancellationVisual(idx) {
     if (currentDenSelect) currentDenSelect.classList.add('unit-cancelled');
 }
 
-function flashCardError(idx) {
-    const card = document.getElementById(`node_${idx}`);
-    card.classList.remove('active-link');
-    card.classList.add('error-link');
-    setTimeout(() => {
-        card.classList.remove('error-link');
-        card.classList.add('active-link');
-    }, 1200);
-}
-
 function updateConsole(msg) {
     document.getElementById('explanationText').innerHTML = msg;
 }
 
-function revealFinalYield() {
-    document.getElementById('btnAddNode').style.display = 'none';
+function revealFinalYield(answerString) {
     document.getElementById('op_eq').style.display = 'inline';
     const yieldNode = document.getElementById('yieldNode');
     yieldNode.style.display = 'block';
-
-    document.getElementById('yieldValue').textContent = `${CORRECT_ANSWER.toFixed(4)} ${TARGET_UNIT}`;
+    document.getElementById('yieldValue').textContent = answerString || '—';
     document.getElementById('actionsBar').style.display = 'flex';
 }
 
-// Automatically save input changes
+// ─────────────────────────────────────────────────────────────────────────────
+// Verified replay + boot
+// ─────────────────────────────────────────────────────────────────────────────
+function renderVerifiedReplay() {
+    if (!VERIFIED_CHAIN || !VERIFIED_CHAIN.length) return;
+    VERIFIED_CHAIN.forEach((n, idx) => {
+        appendUserStep(false);
+        const set = (f, v) => {
+            const el = document.getElementById(`${f}_${idx}`);
+            if (el) el.value = v ?? '';
+        };
+        set('num_val', n.num_value);
+        set('num_unit', n.num_unit);
+        set('den_val', n.den_value);
+        set('den_unit', n.den_unit);
+    });
+    laneCleared = true;
+    lockAllCards();
+    revealFinalYield({% if verified_answer %}"{{ verified_answer|escapejs }}"{% else %}null{% endif %});
+    updateConsole('🎉 <strong>Problem Completed Previously:</strong> Review your verified step factors and cancellation chain above.');
+}
+
 document.addEventListener('input', e => {
     if (e.target.classList.contains('slot-input') || e.target.classList.contains('unit-select')) {
-        saveState();
+        saveDraft();
     }
 });
 
-// Restore previous state on page load
-restoreState();
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Gamification XP System Integration
-// ─────────────────────────────────────────────────────────────────────────────
-async function awardXP(isFinalNode) {
-    const xpAmount = 25 + (isFinalNode ? 50 : 0);
-    try {
-        const res = await fetch('/award-xp/', {
-            method: 'POST',
-            headers: { 
-                'Content-Type': 'application/json',
-                'X-CSRFToken': '{{ csrf_token }}'
-            },
-            body: JSON.stringify({
-                xp_amount: xpAmount,
-                reason: `step_grid_constructed_${PROBLEM_ID}_${PART_LABEL}`,
-            }),
-        });
-        if (!res.ok) return;
-        const data = await res.json();
-        if (data.success) {
-            showToast(`+${data.xp_awarded} XP — Step Constructed!`, 'ok');
-        }
-    } catch (err) {
-        console.warn('[XP] Award request failed:', err);
+if (laneCleared) {
+    renderVerifiedReplay();
+} else {
+    while (activeNodeIndex < REQUIRED_NODES) {
+        appendUserStep(false);
+    }
+    const restored = restoreDraft();
+    if (restored) {
+        updateConsole('Draft inputs restored. Complete any missing pieces, then run the audit.');
     }
 }
+updateAuditControls();
 
 let _toastTimeout;
 function showToast(msg, type = 'info') {
@@ -708,7 +739,7 @@ function showToast(msg, type = 'info') {
             position:fixed; bottom:28px; left:50%; transform:translateX(-50%);
             padding:10px 22px; border-radius:5px; font-size:14px; font-weight:bold;
             z-index:9999; transition:opacity 0.3s; pointer-events:none;
-            box-shadow:0 4px 16px rgba(0,0,0,0.5); max-width:500px; text-align:center;
+            box-shadow:0 4px 16px rgba(0,0,0,0.5); max-width:520px; text-align:center;
         `;
         document.body.appendChild(toast);
     }

@@ -1,0 +1,124 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<style>
+    .syn-card {
+        background: #171A21;
+        border: 1px solid #2A303C;
+        border-radius: 8px;
+        padding: 22px;
+        margin-bottom: 20px;
+    }
+    .syn-entry {
+        display: flex; justify-content: space-between; align-items: center;
+        background: var(--bg-dark); border: 1px solid #2A303C;
+        border-radius: 6px; padding: 14px 18px; margin-bottom: 10px;
+        flex-wrap: wrap; gap: 10px;
+    }
+    .syn-badge {
+        font-size: 11px; font-weight: bold; letter-spacing: 1px;
+        padding: 4px 10px; border-radius: 3px;
+    }
+    .syn-passed  { background: rgba(4,120,87,0.15); color: #34D399; border: 1px solid #059669; }
+    .syn-current { background: rgba(255,214,0,0.12); color: var(--constant-gold); border: 1px solid var(--constant-gold); }
+    .syn-locked  { background: #20242E; color: var(--text-muted); border: 1px solid #2A303C; }
+</style>
+
+<div style="max-width: 900px; margin: 0 auto; padding: 20px;">
+
+    <div class="syn-card" style="border-bottom: 2px solid var(--constant-gold);">
+        <h2 style="margin:0 0 8px 0; color:var(--constant-gold); letter-spacing:1px;">
+            ⚗️ SYNTHESIS CHALLENGE
+        </h2>
+        <p style="color:var(--text-light); line-height:1.6; margin:0;">
+            Five randomized conversion sets solved <strong>completely unassisted</strong>:
+            no hints, no databank, no constants tray, no worked examples.
+            Finish a full run to receive a first-try accuracy score.
+            Score <strong>≥ {{ threshold|floatformat:0 }}%</strong> to unlock the Limiting-Reagent capstone problems.
+        </p>
+        {% if score is not None %}
+        <p style="margin:12px 0 0 0;">
+            <span class="syn-badge {% if unlocked %}syn-passed{% else %}syn-current{% endif %}">
+                BEST SCORE: {{ score }}% {% if unlocked %}· CAPSTONES UNLOCKED{% else %}· BELOW {{ threshold|floatformat:0 }}% THRESHOLD{% endif %}
+            </span>
+        </p>
+        {% endif %}
+    </div>
+
+    {% if run_active and entries %}
+    <div class="syn-card">
+        <h3 style="margin:0 0 14px 0; color:var(--cyber-teal);">ACTIVE RUN STATUS</h3>
+        {% for e in entries %}
+        <div class="syn-entry">
+            <div>
+                <strong style="color:var(--text-light);">Set {{ e.index|add:1 }}</strong>
+                <span style="color:var(--text-muted); font-size:12px;"> · {{ e.conversion_type }}</span>
+                <br><small style="color:var(--text-muted);">{{ e.title }}</small>
+            </div>
+            {% if e.passed %}
+            <span class="syn-badge syn-passed">✓ SOLVED</span>
+            {% elif e.is_current %}
+            <a href="{{ e.url }}" class="syn-badge syn-current"
+               style="text-decoration:none;">▶ ENTER SET {{ e.index|add:1 }}</a>
+            {% else %}
+            <span class="syn-badge syn-locked">🔒 PREVIOUS SETS FIRST</span>
+            {% endif %}
+        </div>
+        {% endfor %}
+
+        <form method="post" action="{% url 'synthesis_challenge' %}" id="abortForm" class="no-js-hidden">
+            {% csrf_token %}
+        </form>
+        <button class="btn-modal btn-cancel" style="margin-top:8px;"
+                onclick="abortRun()">Abandon Run</button>
+    </div>
+    {% else %}
+    <div class="syn-card" style="text-align:center; padding:40px;">
+        <p style="color:var(--text-muted); margin-bottom:18px;">
+            No active run. Starting a run randomizes five conversion problems from the practice pool.
+            Your score is computed from first-attempt correctness across all graded steps.
+        </p>
+        <button onclick="startRun()"
+                style="background:transparent; border:2px solid var(--constant-gold); color:var(--constant-gold);
+                       padding:12px 30px; font-weight:bold; font-size:14px; border-radius:4px; cursor:pointer;">
+            ▶ START RANDOMIZED RUN
+        </button>
+    </div>
+    {% endif %}
+
+    <p style="text-align:center; margin-top:16px;">
+        <a href="{% url 'problem_lobby' %}" style="color:var(--text-muted); font-size:13px;">← Back to Lobby</a>
+    </p>
+</div>
+
+<script>
+function csrfToken() {
+    return document.querySelector('[name=csrfmiddlewaretoken]')?.value ||
+           document.cookie.match(/csrftoken=([^;]+)/)?.[1] || '';
+}
+
+async function post(action) {
+    const resp = await fetch(window.location.href, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrfToken() },
+        body: JSON.stringify({ action }),
+    });
+    return resp.json();
+}
+
+async function startRun() {
+    const data = await post('start');
+    if (data.success) window.location.reload();
+    else showToastSafe(data.message || 'Could not start run.');
+}
+
+async function abortRun() {
+    const data = await post('abort');
+    if (data.success) window.location.reload();
+}
+
+function showToastSafe(msg) {
+    alert(msg);
+}
+</script>
+{% endblock content %}

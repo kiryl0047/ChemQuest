@@ -1,0 +1,138 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<style>
+    .inst-header {
+        border-left: 4px solid var(--combo-green);
+        padding: 15px 20px;
+        background: #171A21;
+        border-radius: 4px;
+        margin-bottom: 25px;
+    }
+    .cohort-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+        gap: 20px;
+        margin-bottom: 30px;
+    }
+    .cohort-metric {
+        background: #171A21;
+        border: 1px solid #2A303C;
+        border-radius: 6px;
+        padding: 18px;
+        text-align: center;
+    }
+    .cohort-metric .num { font-size: 30px; font-weight: bold; color: var(--cyber-teal); margin-top: 6px; }
+
+    .heatmap-wrap {
+        background: #171A21;
+        border: 1px solid #2A303C;
+        border-radius: 8px;
+        padding: 22px;
+        overflow-x: auto;
+    }
+    table.heatmap {
+        border-collapse: collapse;
+        width: 100%;
+        min-width: 720px;
+        font-size: 13px;
+    }
+    table.heatmap th, table.heatmap td {
+        border: 1px solid #2A303C;
+        padding: 9px 12px;
+        text-align: center;
+    }
+    table.heatmap th {
+        background: #0F1115;
+        color: var(--text-muted);
+        font-size: 11px;
+        letter-spacing: 0.5px;
+        text-transform: uppercase;
+    }
+    table.heatmap td.student-name {
+        text-align: left;
+        color: var(--text-light);
+        font-weight: bold;
+        white-space: nowrap;
+    }
+    .cell-mastered   { background: rgba(0, 200, 100, 0.22); color: #34D399; font-weight: bold; }
+    .cell-developing { background: rgba(255, 214, 0, 0.16); color: var(--constant-gold); font-weight: bold; }
+    .cell-critical   { background: rgba(255, 61, 0, 0.2);  color: #FCA5A5; font-weight: bold; }
+    .cell-none       { color: #4B5563; }
+
+    .legend-row { display: flex; gap: 16px; margin-top: 14px; flex-wrap: wrap; align-items: center; }
+    .legend-swatch { width: 12px; height: 12px; border-radius: 3px; display: inline-block; margin-right: 5px; vertical-align: middle; }
+</style>
+
+<div class="inst-header">
+    <span style="color: var(--combo-green); font-weight: bold; font-size: 12px; letter-spacing: 2px;">
+        INSTRUCTOR CONSOLE // COHORT ANALYTICS
+    </span>
+    <p style="margin: 8px 0 0 0; color: var(--text-light); font-size: 14px;">
+        Mastery heatmap across all students and conversion sub-skills. Scope:
+        <strong>instructor-only</strong> (staff accounts).
+    </p>
+</div>
+
+<div class="cohort-grid">
+    <div class="cohort-metric">
+        <div>STUDENTS TRACKED</div>
+        <div class="num">{{ roster|length }}</div>
+    </div>
+    <div class="cohort-metric">
+        <div>COHORT MEAN ACCURACY</div>
+        <div class="num">{% if cohort_accuracy is not None %}{{ cohort_accuracy }}%{% else %}&mdash;{% endif %}</div>
+    </div>
+    <div class="cohort-metric">
+        <div>STUDENTS NEEDING REVIEW</div>
+        <div class="num" style="color:var(--coral-red);">{{ needing_review }}</div>
+    </div>
+</div>
+
+<div class="heatmap-wrap">
+    <h3 style="margin:0 0 16px 0; color:var(--cyber-teal);">Students × Sub-Skills Mastery Heatmap</h3>
+    <table class="heatmap">
+        <thead>
+            <tr>
+                <th style="text-align:left;">Student</th>
+                <th>LVL</th>
+                <th>Overall</th>
+                {% for ct in conversion_types %}
+                <th>{{ ct|cut:"_" }}</th>
+                {% endfor %}
+                <th>Weakest Skill</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for row in roster %}
+            <tr>
+                <td class="student-name">{{ row.username }}</td>
+                <td>{{ row.level }}</td>
+                <td class="{% if row.accuracy is None %}cell-none{% elif row.accuracy >= 80 %}cell-mastered{% elif row.accuracy >= 50 %}cell-developing{% else %}cell-critical{% endif %}">
+                    {% if row.accuracy is not None %}{{ row.accuracy }}%{% else %}&mdash;{% endif %}
+                </td>
+                {% for cell in row.cell_list %}
+                    {% with score=cell.1 %}
+                    <td class="{% if score is None %}cell-none{% elif score >= 80 %}cell-mastered{% elif score >= 50 %}cell-developing{% else %}cell-critical{% endif %}">
+                        {% if score is not None %}{{ score }}%{% else %}&mdash;{% endif %}
+                    </td>
+                    {% endwith %}
+                {% endfor %}
+                <td style="color:#94A3B8; font-size:12px;">{{ row.weakest|default:"—" }}</td>
+            </tr>
+            {% empty %}
+            <tr><td colspan="{{ conversion_types|length|add:5 }}" style="color:var(--text-muted); padding:24px;">
+                No student telemetry recorded yet.
+            </td></tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    <div class="legend-row">
+        <span style="font-size:11px; color:var(--text-muted);"><span class="legend-swatch cell-mastered"></span>Mastered &ge;80%</span>
+        <span style="font-size:11px; color:var(--text-muted);"><span class="legend-swatch cell-developing"></span>Developing 50–79%</span>
+        <span style="font-size:11px; color:var(--text-muted);"><span class="legend-swatch cell-critical"></span>Critical &lt;50%</span>
+        <span style="font-size:11px; color:var(--text-muted);"><span class="legend-swatch cell-none"></span>No data</span>
+    </div>
+</div>
+{% endblock content %}

@@ -23,12 +23,23 @@ urlpatterns = [
 
     # Module 4 — Student Self-Optimization Dashboard
     path('dashboard/', views.student_dashboard, name='student_dashboard'),
+    path('dashboard/export/pdf/', views.dashboard_export_pdf, name='dashboard_export_pdf'),
 
-    # ── XP award endpoint (called from Module 2 & 3 JS) ──────────
+    # Instructor-only analytics (is_staff scope)
+    path('dashboard/instructor/', views.instructor_dashboard, name='instructor_dashboard'),
+
+    # Synthesis Challenge — randomized unassisted review
+    path('synthesis/', views.synthesis_challenge, name='synthesis_challenge'),
+    path('api/synthesis-submit/', views.synthesis_submit, name='synthesis_submit'),
+
+    # ── XP award endpoint (legacy client-driven) ──────────
     path('award-xp/', views.award_node_xp, name='award_node_xp'),
 
     # API endpoints
-    path('api/verify-balancing/',   views.verify_balancing_backend,  name='verify_balancing'),
-    path('api/verify-molar-mass/',  views.verify_molar_mass_backend, name='verify_molar_mass'),
-    path('api/validate-step-node/', views.validate_step_node,        name='validate_step_node'),
+    path('api/verify-balancing/',    views.verify_balancing_backend,  name='verify_balancing'),
+    path('api/verify-molar-mass/',   views.verify_molar_mass_backend, name='verify_molar_mass'),
+    path('api/m1-checkpoint/',       views.m1_checkpoint,             name='m1_checkpoint'),
+    path('api/m1-retrieval/',        views.m1_retrieval_check,        name='m1_retrieval'),
+    path('api/audit-chain/',         views.audit_chain,               name='audit_chain'),
+    path('api/constants/<str:prob_id>/', views.api_locked_constants,  name='api_locked_constants'),
 ]

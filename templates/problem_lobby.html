@@ -259,6 +259,32 @@
     </p>
 </div>
 
+<!-- ── Synthesis Challenge banner ── -->
+<div class="filter-ribbon" style="justify-content:space-between; align-items:center;
+     {% if synthesis_unlocked %}border-color: rgba(0,230,118,0.4);{% endif %}">
+    <div>
+        <span style="font-size:11px; font-weight:bold; letter-spacing:1.5px; color:{% if synthesis_passed %}var(--combo-green){% elif synthesis_unlocked %}var(--constant-gold){% else %}var(--text-muted){% endif %};">
+            ⚗ SYNTHESIS CHALLENGE
+        </span>
+        <span style="font-size:12px; color:var(--text-light); margin-left:10px;">
+            {% if synthesis_passed %}
+                Credential earned{% if synthesis_best_pct is not None %} · best {{ synthesis_best_pct }}%{% endif %}
+            {% elif synthesis_unlocked %}
+                Unlocked — randomized unassisted review available
+            {% else %}
+                Complete {{ synthesis_completed }}/{{ synthesis_required }} problems to unlock randomized review
+            {% endif %}
+        </span>
+    </div>
+    {% if synthesis_unlocked %}
+    <a href="{% url 'synthesis_challenge' %}"
+       style="color:var(--combo-green); font-size:12px; text-decoration:none; border:1px solid var(--combo-green);
+              padding:7px 14px; border-radius:4px; font-weight:bold;">
+        Enter Review ──>
+    </a>
+    {% endif %}
+</div>
+
 <!-- Category Filtering Tabs Ribbon -->
 <div class="filter-ribbon">
     <button class="filter-btn active" onclick="filterCategory('all', this)" data-type="all">
@@ -295,6 +321,12 @@
                                  border-radius:3px; border:1px solid var(--coral-red);
                                  color:var(--coral-red); margin-left:8px; vertical-align:middle;
                                  letter-spacing:1px;">LIMITING</span>
+                    {% endif %}
+                    {% if problem.completed %}
+                    <span style="font-size:11px; font-weight:bold; padding:3px 8px;
+                                 border-radius:3px; border:1px solid var(--combo-green);
+                                 color:var(--combo-green); margin-left:8px; vertical-align:middle;
+                                 letter-spacing:1px;">✓ COMPLETE</span>
                     {% endif %}
                 </p>
                 <p class="problem-prompt-preview">{{ problem.prompt }}</p>
@@ -414,25 +446,15 @@ function updateCategoryCounters() {
 }
 
 async function performSystemWipe(problemId) {
-    const msg = "Are you sure you want to reset Problem " + problemId + "? This will delete all telemetry records and clear out all your input values.";
-    
-    const confirmed = await showCyberConfirm(msg);
-    if (!confirmed) return; 
+    const msg = "Are you sure you want to reset Problem " + problemId + "? This will delete all telemetry records, progress flags, and locked constants for this problem.";
 
-    try {
-        const cacheKeys = Object.keys(localStorage);
-        cacheKeys.forEach(key => {
-            if (key.toLowerCase().includes(problemId.toLowerCase()) || 
-                key.includes('ledger') || 
-                key.includes('workspace') || 
-                key.includes('nodes')) {
-                localStorage.removeItem(key);
-            }
-        });
-        sessionStorage.clear();
-    } catch (e) {
-        console.error("[WIPER] Error clearing client-side state maps: ", e);
-    }
+    const confirmed = await showCyberConfirm(msg);
+    if (!confirmed) return;
+
+    const prefixes = [`cq_m2_${problemId}_`, `cq_m1_${problemId}`];
+    Object.keys(localStorage)
+        .filter(key => prefixes.some(prefix => key.startsWith(prefix)))
+        .forEach(key => localStorage.removeItem(key));
 
     window.location.href = "/problem/reset/" + problemId + "/";
 }

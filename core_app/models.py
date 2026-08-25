@@ -44,6 +44,7 @@ class UserProfile(models.Model):
     user     = models.OneToOneField(User, on_delete=models.CASCADE,
                                     related_name='profile')
     total_xp = models.IntegerField(default=0)
+    quickharvest_mastery_count = models.IntegerField(default=0)
  
     def __str__(self):
         return f"{self.user.username} -- LVL {self.level} ({self.total_xp} XP)"
@@ -211,6 +212,12 @@ class ProblemPart(models.Model):
  
         return nodes
 
+    def expected_node_units(self):
+        return [
+            {'num_unit': n['num_unit'], 'den_unit': n['den_unit']}
+            for n in self.expected_nodes()
+        ]
+
 # ---------------------------------------------------------------------------
 # Private helpers
 # ---------------------------------------------------------------------------
@@ -219,8 +226,8 @@ def _get_coeff(problem, formula):
         if entry['formula'] == formula:
             return entry['coeff']
     raise ValueError(f"Formula '{formula}' not found in problem {problem.problem_id}")
- 
- 
+
+
 def _node(num_val, num_unit, den_val, den_unit):
     return {
         'num_value': round(float(num_val), 4),
@@ -228,3 +235,80 @@ def _node(num_val, num_unit, den_val, den_unit):
         'den_value': round(float(den_val), 4),
         'den_unit':  den_unit,
     }
+
+# ---------------------------------------------------------------------------
+# Server-persisted per-user progress (replaces localStorage gating state)
+# ---------------------------------------------------------------------------
+class ProblemProgress(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE,
+                             related_name='problem_progress')
+    problem_id    = models.CharField(max_length=50)
+    balancing_cleared       = models.BooleanField(default=False)
+    molar_mass_cleared      = models.BooleanField(default=False)
+    checkpoint_cleared      = models.BooleanField(default=False)
+    retrieval_check_passed  = models.BooleanField(default=False)
+    accuracy_gate_passed    = models.BooleanField(default=False)
+    yield_comparison_verified = models.BooleanField(default=False)
+    deduction_cleared       = models.BooleanField(default=False)
+    synthesis_passed        = models.BooleanField(default=False)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        unique_together = [('user', 'problem_id')]
+
+    def __str__(self):
+        return f"Progress-{self.user.username}-{self.problem_id}"
+
+    @classmethod
+    def get_or_default(cls, user, problem_id):
+        if not getattr(user, 'is_authenticated', False):
+            return None
+        obj, _ = cls.objects.get_or_create(user=user, problem_id=problem_id)
+        return obj
+
+    def module1_complete(self):
+        return (self.balancing_cleared and self.molar_mass_cleared
+                and self.checkpoint_cleared and self.retrieval_check_passed
+                and self.accuracy_gate_passed)
+
+    def is_completed(self, problem=None):
+        base = self.module1_complete()
+        if problem is not None and problem.is_limiting_problem:
+            return base and self.deduction_cleared
+        return base
+
+
+class PartProgress(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE,
+                             related_name='part_progress')
+    problem_id  = models.CharField(max_length=50)
+    part_label  = models.CharField(max_length=10)
+    lane_cleared = models.BooleanField(default=False)
+    chain_json  = models.JSONField(default=list, blank=True)
+
+    class Meta:
+        unique_together = [('user', 'problem_id', 'part_label')]
+
+    def __str__(self):
+        return f"PartProgress-{self.user.username}-{self.problem_id}-{self.part_label}"
+
+    @classmethod
+    def get_or_default(cls, user, problem_id, part_label):
+        if not getattr(user, 'is_authenticated', False):
+            return None
+        obj, _ = cls.objects.get_or_create(
+            user=user, problem_id=problem_id, part_label=part_label)
+        return obj
+
+
+class SynthesisAttempt(models.Model):
+    user         = models.ForeignKey(User, on_delete=models.CASCADE,
+                                     related_name='synthesis_attempts')
+    total_items   = models.IntegerField(default=0)
+    correct_items = models.IntegerField(default=0)
+    score_pct     = models.FloatField(default=0.0)
+    passed        = models.BooleanField(default=False)
+    created_at    = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"Synthesis-{self.user.username}-{self.score_pct:.0f}%"

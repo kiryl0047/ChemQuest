@@ -44,7 +44,7 @@
     }
     .status-waiting { background: #2D3748; color: #A0AEC0; }
     .status-cleared { background: #065F46; color: #34D399; }
-    
+
     .row-layout {
         display: flex;
         align-items: center;
@@ -79,7 +79,7 @@
     }
     .fraction-input-cell:focus { outline: none; background: rgba(0,240,255,0.02); }
     .fraction-multiply { font-weight: bold; color: var(--text-muted); font-size: 18px; }
-    
+
     .btn-verify-lane {
         background: #1F2937;
         border: 1px solid #374151;
@@ -93,13 +93,12 @@
     }
     .btn-verify-lane:hover { background: #374151; }
 
-    #deductionCard.locked-lane {
+    #deductionCard.locked-lane, #comparisonCard.locked-lane {
         opacity: 0.35;
         pointer-events: none;
         filter: blur(1.5px);
     }
 
-    /* Explanation Accordion Box */
     .edu-expander {
         background: rgba(255, 61, 0, 0.04);
         border: 1px solid rgba(255, 61, 0, 0.25);
@@ -123,10 +122,63 @@
         border-top: 1px dashed rgba(255, 255, 255, 0.1);
         padding-top: 10px;
     }
+
+    .track-compare-btn {
+        background: #141822;
+        border: 2px solid #222A3B;
+        color: #E5E7EB;
+        padding: 16px 20px;
+        border-radius: 6px;
+        cursor: pointer;
+        font-weight: bold;
+        font-size: 14px;
+        min-width: 170px;
+        transition: all 0.2s ease;
+    }
+    .track-compare-btn:hover { border-color: var(--coral-red); box-shadow: 0 0 12px rgba(255,61,0,0.25); }
+    .track-compare-btn.selected-wrong {
+        border-color: var(--coral-red) !important;
+        animation: shakeX 0.4s ease;
+    }
+    @keyframes shakeX {
+        0%,100% { transform: translateX(0); }
+        25%     { transform: translateX(-5px); }
+        75%     { transform: translateX(5px); }
+    }
+
+    .tactical-hint-box {
+        background: rgba(255, 214, 0, 0.06);
+        border: 1px solid rgba(255, 214, 0, 0.35);
+        border-left: 4px solid var(--constant-gold);
+        border-radius: 5px;
+        padding: 12px 16px;
+        margin-top: 14px;
+        animation: fadeInHint 0.3s ease-in-out;
+    }
+    .hint-header {
+        font-size: 11px; font-weight: 800; letter-spacing: 1px;
+        color: var(--constant-gold); margin-bottom: 6px; text-transform: uppercase;
+    }
+    .hint-body { font-size: 13px; color: var(--text-light); line-height: 1.5; }
+    @keyframes fadeInHint {
+        from { opacity: 0; transform: translateY(-4px); }
+        to   { opacity: 1; transform: translateY(0); }
+    }
+
+    .deduction-input {
+        background: #141822;
+        border: 1px solid #222A3B;
+        color: white;
+        padding: 7px 12px;
+        border-radius: 4px;
+        font-size: 13px;
+        width: 180px;
+    }
+    .deduction-input.input-error { border-color: var(--coral-red); }
 </style>
 
 <div class="container" style="max-width: 1100px; margin: 0 auto; padding: 20px;">
-    
+
     <div class="grid-info-header">
         <span style="color: var(--cyber-teal); font-weight: bold; font-size: 16px;">
             STATION SYSTEM BALANCING // {{ problem_title }}
@@ -134,7 +186,6 @@
         <p style="margin-top: 10px; color: var(--text-muted); line-height: 1.6;">{{ prompt }}</p>
     </div>
 
-    <!-- ── Educational Strategy Guide ── -->
     <details class="edu-expander" open>
         <summary>💡 CONCEPT CHECK: How Limiting Reagents Work (The Sandwich Analogy)</summary>
         <div class="edu-content">
@@ -159,12 +210,11 @@
 
                 <div style="background: rgba(255, 61, 0, 0.05); border: 1px solid rgba(255, 61, 0, 0.2); border-radius: 5px; padding: 10px 14px;">
                     <div style="font-weight: 800; color: var(--coral-red); margin-bottom: 4px; font-size: 13px;">
-                        2️⃣ Step 2: Pick the Smaller Yield
+                        2️⃣ Step 2: Compare Side by Side
                     </div>
                     <p style="margin: 0; font-size: 12px; color: var(--text-light); line-height: 1.5;">
                         • The reactant that produces the <strong>LOWEST product amount</strong> is your <strong>Limiting Reagent</strong>.
-                        <br>
-                        • That lowest amount is your true <strong>Theoretical Yield</strong>!
+                        <br>• The rest is left over — you will compute exactly how much remains!
                     </p>
                 </div>
             </div>
@@ -173,14 +223,17 @@
 
     <div id="pipelineContainer">
         {% for part in processed_parts %}
-        <div class="part-lane-card locked-lane" id="card_{{ part.part_label }}" data-idx="{{ part.index }}">
+        <div class="part-lane-card locked-lane {% if part.cleared %}verified-lane{% endif %}"
+             id="card_{{ part.part_label }}" data-idx="{{ part.index }}" data-label="{{ part.part_label }}">
             <div class="lane-title">
                 <span style="color: #94A3B8;">
                     STEP {{ part.index|add:1 }}: SUB-PROBLEM UNIFIED PART [{{ part.part_label|upper }}]
                 </span>
-                <span class="lane-status status-waiting" id="status_{{ part.part_label }}">AWAITING DATA LINK</span>
+                <span class="lane-status {% if part.cleared %}status-cleared{% else %}status-waiting{% endif %}" id="status_{{ part.part_label }}">
+                    {% if part.cleared %}VERIFIED VECTOR{% else %}AWAITING DATA LINK{% endif %}
+                </span>
             </div>
-            
+
             <p style="font-size: 13px; color: #CBD5E1; margin-bottom: 12px;">{{ part.part_prompt }}</p>
 
             <div class="row-layout">
@@ -194,31 +247,50 @@
                     </span>
                 </div>
 
-                {% for node in part.nodes %}
+                {% for unit in part.node_units %}
                 <span class="fraction-multiply">×</span>
-                <div class="fraction-block" 
-                    data-part="{{ part.part_label }}" 
+                <div class="fraction-block"
+                    data-part="{{ part.part_label }}"
                     data-node="{{ forloop.counter0 }}">
-                    <input type="number" step="0.0001" 
-                        class="fraction-input-cell input-cell-num" 
+                    <input type="number" step="0.0001"
+                        class="fraction-input-cell input-cell-num"
                         id="input_{{ part.part_label }}_{{ forloop.counter0 }}_num"
-                        placeholder="{{ node.num_unit }}">
+                        placeholder="{{ unit.num_unit }}">
                     <div class="fraction-bar"></div>
-                    <input type="number" step="0.0001" 
-                        class="fraction-input-cell input-cell-den" 
+                    <input type="number" step="0.0001"
+                        class="fraction-input-cell input-cell-den"
                         id="input_{{ part.part_label }}_{{ forloop.counter0 }}_den"
-                        placeholder="{{ node.den_unit }}">
+                        placeholder="{{ unit.den_unit }}">
                 </div>
                 {% endfor %}
 
-                <button class="btn-verify-lane" style="margin-left: auto;" 
+                <button class="btn-verify-lane" style="margin-left: auto;"
                         id="btn_verify_{{ part.part_label }}"
                         onclick="verifyStepPart('{{ part.part_label }}')">
                     Audit Conversion Link
                 </button>
             </div>
+            <div id="hint_{{ part.part_label }}"></div>
         </div>
         {% endfor %}
+    </div>
+
+    <!-- ── NEW STEP: side-by-side yield comparison ── -->
+    <div class="part-lane-card locked-lane" id="comparisonCard" style="border-top: 2px dashed #3F4E65;">
+        <div class="lane-title">
+            <span style="color: var(--constant-gold); font-weight: bold;">YIELD ANALYSIS: SIDE-BY-SIDE COMPARISON</span>
+            <span class="lane-status status-waiting" id="comparisonStatus">LOCKED</span>
+        </div>
+
+        <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 15px;">
+            Both conversion lanes are verified. Click the track that produced the
+            <strong style="color:#FCA5A5;">SMALLER</strong> product yield of <code>{{ target_formula }}</code>.
+        </p>
+
+        <div id="trackButtons" style="display:flex; gap:14px; flex-wrap:wrap;"></div>
+
+        <div id="yieldSummaryPanel" style="display:none; margin-top:14px;" class="answer-reveal-panel"></div>
+        <div id="comparisonHint"></div>
     </div>
 
     <div class="part-lane-card locked-lane" id="deductionCard" style="border-top: 2px dashed #3F4E65;">
@@ -226,9 +298,10 @@
             <span style="color: var(--coral-red); font-weight: bold;">FINAL ANALYSIS: STRATEGIC REAGENT BOUNDARY</span>
             <span class="lane-status status-waiting" id="deductionStatus">LOCKED</span>
         </div>
-        
+
         <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 15px;">
-            Analyze conversion yield lines compiled above. Identify the true limiting factor to compute operational chemical mass.
+            Identify the true limiting factor, commit the theoretical product mass, and compute
+            how much of each excess reactant remains unconsumed.
         </p>
 
         <div style="display: flex; flex-wrap: wrap; gap: 20px; align-items: flex-end; background: #0F1115; padding: 18px; border-radius: 6px;">
@@ -236,8 +309,8 @@
                 <label style="display: block; font-size: 11px; font-weight: bold; color: #94A3B8; margin-bottom: 6px;">
                     LIMITING REAGENT FORMULA
                 </label>
-                <select id="selectLimiting" style="background: #141822; border: 1px solid #222A3B; color: white; padding: 8px 12px; border-radius: 4px; font-size: 13px; min-width: 160px;">
-                    <option value="">-- Choose Element --</option>
+                <select id="selectLimiting" class="deduction-input" style="min-width: 160px;">
+                    <option value="">-- Choose Reactant --</option>
                     {% for r in reactants %}
                         <option value="{{ r.formula }}">{{ r.formula }}</option>
                     {% endfor %}
@@ -249,21 +322,41 @@
                     THEORETICAL PRODUCT YIELD (g {{ target_formula }})
                 </label>
                 <input type="number" step="0.0001" id="inputYield" placeholder="Total Yield Amount"
-                       style="background: #141822; border: 1px solid #222A3B; color: white; padding: 7px 12px; border-radius: 4px; font-size: 13px; width: 180px;">
+                       class="deduction-input">
             </div>
 
-            <button class="btn-verify-lane" style="margin-left: auto; background: var(--coral-red); border-color: var(--coral-red); color: white;" 
+            <div id="excessInputsWrap" style="display:flex; gap:16px; flex-wrap:wrap;"></div>
+
+            <button class="btn-verify-lane" style="margin-left: auto; background: var(--coral-red); border-color: var(--coral-red); color: white;"
                     onclick="verifyFinalDeduction()">
                 Commit Synthesis Boundary
             </button>
+        </div>
+
+        <div class="tactical-hint-box" id="deductionHintBox" style="display:none;">
+            <div class="hint-header"><span>💡 Strategic Hint (<span id="deductionAttemptLabel">Attempt 1</span>)</span></div>
+            <div id="deductionHintText" class="hint-body"></div>
         </div>
     </div>
 </div>
 
 <script>
-    // ─────────────────────────────────────────────────────────────────────────────
-    // XP helpers (shared pattern with Module 2)
-    // ─────────────────────────────────────────────────────────────────────────────
+    const PROBLEM_ID = "{{ problem_id }}";
+
+    const TRACKS = {{ tracks_json|safe }};
+    const EXCESS_FORMULAS = {{ excess_formulas_json|safe }};
+    let comparisonVerified = {{ comparison_verified|yesno:'true,false' }};
+    let deductionCleared = {{ deduction_cleared|yesno:'true,false' }};
+
+    // Server-authoritative lane states (no localStorage)
+    const LANE_STATE = {};
+    {% for part in processed_parts %}
+    LANE_STATE['{{ part.part_label }}'] = {
+        cleared: {{ part.cleared|yesno:'true,false' }},
+        chain:   {{ part.chain_json|safe }},
+    };
+    {% endfor %}
+
     function updateHeaderXP(data) {
         const levelEl = document.getElementById('xp-level-display');
         const xpEl    = document.getElementById('xp-total-display');
@@ -277,7 +370,7 @@
         try {
             const res = await fetch('/award-xp/', {
                 method:  'POST',
-                headers: { 
+                headers: {
                     'Content-Type': 'application/json',
                     'X-CSRFToken': '{{ csrf_token }}'
                 },
@@ -293,16 +386,11 @@
             console.warn('[XP] Award failed silently:', err);
         }
     }
-    const PROBLEM_ID = "{{ problem_id }}";
-    
-    document.addEventListener("DOMContentLoaded", function() {
-        initializeProgressionGrid();
-    });
 
     function showToast(message, type) {
         const existing = document.getElementById('chemquest-toast');
         if (existing) existing.remove();
-        
+
         const toast = document.createElement('div');
         toast.id = 'chemquest-toast';
         toast.textContent = message;
@@ -319,77 +407,93 @@
     }
 
     function initializeProgressionGrid() {
-        const cards = document.querySelectorAll('#pipelineContainer .part-lane-card');
-        
-        cards.forEach((card, idx) => {
-            const label = card.id.replace('card_', '');
-            const cleared = localStorage.getItem(`m3_cleared_${PROBLEM_ID}_${label}`) === 'true';
-            
-            if (cleared) {
-                markLaneAsCleared(label);
-            }
+        Object.entries(LANE_STATE).forEach(([label, st]) => {
+            if (st.cleared) markLaneAsCleared(label, false);
         });
-
         evaluateLockStates();
+        buildTrackButtons();
+        buildExcessInputs();
     }
 
     function evaluateLockStates() {
         const cards = Array.from(document.querySelectorAll('#pipelineContainer .part-lane-card'));
         let allPreviousCleared = true;
 
-        cards.forEach((card, idx) => {
-            const label = card.id.replace('card_', '');
-            
-            if (idx === 0 || allPreviousCleared) {
-                card.classList.remove('locked-lane');
-            } else {
-                card.classList.add('locked-lane');
-            }
+        cards.forEach((card) => {
+            const label = card.dataset.label;
+            if (allPreviousCleared) card.classList.remove('locked-lane');
+            else card.classList.add('locked-lane');
 
-            // Check if this step is solved before iterating to the next downstream line
-            const cleared = localStorage.getItem(`m3_cleared_${PROBLEM_ID}_${label}`) === 'true';
-            if (!cleared) {
-                allPreviousCleared = false;
-            }
+            if (!LANE_STATE[label]?.cleared) allPreviousCleared = false;
         });
 
-        // The final deduction card unlocks only after all path conversion lines are cleared
+        const comparisonCard = document.getElementById('comparisonCard');
         const deductionCard = document.getElementById('deductionCard');
+
         if (allPreviousCleared) {
-            deductionCard.classList.remove('locked-lane');
-            document.getElementById('deductionStatus').textContent = "READY FOR ARCHITECTURE ANALYSIS";
-            document.getElementById('deductionStatus').style.background = "#1E3A8A";
-            document.getElementById('deductionStatus').style.color = "#93C5FD";
+            comparisonCard.classList.remove('locked-lane');
+            setLaneStatus('comparisonStatus', comparisonVerified ? 'COMPARISON CONFIRMED' : 'READY FOR YIELD ANALYSIS',
+                          comparisonVerified ? 'status-cleared' : null,
+                          comparisonVerified ? null : { bg: '#1E3A8A', color: '#93C5FD' });
+
+            if (comparisonVerified || deductionCleared) {
+                deductionCard.classList.remove('locked-lane');
+                setLaneStatus('deductionStatus',
+                    deductionCleared ? 'MASTER CLEARED' : 'READY FOR ARCHITECTURE ANALYSIS',
+                    deductionCleared ? 'status-cleared' : null,
+                    deductionCleared ? null : { bg: '#1E3A8A', color: '#93C5FD' });
+            } else {
+                deductionCard.classList.add('locked-lane');
+                setLaneStatus('deductionStatus', 'LOCKED', 'status-waiting');
+            }
         } else {
+            comparisonCard.classList.add('locked-lane');
             deductionCard.classList.add('locked-lane');
+            setLaneStatus('comparisonStatus', 'LOCKED', 'status-waiting');
+            setLaneStatus('deductionStatus', 'LOCKED', 'status-waiting');
         }
     }
 
-    function markLaneAsCleared(label) {
+    function setLaneStatus(id, text, cls, custom) {
+        const el = document.getElementById(id);
+        if (!el) return;
+        el.textContent = text;
+        el.className = `lane-status ${cls || ''}`;
+        if (custom) { el.style.background = custom.bg; el.style.color = custom.color; }
+        else { el.style.background = ''; el.style.color = ''; }
+    }
+
+    function markLaneAsCleared(label, revealAnswerFromResponse = true) {
         const card = document.getElementById(`card_${label}`);
         if (!card) return;
-        
+
         card.classList.add('verified-lane');
         card.classList.remove('locked-lane');
-        
+
         const statusSpan = document.getElementById(`status_${label}`);
         statusSpan.textContent = "VERIFIED VECTOR";
         statusSpan.className = "lane-status status-cleared";
-        
-        // Disable inputs inside verified vectors
+
         card.querySelectorAll('input').forEach(i => i.disabled = true);
         const btn = document.getElementById(`btn_verify_${label}`);
         if (btn) btn.style.display = 'none';
+
+        const st = LANE_STATE[label];
+        if (st && st.chain && st.chain.length) {
+            injectAnswerReveal(label, formatChainYield(st.chain), 'COMPUTED YIELD — VERIFIED');
+        }
+    }
+
+    function formatChainYield(chain) {
+        const last = chain[chain.length - 1];
+        if (!last) return '—';
+        return `${last.num_value.toFixed(4)} per ${last.num_unit.replace(/_/g, ' ')}`;
     }
 
     function injectAnswerReveal(label, correctAnswer, answerLabel) {
         const card = document.getElementById(`card_${label}`);
         if (!card) return;
-
-        // Prevent duplicate injection
         if (card.querySelector('.answer-reveal-panel')) return;
-
-        const displayLabel = answerLabel || 'COMPUTED CONVERSION RESULT';
 
         const panel = document.createElement('div');
         panel.className = 'answer-reveal-panel';
@@ -404,14 +508,13 @@
             gap: 14px;
             animation: fadeSlideIn 0.35s ease;
         `;
-
         panel.innerHTML = `
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#34D399" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;">
                 <polyline points="20 6 9 17 4 12"></polyline>
             </svg>
             <div>
                 <div style="font-size: 10px; font-weight: bold; letter-spacing: 1px; color: #6EE7B7; margin-bottom: 3px;">
-                    ${displayLabel}
+                    ${answerLabel}
                 </div>
                 <div style="font-size: 15px; font-weight: bold; color: #ECFDF5; letter-spacing: 0.5px;">
                     ${correctAnswer}
@@ -419,7 +522,6 @@
             </div>
         `;
 
-        // Ensure the keyframe animation exists
         if (!document.getElementById('chemquest-reveal-keyframes')) {
             const styleTag = document.createElement('style');
             styleTag.id = 'chemquest-reveal-keyframes';
@@ -432,19 +534,13 @@
             document.head.appendChild(styleTag);
         }
 
-        // Insert the panel just after the row-layout div
         const rowLayout = card.querySelector('.row-layout');
-        if (rowLayout) {
-            rowLayout.insertAdjacentElement('afterend', panel);
-        } else {
-            card.appendChild(panel);
-        }
+        if (rowLayout) rowLayout.insertAdjacentElement('afterend', panel);
+        else card.appendChild(panel);
     }
 
     async function verifyStepPart(label) {
-        // Force standard lowercase configuration to guarantee accurate DOM queries
         const cleanLabel = label.toLowerCase();
-        
         const card = document.getElementById(`card_${cleanLabel}`);
         if (!card) {
             showToast('Error: Target card element container not located.', 'err');
@@ -460,11 +556,8 @@
             if (nodeIdx !== null) {
                 const numEl = document.getElementById(`input_${cleanLabel}_${nodeIdx}_num`);
                 const denEl = document.getElementById(`input_${cleanLabel}_${nodeIdx}_den`);
-
                 if (numEl && denEl) {
-                    if (!numEl.value.trim() || !denEl.value.trim()) {
-                        hasEmptyCells = true;
-                    }
+                    if (!numEl.value.trim() || !denEl.value.trim()) hasEmptyCells = true;
                     nodesData.push({
                         num_value: numEl.value.trim(),
                         den_value: denEl.value.trim()
@@ -483,7 +576,7 @@
         try {
             const response = await fetch(window.location.href, {
                 method: 'POST',
-                headers: { 
+                headers: {
                     'Content-Type': 'application/json',
                     'X-CSRFToken': '{{ csrf_token }}',
                     'X-Requested-With': 'XMLHttpRequest'
@@ -495,9 +588,7 @@
                 })
             });
 
-            if (!response.ok) {
-                throw new Error(`HTTP Error Status: ${response.status}`);
-            }
+            if (!response.ok) throw new Error(`HTTP Error Status: ${response.status}`);
 
             const res = await response.json();
             if (res.success && res.is_correct) {
@@ -505,12 +596,29 @@
                 if (res.correct_answer !== undefined && res.correct_answer !== null) {
                     injectAnswerReveal(cleanLabel, res.correct_answer, res.answer_label || null);
                 }
-                localStorage.setItem(`m3_cleared_${PROBLEM_ID}_${cleanLabel}`, 'true');
+                LANE_STATE[cleanLabel] = {
+                    cleared: true,
+                    chain: nodesData.map(n => ({
+                        num_value: parseFloat(n.num_value),
+                        num_unit: '?',
+                        den_value: parseFloat(n.den_value),
+                        den_unit: '?',
+                    })),
+                };
                 markLaneAsCleared(cleanLabel);
                 evaluateLockStates();
-                await awardXP(40, `lane_${cleanLabel}_verified`);
             } else {
                 showToast(res.message || 'Validation failed. Check your values.', 'err');
+                if (res.hint && res.error_node_index !== undefined) {
+                    const holder = document.getElementById(`hint_${cleanLabel}`);
+                    if (holder) {
+                        holder.innerHTML = `
+                            <div class="tactical-hint-box">
+                                <div class="hint-header"><span>💡 Lane Hint (Attempt ${res.attempts})</span></div>
+                                <div class="hint-body">${res.hint}</div>
+                            </div>`;
+                    }
+                }
             }
         } catch (err) {
             console.error('Audit transaction pipeline exception:', err);
@@ -518,47 +626,168 @@
         }
     }
 
+    // ── Side-by-side comparison step ────────────────────────────────────────
+    function buildTrackButtons() {
+        const wrap = document.getElementById('trackButtons');
+        if (!wrap) return;
+        wrap.innerHTML = '';
+        TRACKS.forEach(track => {
+            const btn = document.createElement('button');
+            btn.className = 'track-compare-btn';
+            btn.id = `track_btn_${track.part_label}`;
+            btn.innerHTML = `
+                <div style="font-size:15px;">TRACK ${track.part_label.toUpperCase()}</div>
+                <div style="font-size:12px; color:var(--text-muted); margin-top:4px;">from ${track.given_formula}</div>
+            `;
+            btn.onclick = () => submitComparison(track.part_label);
+            wrap.appendChild(btn);
+        });
+
+        if (comparisonVerified) {
+            wrap.style.pointerEvents = 'none';
+            wrap.style.opacity = '0.7';
+        }
+    }
+
+    async function submitComparison(choiceTrack) {
+        try {
+            const response = await fetch(window.location.href, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': '{{ csrf_token }}'
+                },
+                body: JSON.stringify({
+                    action: 'verify_comparison',
+                    choice_track: choiceTrack,
+                })
+            });
+            const res = await response.json();
+
+            if (res.success) {
+                comparisonVerified = true;
+                const wrap = document.getElementById('trackButtons');
+                wrap.style.pointerEvents = 'none';
+                wrap.style.opacity = '0.7';
+                renderYieldSummary(res.yield_summary || []);
+                showToast(res.message, 'ok');
+                evaluateLockStates();
+            } else {
+                const wrongBtn = document.getElementById(`track_btn_${choiceTrack}`);
+                if (wrongBtn) {
+                    wrongBtn.classList.add('selected-wrong');
+                    setTimeout(() => wrongBtn.classList.remove('selected-wrong'), 600);
+                }
+                showToast(res.message, 'err');
+                if (res.hint) {
+                    document.getElementById('comparisonHint').innerHTML = `
+                        <div class="tactical-hint-box">
+                            <div class="hint-header"><span>💡 Comparison Hint (Attempt ${res.attempts})</span></div>
+                            <div class="hint-body">${res.hint}</div>
+                        </div>`;
+                }
+            }
+        } catch (err) {
+            console.error('Comparison verification failed:', err);
+        }
+    }
+
+    function renderYieldSummary(lines) {
+        const panel = document.getElementById('yieldSummaryPanel');
+        if (!panel) return;
+        panel.style.display = 'flex';
+        panel.style.cssText += `
+            flex-direction: column;
+            gap: 6px;
+            background: rgba(4, 120, 87, 0.08);
+            border: 1px solid #059669;
+            border-radius: 5px;
+            padding: 14px 18px;
+        `;
+        panel.innerHTML = lines.map(l =>
+            `<div style="font-size:14px; font-weight:bold; color:#ECFDF5;">${l}</div>`
+        ).join('');
+    }
+
+    // ── Excess remaining inputs ─────────────────────────────────────────────
+    function buildExcessInputs() {
+        const wrap = document.getElementById('excessInputsWrap');
+        if (!wrap) return;
+        EXCESS_FORMULAS.forEach(formula => {
+            wrap.insertAdjacentHTML('beforeend', `
+                <div>
+                    <label style="display:block; font-size:11px; font-weight:bold; color:#94A3B8; margin-bottom:6px;">
+                        ${formula} LEFT OVER (g)
+                    </label>
+                    <input type="number" step="0.0001" id="excess_${formula}"
+                           placeholder="Unconsumed mass" class="deduction-input" data-formula="${formula}">
+                </div>
+            `);
+        });
+    }
+
     async function verifyFinalDeduction() {
         const reagent = document.getElementById('selectLimiting').value;
         const totalYield = document.getElementById('inputYield').value;
 
-        if (!reagent || !totalYield) {
-            showToast('Please fill out all analytical decision parameters.', 'err');
+        const excessRemaining = {};
+        let excessIncomplete = false;
+        EXCESS_FORMULAS.forEach(formula => {
+            const el = document.getElementById(`excess_${formula}`);
+            el?.classList.remove('input-error');
+            if (!el || !el.value.trim()) { el?.classList.add('input-error'); excessIncomplete = true; }
+            else excessRemaining[formula] = el.value.trim();
+        });
+
+        if (!reagent || !totalYield || excessIncomplete) {
+            showToast('Please fill out all analytical decision parameters, including excess leftovers.', 'err');
             return;
         }
 
         try {
             const response = await fetch(window.location.href, {
                 method: 'POST',
-                headers: { 
+                headers: {
                     'Content-Type': 'application/json',
                     'X-CSRFToken': '{{ csrf_token }}'
                 },
                 body: JSON.stringify({
                     action: 'verify_deduction',
                     limiting_reagent: reagent,
-                    theoretical_yield: totalYield
+                    theoretical_yield: totalYield,
+                    excess_remaining: excessRemaining
                 })
             });
 
             const res = await response.json();
             if (res.success) {
+                deductionCleared = true;
                 showToast(res.message, 'ok');
-                await awardXP(100, 'limiting_reagent_deduction');
-                const cards = document.querySelectorAll('#pipelineContainer .part-lane-card');
-                cards.forEach(c => {
-                    const l = c.id.replace('card_', '');
-                    localStorage.removeItem(`m3_cleared_${PROBLEM_ID}_${l}`);
-                });
+                evaluateLockStates();
                 setTimeout(() => {
                     window.location.href = res.next_url || '/problem_lobby/';
                 }, 1500);
             } else {
+                (res.excess_errors || []).forEach(f => {
+                    const el = document.getElementById(`excess_${f}`);
+                    if (el) el.classList.add('input-error');
+                });
                 showToast(res.message, 'err');
+                if (res.hint) {
+                    const label = document.getElementById('deductionAttemptLabel');
+                    if (label) label.textContent = `Attempt ${res.attempts}`;
+                    const box = document.getElementById('deductionHintBox');
+                    const txt = document.getElementById('deductionHintText');
+                    txt.textContent = res.hint;
+                    box.style.display = 'block';
+                }
             }
         } catch (err) {
             console.error('Final commitment verification channel failure:', err);
         }
     }
+
+    // Inline script at end of body: DOM above is already parsed.
+    initializeProgressionGrid();
 </script>
 {% endblock %}

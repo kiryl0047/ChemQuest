@@ -1,0 +1,202 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<style>
+    .exam-header {
+        border-left: 4px solid var(--combo-green);
+        padding: 15px 20px;
+        background: #171A21;
+        border-radius: 4px;
+        margin-bottom: 25px;
+    }
+    .exam-item {
+        background: var(--bg-dark);
+        border: 1px solid #2A303C;
+        padding: 22px;
+        border-radius: 8px;
+        margin-bottom: 25px;
+    }
+    .exam-item.verified-item { border-color: #059669 !important; }
+    .exam-item.failed-item   { border-color: var(--coral-red) !important; }
+    .row-layout {
+        display: flex;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 10px;
+        background: #0F1115;
+        padding: 15px;
+        border-radius: 6px;
+    }
+    .fraction-block {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        background: #141822;
+        border: 1px solid #222A3B;
+        border-radius: 4px;
+        min-width: 110px;
+    }
+    .fraction-bar { width: 100%; height: 2px; background: #222A3B; }
+    .fraction-input-cell {
+        width: 95px; background: transparent; border: none; color: #FFF;
+        text-align: center; padding: 6px; font-size: 13px;
+    }
+    .fraction-input-cell:focus { outline: none; background: rgba(0,240,255,0.02); }
+    .fraction-multiply { font-weight: bold; color: var(--text-muted); font-size: 18px; }
+    .btn-submit-exam {
+        background: var(--combo-green);
+        border: none;
+        color: #0F1115;
+        padding: 12px 26px;
+        font-size: 14px;
+        font-weight: bold;
+        border-radius: 4px;
+        cursor: pointer;
+    }
+    .btn-submit-exam:hover { filter: brightness(1.15); box-shadow: 0 0 14px rgba(0,230,118,0.35); }
+    .result-banner {
+        display: none;
+        border-radius: 8px;
+        padding: 24px;
+        margin-bottom: 25px;
+        font-size: 16px;
+        font-weight: bold;
+    }
+</style>
+
+<div class="exam-header">
+    <span style="color: var(--combo-green); font-weight: bold; font-size: 12px; letter-spacing: 2px;">
+        SYNTHESIS CHALLENGE // UNASSISTED RETENTION REVIEW
+    </span>
+    <p style="margin: 8px 0 0 0; color: var(--text-light); font-size: 14px;">
+        {{ items|length }} randomized conversion{{ items|length|pluralize }} from problems you have completed.
+        No hints, no constants tray assistance — score &ge; {{ pass_threshold }}% to earn the retention credential.
+    </p>
+</div>
+
+<div class="result-banner" id="resultBanner"></div>
+
+<div id="examContainer">
+    {% for item in items %}
+    <div class="exam-item" id="item_{{ forloop.counter0 }}"
+         data-problem="{{ item.problem_id }}" data-part="{{ item.part_label }}">
+        <div style="display:flex; justify-content:space-between; margin-bottom:12px; flex-wrap:wrap; gap:8px;">
+            <strong style="color:#CBD5E1; font-size:13px;">ITEM {{ forloop.counter }} · {{ item.part_prompt }}</strong>
+            <span style="font-size:11px; color:var(--text-muted);">{{ item.problem_title }}</span>
+        </div>
+        <div class="row-layout">
+            <div class="fraction-block" style="border-color:#1E293B;">
+                <span style="font-size:13px; font-weight:bold; color:var(--cyber-teal); padding:6px;">{{ item.given_quantity }}</span>
+                <div class="fraction-bar"></div>
+                <span style="font-size:11px; color:var(--text-muted); padding:6px;">{{ item.given_unit }} {{ item.given_formula }}</span>
+            </div>
+            <span id="nodeCells_{{ forloop.counter0 }}" style="display:contents;"></span>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+
+<div style="text-align:center; margin-top:10px;">
+    <button class="btn-submit-exam" onclick="submitExam()">Submit Full Review</button>
+    <a href="{% url 'problem_lobby' %}" style="color:var(--text-muted); font-size:12px; margin-left:16px;">Abandon (no penalty)</a>
+</div>
+
+<script>
+const EXAM_ITEMS = {{ exam_items_json|safe }};
+
+function buildItemInputs() {
+    EXAM_ITEMS.forEach((item, i) => {
+        const holder = document.getElementById(`nodeCells_${i}`);
+        if (!holder) return;
+        let html = '';
+        item.node_units.forEach((u, ni) => {
+            html += `
+                <span class="fraction-multiply">×</span>
+                <div class="fraction-block" data-node="${ni}">
+                    <input type="number" step="0.0001" class="fraction-input-cell"
+                           id="ex_${i}_${ni}_num" placeholder="${u.num_unit}">
+                    <div class="fraction-bar"></div>
+                    <input type="number" step="0.0001" class="fraction-input-cell"
+                           id="ex_${i}_${ni}_den" placeholder="${u.den_unit}">
+                </div>`;
+        });
+        holder.outerHTML = html;
+    });
+}
+
+async function submitExam() {
+    const answers = [];
+    let incomplete = false;
+
+    EXAM_ITEMS.forEach((item, i) => {
+        const nodes = [];
+        item.node_units.forEach((u, ni) => {
+            const num = document.getElementById(`ex_${i}_${ni}_num`)?.value.trim();
+            const den = document.getElementById(`ex_${i}_${ni}_den`)?.value.trim();
+            if (!num || !den) incomplete = true;
+            nodes.push({ num_value: num, den_value: den });
+        });
+        answers.push({
+            problem_id: item.problem_id,
+            part_label: item.part_label,
+            nodes,
+        });
+    });
+
+    if (incomplete) {
+        showToast('Complete every node in every item before submitting.', 'err');
+        return;
+    }
+
+    try {
+        const res = await fetch('/api/synthesis-submit/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': '{{ csrf_token }}'
+            },
+            body: JSON.stringify({ answers }),
+        });
+        const data = await res.json();
+
+        data.results.forEach((r, i) => {
+            const el = document.getElementById(`item_${i}`);
+            if (!el || r.problem_id !== answers[i].problem_id || r.part_label !== answers[i].part_label) return;
+            el.classList.add(r.correct ? 'verified-item' : 'failed-item');
+            el.querySelectorAll('input').forEach(inp => inp.disabled = true);
+        });
+
+        const banner = document.getElementById('resultBanner');
+        banner.style.display = 'block';
+        banner.style.background = data.passed ? 'rgba(4,120,87,0.15)' : 'rgba(127,29,29,0.2)';
+        banner.style.border = `1px solid ${data.passed ? '#059669' : '#7F1D1D'}`;
+        banner.style.color = data.passed ? '#6EE7B7' : '#FCA5A5';
+        banner.textContent = data.passed
+            ? `✓ PASSED — ${data.score_pct}% retention confirmed! Credential awarded.`
+            : `Score ${data.score_pct}% — below the ${data.threshold}% threshold. Review your weak skills and retry anytime.`;
+        showToast(data.passed ? 'Credential earned!' : 'Not passed this round.', data.passed ? 'ok' : 'err');
+    } catch (err) {
+        console.error('[Synthesis] submission failed:', err);
+        showToast('Submission failed. Try again.', 'err');
+    }
+}
+
+function showToast(message, type) {
+    const existing = document.getElementById('chemquest-toast');
+    if (existing) existing.remove();
+    const toast = document.createElement('div');
+    toast.id = 'chemquest-toast';
+    toast.textContent = message;
+    toast.style.cssText = `
+        position: fixed; bottom: 24px; right: 24px; z-index: 9999;
+        padding: 12px 20px; border-radius: 6px; font-size: 13px; font-weight: bold; color: white;
+        background: ${type === 'ok' ? '#065F46' : '#7F1D1D'};
+        border: 1px solid ${type === 'ok' ? '#34D399' : '#F87171'};
+    `;
+    document.body.appendChild(toast);
+    setTimeout(() => toast.remove(), 3200);
+}
+
+buildItemInputs();
+</script>
+{% endblock content %}
