@@ -264,6 +264,23 @@ def _unit_signature(nodes):
     return [(str(n.get('num_unit') or ''), str(n.get('den_unit') or '')) for n in nodes]
 
 
+def _prefix_matches(chain, prefix):
+    """True when a candidate chain begins with exactly the verified prefix
+    (units equal and values within tolerance at every position)."""
+    try:
+        for c_node, p_node in zip(chain, prefix):
+            if c_node['num_unit'] != p_node['num_unit'] or \
+               c_node['den_unit'] != p_node['den_unit']:
+                return False
+            if abs(float(p_node['num_value']) - float(c_node['num_value'])) >= NODE_TOLERANCE:
+                return False
+            if abs(float(p_node['den_value']) - float(c_node['den_value'])) >= NODE_TOLERANCE:
+                return False
+        return True
+    except (TypeError, ValueError):
+        return False
+
+
 def _valid_chains(part):
     """All permutations of the expected nodes that keep dimensional validity:
     each denominator must cancel the previous numerator, starting at the
@@ -627,7 +644,8 @@ def step_grid_workspace(request, prob_id, part_label='a'):
         request.user, problem.problem_id, part.part_label)
 
     verified_answer = (
-        f"{float(part.correct_answer):.4f} {part.target_unit} {part.target_formula}"
+        f"{float(part.correct_answer):.4f} {part.target_unit} "
+        f"{part.target_substance.formula}"
         if part_progress.lane_cleared else None
     )
 
@@ -638,6 +656,7 @@ def step_grid_workspace(request, prob_id, part_label='a'):
         **_part_context(part),
         **nav_ctx,
         'verified_chain_json': json.dumps(part_progress.chain_json or []),
+        'verified_prefix_json': json.dumps(part_progress.verified_prefix_json or []),
         'lane_cleared': part_progress.lane_cleared,
         'verified_answer': verified_answer,
         'step_lock_threshold': int(STEP_LOCK_ACCURACY),
@@ -1891,6 +1910,156 @@ def audit_chain(request):
         'locked': lock_now['locked'] or False,
         'retry_after': lock_now.get('retry_after'),
         'rolling_accuracy': lock_now.get('rolling_accuracy'),
+    })
+
+
+# ===========================================================================
+# API: Verify a single Module 2 node (progressive step-by-step flow)
+# ===========================================================================
+
+@csrf_exempt
+def verify_node(request):
+    if request.method != 'POST':
+        return JsonResponse({'success': False, 'message': 'Invalid method.'})
+
+    try:
+        data = json.loads(request.body)
+    except json.JSONDecodeError:
+        return JsonResponse({'success': False, 'message': 'Invalid JSON.'})
+
+    prob_id = data.get('problem_id')
+    part_label = data.get('part_label', 'a')
+    raw_node = data.get('node')
+
+    if not isinstance(raw_node, dict):
+        return JsonResponse({'success': False, 'message': 'Missing node payload.'})
+
+    current = {
+        'num_value': raw_node.get('num_value'),
+        'num_unit':  str(raw_node.get('num_unit') or '').strip(),
+        'den_value': raw_node.get('den_value'),
+        'den_unit':  str(raw_node.get('den_unit') or '').strip(),
+    }
+
+    try:
+        problem = StoichiometryProblem.objects.get(problem_id=prob_id)
+        part = ProblemPart.objects.get(problem=problem, part_label=part_label)
+    except (StoichiometryProblem.DoesNotExist, ProblemPart.DoesNotExist):
+        return JsonResponse({'success': False, 'message': 'Problem or part not found.'})
+
+    progress = ProblemProgress.get_or_default(request.user, prob_id)
+    if not progress or not progress.module1_complete():
+        return JsonResponse({'success': False, 'message': 'Module 1 gate not satisfied.'}, status=403)
+
+    part_progress = PartProgress.get_or_default(request.user, prob_id, part_label)
+
+    if part_progress.lane_cleared:
+        return JsonResponse({'success': True, 'already_cleared': True, 'complete': True})
+
+    lock = _step_lock_state(request.user, prob_id)
+    if lock['locked']:
+        return JsonResponse({
+            'success': False,
+            'locked': True,
+            'retry_after': lock['retry_after'],
+            'rolling_accuracy': lock['rolling_accuracy'],
+            'message': (f'Rolling accuracy {lock["rolling_accuracy"]}% is below the '
+                        f'{STEP_LOCK_ACCURACY:.0f}% threshold. Review the strategy guide; '
+                        f'inputs unlock in {lock["retry_after"]}s.'),
+        })
+
+    prefix = part_progress.verified_prefix_json or []
+    index = len(prefix)
+
+    if index >= part.node_count:
+        return JsonResponse({'success': False, 'message': 'All steps already verified.'})
+
+    candidates = [c for c in _valid_chains(part) if _prefix_matches(c, prefix)]
+
+    unit_ok = any(
+        c[index]['num_unit'] == current['num_unit'] and
+        c[index]['den_unit'] == current['den_unit']
+        for c in candidates
+    )
+
+    correct = False
+    matched_chain = None
+    if unit_ok:
+        try:
+            num_val = float(current['num_value'])
+            den_val = float(current['den_value'])
+        except (TypeError, ValueError):
+            num_val = den_val = None
+
+        for c in candidates:
+            exp = c[index]
+            if num_val is None:
+                break
+            if abs(num_val - float(exp['num_value'])) < NODE_TOLERANCE and \
+               abs(den_val - float(exp['den_value'])) < NODE_TOLERANCE:
+                correct = True
+                matched_chain = c
+                break
+
+    _log_attempt(request, prob_id, part_label, str(index), 2, correct)
+
+    if not correct:
+        prev_unit = (f"{part.given_unit}_{part.given_substance.formula}"
+                     if index == 0 else prefix[-1]['num_unit'])
+        if not unit_ok:
+            message = (f'Step {index + 1}: unit mismatch — the denominator must '
+                       f'cancel "{prev_unit.replace("_", " ")}" so it simplifies to 1.')
+        else:
+            message = (f'Step {index + 1}: units are correct but the VALUES are off — '
+                       f'recheck your arithmetic for that conversion constant.')
+
+        lock_now = _step_lock_state(request.user, prob_id)
+        return JsonResponse({
+            'success': False,
+            'unit_ok': unit_ok,
+            'message': message,
+            'locked': lock_now['locked'] or False,
+            'retry_after': lock_now.get('retry_after'),
+            'rolling_accuracy': lock_now.get('rolling_accuracy'),
+        })
+
+    verified_entry = {
+        'num_value': float(matched_chain[index]['num_value']),
+        'num_unit':  current['num_unit'],
+        'den_value': float(matched_chain[index]['den_value']),
+        'den_unit':  current['den_unit'],
+    }
+
+    if index + 1 == part.node_count:
+        first_clear = not part_progress.lane_cleared
+        part_progress.lane_cleared = True
+        part_progress.chain_json = prefix + [verified_entry]
+        part_progress.save()
+
+        if first_clear:
+            xp_reward = XP_PER_NODE_CORRECT * part.node_count + XP_PER_PART_COMPLETE
+            _award_xp(request, xp_reward)
+        else:
+            xp_reward = 0
+
+        return JsonResponse({
+            'success': True,
+            'correct': True,
+            'complete': True,
+            'xp_reward': xp_reward,
+            'correct_answer': f"{float(part.correct_answer):.4f} {part.target_unit} {part.target_substance.formula}",
+            'message': 'Conversion chain verified — all units cancelled cleanly!',
+        })
+
+    part_progress.verified_prefix_json = prefix + [verified_entry]
+    part_progress.save()
+
+    return JsonResponse({
+        'success': True,
+        'correct': True,
+        'complete': False,
+        'verified_count': index + 1,
+        'message': f'Step {index + 1} verified.',
     })
 
 

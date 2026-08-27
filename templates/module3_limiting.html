@@ -3,7 +3,7 @@
 {% block content %}
 <style>
     .grid-info-header {
-        background: #171A21;
+        background: var(--bg-slate);
         border-bottom: 2px solid var(--cyber-teal);
         padding: 15px 18px;
         margin-bottom: 28px;
@@ -12,7 +12,7 @@
     }
     .part-lane-card {
         background: var(--bg-dark);
-        border: 1px solid #2A303C;
+        border: 1px solid var(--border);
         padding: 20px;
         border-radius: 8px;
         margin-bottom: 25px;
@@ -24,8 +24,8 @@
         filter: blur(1.5px);
     }
     .part-lane-card.verified-lane {
-        border-color: #059669 !important;
-        background: rgba(4, 120, 87, 0.03);
+        border-color: var(--combo-green) !important;
+        background: rgba(var(--success-rgb), 0.04);
     }
     .lane-title {
         font-weight: bold;
@@ -42,15 +42,15 @@
         border-radius: 3px;
         font-weight: bold;
     }
-    .status-waiting { background: #2D3748; color: #A0AEC0; }
-    .status-cleared { background: #065F46; color: #34D399; }
+    .status-waiting { background: var(--surface-sunken); color: var(--text-muted); }
+    .status-cleared { background: #DCFCE7; color: #166534; }
 
     .row-layout {
         display: flex;
         align-items: center;
         flex-wrap: wrap;
         gap: 10px;
-        background: #0F1115;
+        background: var(--bg-slate);
         padding: 15px;
         border-radius: 6px;
     }
@@ -58,32 +58,32 @@
         display: flex;
         flex-direction: column;
         align-items: center;
-        background: #141822;
-        border: 1px solid #222A3B;
+        background: var(--bg-slate);
+        border: 1px solid var(--border);
         border-radius: 4px;
         min-width: 110px;
     }
     .fraction-bar {
         width: 100%;
         height: 2px;
-        background: #222A3B;
+        background: #8A93AB;
     }
     .fraction-input-cell {
         width: 95px;
         background: transparent;
         border: none;
-        color: #FFFFFF;
+        color: var(--text-light);
         text-align: center;
         padding: 6px;
         font-size: 13px;
     }
-    .fraction-input-cell:focus { outline: none; background: rgba(0,240,255,0.02); }
+    .fraction-input-cell:focus { outline: none; background: rgba(var(--accent-rgb),0.06); }
     .fraction-multiply { font-weight: bold; color: var(--text-muted); font-size: 18px; }
 
     .btn-verify-lane {
-        background: #1F2937;
-        border: 1px solid #374151;
-        color: #E5E7EB;
+        background: var(--surface-sunken);
+        border: 1px solid var(--border);
+        color: var(--text-light);
         padding: 8px 16px;
         font-size: 12px;
         font-weight: bold;
@@ -91,7 +91,7 @@
         cursor: pointer;
         transition: background 0.2s;
     }
-    .btn-verify-lane:hover { background: #374151; }
+    .btn-verify-lane:hover { background: #DADEE9; }
 
     #deductionCard.locked-lane, #comparisonCard.locked-lane {
         opacity: 0.35;
@@ -99,34 +99,10 @@
         filter: blur(1.5px);
     }
 
-    .edu-expander {
-        background: rgba(255, 61, 0, 0.04);
-        border: 1px solid rgba(255, 61, 0, 0.25);
-        border-radius: 6px;
-        padding: 12px 16px;
-        margin-bottom: 25px;
-        font-size: 13px;
-        color: var(--text-light);
-        line-height: 1.6;
-    }
-    .edu-expander summary {
-        cursor: pointer;
-        font-weight: bold;
-        color: var(--coral-red);
-        letter-spacing: 0.5px;
-        user-select: none;
-    }
-    .edu-expander summary:hover { color: #FFF; }
-    .edu-content {
-        margin-top: 10px;
-        border-top: 1px dashed rgba(255, 255, 255, 0.1);
-        padding-top: 10px;
-    }
-
     .track-compare-btn {
-        background: #141822;
-        border: 2px solid #222A3B;
-        color: #E5E7EB;
+        background: var(--bg-slate);
+        border: 2px solid var(--border);
+        color: var(--text-light);
         padding: 16px 20px;
         border-radius: 6px;
         cursor: pointer;
@@ -135,7 +111,7 @@
         min-width: 170px;
         transition: all 0.2s ease;
     }
-    .track-compare-btn:hover { border-color: var(--coral-red); box-shadow: 0 0 12px rgba(255,61,0,0.25); }
+    .track-compare-btn:hover { border-color: var(--coral-red); box-shadow: 0 1px 8px rgba(var(--danger-rgb),0.25); }
     .track-compare-btn.selected-wrong {
         border-color: var(--coral-red) !important;
         animation: shakeX 0.4s ease;
@@ -147,8 +123,8 @@
     }
 
     .tactical-hint-box {
-        background: rgba(255, 214, 0, 0.06);
-        border: 1px solid rgba(255, 214, 0, 0.35);
+        background: rgba(var(--warning-rgb), 0.06);
+        border: 1px solid rgba(var(--warning-rgb), 0.35);
         border-left: 4px solid var(--constant-gold);
         border-radius: 5px;
         padding: 12px 16px;
@@ -166,9 +142,9 @@
     }
 
     .deduction-input {
-        background: #141822;
-        border: 1px solid #222A3B;
-        color: white;
+        background: #FFFFFF;
+        border: 1px solid var(--border);
+        color: var(--text-light);
         padding: 7px 12px;
         border-radius: 4px;
         font-size: 13px;
@@ -187,32 +163,32 @@
     </div>
 
     <details class="edu-expander" open>
-        <summary>💡 CONCEPT CHECK: How Limiting Reagents Work (The Sandwich Analogy)</summary>
+        <summary>How Limiting Reagents Work (The Sandwich Analogy)</summary>
         <div class="edu-content">
-            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 12px; margin-top: 6px;">
-                <div style="background: rgba(255, 61, 0, 0.05); border: 1px solid rgba(255, 61, 0, 0.2); border-radius: 5px; padding: 10px 14px;">
-                    <div style="font-weight: 800; color: var(--coral-red); margin-bottom: 4px; font-size: 13px;">
-                        🥪 The Kitchen Analogy
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 12px;">
+                <div class="cc-tip-card">
+                    <div class="cc-tip-card-title" style="color: var(--coral-red);">
+                        The Kitchen Analogy
                     </div>
-                    <p style="margin: 0; font-size: 12px; color: var(--text-light); line-height: 1.5;">
+                    <p>
                         If you have <strong>10 bread slices</strong> but only <strong>2 cheese slices</strong>, you can only make <strong>2 sandwiches</strong>. The cheese runs out first and stops all production — making it the <strong>Limiting Reagent</strong>.
                     </p>
                 </div>
 
-                <div style="background: rgba(255, 61, 0, 0.05); border: 1px solid rgba(255, 61, 0, 0.2); border-radius: 5px; padding: 10px 14px;">
-                    <div style="font-weight: 800; color: var(--coral-red); margin-bottom: 4px; font-size: 13px;">
-                        1️⃣ Step 1: Calculate Product from Each Reactant
+                <div class="cc-tip-card">
+                    <div class="cc-tip-card-title" style="color: var(--coral-red);">
+                        Step 1: Calculate Product from Each Reactant
                     </div>
-                    <p style="margin: 0; font-size: 12px; color: var(--text-light); line-height: 1.5;">
+                    <p>
                         Complete the dimensional analysis lanes below for each reactant to calculate how much product (<code>{{ target_formula }}</code>) each one could produce.
                     </p>
                 </div>
 
-                <div style="background: rgba(255, 61, 0, 0.05); border: 1px solid rgba(255, 61, 0, 0.2); border-radius: 5px; padding: 10px 14px;">
-                    <div style="font-weight: 800; color: var(--coral-red); margin-bottom: 4px; font-size: 13px;">
-                        2️⃣ Step 2: Compare Side by Side
+                <div class="cc-tip-card">
+                    <div class="cc-tip-card-title" style="color: var(--coral-red);">
+                        Step 2: Compare Side by Side
                     </div>
-                    <p style="margin: 0; font-size: 12px; color: var(--text-light); line-height: 1.5;">
+                    <p>
                         • The reactant that produces the <strong>LOWEST product amount</strong> is your <strong>Limiting Reagent</strong>.
                         <br>• The rest is left over — you will compute exactly how much remains!
                     </p>
@@ -226,7 +202,7 @@
         <div class="part-lane-card locked-lane {% if part.cleared %}verified-lane{% endif %}"
              id="card_{{ part.part_label }}" data-idx="{{ part.index }}" data-label="{{ part.part_label }}">
             <div class="lane-title">
-                <span style="color: #94A3B8;">
+                <span style="color: var(--text-muted);">
                     STEP {{ part.index|add:1 }}: SUB-PROBLEM UNIFIED PART [{{ part.part_label|upper }}]
                 </span>
                 <span class="lane-status {% if part.cleared %}status-cleared{% else %}status-waiting{% endif %}" id="status_{{ part.part_label }}">
@@ -234,10 +210,10 @@
                 </span>
             </div>
 
-            <p style="font-size: 13px; color: #CBD5E1; margin-bottom: 12px;">{{ part.part_prompt }}</p>
+            <p style="font-size: 13px; color: #3c486a; margin-bottom: 12px;">{{ part.part_prompt }}</p>
 
             <div class="row-layout">
-                <div class="fraction-block" style="border-color: #1E293B;">
+                <div class="fraction-block" style="border-color: var(--border);">
                     <span style="font-size: 13px; font-weight: bold; color: var(--cyber-teal); padding: 6px;">
                         {{ part.given_quantity }}
                     </span>
@@ -276,7 +252,7 @@
     </div>
 
     <!-- ── NEW STEP: side-by-side yield comparison ── -->
-    <div class="part-lane-card locked-lane" id="comparisonCard" style="border-top: 2px dashed #3F4E65;">
+    <div class="part-lane-card locked-lane" id="comparisonCard" style="border-top: 2px dashed var(--border);">
         <div class="lane-title">
             <span style="color: var(--constant-gold); font-weight: bold;">YIELD ANALYSIS: SIDE-BY-SIDE COMPARISON</span>
             <span class="lane-status status-waiting" id="comparisonStatus">LOCKED</span>
@@ -284,7 +260,7 @@
 
         <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 15px;">
             Both conversion lanes are verified. Click the track that produced the
-            <strong style="color:#FCA5A5;">SMALLER</strong> product yield of <code>{{ target_formula }}</code>.
+            <strong style="color:#B91C1C;">SMALLER</strong> product yield of <code>{{ target_formula }}</code>.
         </p>
 
         <div id="trackButtons" style="display:flex; gap:14px; flex-wrap:wrap;"></div>
@@ -293,7 +269,7 @@
         <div id="comparisonHint"></div>
     </div>
 
-    <div class="part-lane-card locked-lane" id="deductionCard" style="border-top: 2px dashed #3F4E65;">
+    <div class="part-lane-card locked-lane" id="deductionCard" style="border-top: 2px dashed var(--border);">
         <div class="lane-title">
             <span style="color: var(--coral-red); font-weight: bold;">FINAL ANALYSIS: STRATEGIC REAGENT BOUNDARY</span>
             <span class="lane-status status-waiting" id="deductionStatus">LOCKED</span>
@@ -304,9 +280,9 @@
             how much of each excess reactant remains unconsumed.
         </p>
 
-        <div style="display: flex; flex-wrap: wrap; gap: 20px; align-items: flex-end; background: #0F1115; padding: 18px; border-radius: 6px;">
+        <div style="display: flex; flex-wrap: wrap; gap: 20px; align-items: flex-end; background: var(--bg-dark); padding: 18px; border-radius: 6px;">
             <div>
-                <label style="display: block; font-size: 11px; font-weight: bold; color: #94A3B8; margin-bottom: 6px;">
+                <label style="display: block; font-size: 11px; font-weight: bold; color: var(--text-muted); margin-bottom: 6px;">
                     LIMITING REAGENT FORMULA
                 </label>
                 <select id="selectLimiting" class="deduction-input" style="min-width: 160px;">
@@ -318,7 +294,7 @@
             </div>
 
             <div>
-                <label style="display: block; font-size: 11px; font-weight: bold; color: #94A3B8; margin-bottom: 6px;">
+                <label style="display: block; font-size: 11px; font-weight: bold; color: var(--text-muted); margin-bottom: 6px;">
                     THEORETICAL PRODUCT YIELD (g {{ target_formula }})
                 </label>
                 <input type="number" step="0.0001" id="inputYield" placeholder="Total Yield Amount"
@@ -397,10 +373,10 @@
         toast.style.cssText = `
             position: fixed; bottom: 24px; right: 24px; z-index: 9999;
             padding: 12px 20px; border-radius: 6px; font-size: 13px;
-            font-weight: bold; color: white;
-            background: ${type === 'ok' ? '#065F46' : '#7F1D1D'};
-            border: 1px solid ${type === 'ok' ? '#34D399' : '#F87171'};
-            box-shadow: 0 4px 12px rgba(0,0,0,0.4);
+            font-weight: bold; color: ${type === 'ok' ? '#166534' : '#991B1B'};
+            background: ${type === 'ok' ? '#DCFCE7' : '#FEE2E2'};
+            border: 1px solid ${type === 'ok' ? '#15803D' : '#DC2626'};
+            box-shadow: 0 4px 12px rgba(42,52,76,0.18);
         `;
         document.body.appendChild(toast);
         setTimeout(() => toast.remove(), 3500);
@@ -434,14 +410,14 @@
             comparisonCard.classList.remove('locked-lane');
             setLaneStatus('comparisonStatus', comparisonVerified ? 'COMPARISON CONFIRMED' : 'READY FOR YIELD ANALYSIS',
                           comparisonVerified ? 'status-cleared' : null,
-                          comparisonVerified ? null : { bg: '#1E3A8A', color: '#93C5FD' });
+                          comparisonVerified ? null : { bg: '#E4E7F0', color: '#3c486a' });
 
             if (comparisonVerified || deductionCleared) {
                 deductionCard.classList.remove('locked-lane');
                 setLaneStatus('deductionStatus',
                     deductionCleared ? 'MASTER CLEARED' : 'READY FOR ARCHITECTURE ANALYSIS',
                     deductionCleared ? 'status-cleared' : null,
-                    deductionCleared ? null : { bg: '#1E3A8A', color: '#93C5FD' });
+                    deductionCleared ? null : { bg: '#E4E7F0', color: '#3c486a' });
             } else {
                 deductionCard.classList.add('locked-lane');
                 setLaneStatus('deductionStatus', 'LOCKED', 'status-waiting');
@@ -500,8 +476,8 @@
         panel.style.cssText = `
             margin-top: 14px;
             padding: 12px 16px;
-            background: rgba(4, 120, 87, 0.08);
-            border: 1px solid #059669;
+            background: rgba(var(--success-rgb), 0.08);
+            border: 1px solid var(--combo-green);
             border-radius: 5px;
             display: flex;
             align-items: center;
@@ -509,14 +485,14 @@
             animation: fadeSlideIn 0.35s ease;
         `;
         panel.innerHTML = `
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#34D399" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#15803D" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;">
                 <polyline points="20 6 9 17 4 12"></polyline>
             </svg>
             <div>
-                <div style="font-size: 10px; font-weight: bold; letter-spacing: 1px; color: #6EE7B7; margin-bottom: 3px;">
+                <div style="font-size: 10px; font-weight: bold; letter-spacing: 1px; color: #15803D; margin-bottom: 3px;">
                     ${answerLabel}
                 </div>
-                <div style="font-size: 15px; font-weight: bold; color: #ECFDF5; letter-spacing: 0.5px;">
+                <div style="font-size: 15px; font-weight: bold; color: #14532D; letter-spacing: 0.5px;">
                     ${correctAnswer}
                 </div>
             </div>
@@ -699,13 +675,13 @@
         panel.style.cssText += `
             flex-direction: column;
             gap: 6px;
-            background: rgba(4, 120, 87, 0.08);
-            border: 1px solid #059669;
+            background: rgba(var(--success-rgb), 0.08);
+            border: 1px solid var(--combo-green);
             border-radius: 5px;
             padding: 14px 18px;
         `;
         panel.innerHTML = lines.map(l =>
-            `<div style="font-size:14px; font-weight:bold; color:#ECFDF5;">${l}</div>`
+            `<div style="font-size:14px; font-weight:bold; color:#14532D;">${l}</div>`
         ).join('');
     }
 
@@ -716,7 +692,7 @@
         EXCESS_FORMULAS.forEach(formula => {
             wrap.insertAdjacentHTML('beforeend', `
                 <div>
-                    <label style="display:block; font-size:11px; font-weight:bold; color:#94A3B8; margin-bottom:6px;">
+                    <label style="display:block; font-size:11px; font-weight:bold; color:var(--text-muted); margin-bottom:6px;">
                         ${formula} LEFT OVER (g)
                     </label>
                     <input type="number" step="0.0001" id="excess_${formula}"

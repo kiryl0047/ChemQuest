@@ -5,7 +5,7 @@
     .lobby-header {
         border-left: 4px solid var(--cyber-teal);
         padding: 15px 20px;
-        background: #171A21;
+        background: var(--bg-slate);
         border-radius: 4px;
         margin-bottom: 25px;
     }
@@ -16,15 +16,15 @@
         gap: 10px;
         flex-wrap: wrap;
         margin-bottom: 25px;
-        background: #171A21;
+        background: var(--bg-slate);
         padding: 12px;
         border-radius: 6px;
-        border: 1px solid #2A303C;
+        border: 1px solid var(--border);
     }
 
     .filter-btn {
         background: var(--bg-dark);
-        border: 1px solid #2A303C;
+        border: 1px solid var(--border);
         color: var(--text-muted);
         padding: 8px 16px;
         font-size: 12px;
@@ -39,38 +39,38 @@
     }
 
     .filter-btn:hover {
-        border-color: #4A5568;
+        border-color: #8A93AB;
         color: var(--text-light);
     }
 
     .filter-btn.active {
-        background: rgba(0, 240, 255, 0.08);
+        background: rgba(var(--accent-rgb), 0.08);
         border-color: var(--cyber-teal);
         color: var(--cyber-teal);
-        box-shadow: 0 0 8px rgba(0, 240, 255, 0.2);
+        box-shadow: 0 1px 6px rgba(var(--accent-rgb), 0.25);
     }
 
     /* Specific Tab Highlights when Active */
-    .filter-btn[data-type="mol_to_mol"].active { border-color: #4A90D9; color: #4A90D9; background: rgba(74, 144, 217, 0.1); }
-    .filter-btn[data-type="mol_to_g"].active   { border-color: var(--combo-green); color: var(--combo-green); background: rgba(0, 255, 136, 0.08); }
-    .filter-btn[data-type="g_to_mol"].active   { border-color: var(--constant-gold); color: var(--constant-gold); background: rgba(255, 184, 0, 0.08); }
-    .filter-btn[data-type="g_to_g"].active     { border-color: var(--cyber-teal); color: var(--cyber-teal); background: rgba(0, 240, 255, 0.08); }
+    .filter-btn[data-type="mol_to_mol"].active { border-color: #3c486a; color: #3c486a; background: rgba(60,72,106,0.12); }
+    .filter-btn[data-type="mol_to_g"].active   { border-color: var(--combo-green); color: var(--combo-green); background: rgba(var(--success-rgb), 0.08); }
+    .filter-btn[data-type="g_to_mol"].active   { border-color: var(--constant-gold); color: var(--constant-gold); background: rgba(var(--warning-rgb), 0.08); }
+    .filter-btn[data-type="g_to_g"].active     { border-color: var(--cyber-teal); color: var(--cyber-teal); background: rgba(var(--accent-rgb), 0.08); }
 
     /* Fix: Prevent badge text from blending into active background */
     .filter-count {
         font-size: 10px;
         padding: 2px 7px;
         border-radius: 10px;
-        background: #2A303C;
+        background: var(--surface-sunken);
         color: var(--text-light);
         font-weight: bold;
         transition: all 0.2s ease;
     }
 
     .filter-btn.active .filter-count {
-        background: #0B0E14;
+        background: #2a344c;
         color: #FFFFFF;
-        border: 1px solid rgba(255, 255, 255, 0.15);
+        border: 1px solid #2a344c;
     }
 
     .problem-grid {
@@ -80,8 +80,8 @@
     }
 
     .problem-card {
-        background: #171A21;
-        border: 1px solid #2A303C;
+        background: var(--bg-slate);
+        border: 1px solid var(--border);
         border-radius: 8px;
         padding: 20px 25px;
         transition: border-color 0.2s ease, box-shadow 0.2s ease;
@@ -89,7 +89,7 @@
 
     .problem-card:hover {
         border-color: var(--cyber-teal);
-        box-shadow: 0 0 14px rgba(0, 240, 255, 0.12);
+        box-shadow: 0 2px 12px rgba(var(--accent-rgb), 0.15);
     }
 
     .problem-card-header {
@@ -107,7 +107,7 @@
         background: var(--bg-dark);
         padding: 3px 8px;
         border-radius: 3px;
-        border: 1px solid #2A303C;
+        border: 1px solid var(--border);
     }
 
     .problem-title {
@@ -136,13 +136,13 @@
         font-weight: bold;
         padding: 4px 10px;
         border-radius: 3px;
-        border: 1px solid #2A303C;
+        border: 1px solid var(--border);
         color: var(--text-muted);
         background: var(--bg-dark);
         letter-spacing: 0.5px;
     }
 
-    .part-chip.mol-to-mol { border-color: #4A90D9; color: #4A90D9; }
+    .part-chip.mol-to-mol { border-color: #3c486a; color: #3c486a; }
     .part-chip.mol-to-g   { border-color: var(--combo-green); color: var(--combo-green); }
     .part-chip.g-to-mol   { border-color: var(--constant-gold); color: var(--constant-gold); }
     .part-chip.g-to-g     { border-color: var(--cyber-teal); color: var(--cyber-teal); }
@@ -164,8 +164,8 @@
 
     .btn-start:hover {
         background: var(--cyber-teal);
-        color: var(--bg-dark);
-        box-shadow: 0 0 10px rgba(0, 240, 255, 0.4);
+        color: #FFFFFF;
+        box-shadow: 0 2px 8px rgba(42,52,76, 0.2);
     }
 
     /* Modal Overlay Blur & Dimming */
@@ -175,7 +175,7 @@
         left: 0;
         width: 100%;
         height: 100%;
-        background: rgba(11, 14, 20, 0.85);
+        background: rgba(42,52,76, 0.45);
         backdrop-filter: blur(4px);
         display: flex;
         justify-content: center;
@@ -184,13 +184,13 @@
     }
 
     .modal-box {
-        background: #171A21;
-        border: 1px solid var(--coral-red, #FF3D00);
+        background: var(--bg-slate);
+        border: 1px solid var(--coral-red);
         border-radius: 6px;
         width: 100%;
         max-width: 460px;
         padding: 24px;
-        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+        box-shadow: 0 10px 30px rgba(42,52,76, 0.25);
         transform: translateY(0);
         animation: modalSlideIn 0.2s cubic-bezier(0.16, 1, 0.3, 1);
     }
@@ -199,9 +199,9 @@
         display: flex;
         align-items: center;
         gap: 12px;
-        color: var(--coral-red, #FF3D00);
+        color: var(--coral-red);
         margin-bottom: 16px;
-        border-bottom: 1px solid #2A303C;
+        border-bottom: 1px solid var(--border);
         padding-bottom: 12px;
     }
 
@@ -226,24 +226,24 @@
 
     .btn-cancel {
         background: transparent;
-        border: 1px solid #2A303C;
-        color: var(--text-muted, #64748B);
+        border: 1px solid var(--border);
+        color: var(--text-muted, #707A94);
     }
 
     .btn-cancel:hover {
-        background: rgba(255, 255, 255, 0.05);
-        color: #FFF;
+        background: rgba(42,52,76, 0.05);
+        color: #2a344c;
     }
 
     .btn-proceed {
-        background: var(--coral-red, #FF3D00);
-        border: 1px solid var(--coral-red, #FF3D00);
+        background: var(--coral-red);
+        border: 1px solid var(--coral-red);
         color: #FFF;
     }
 
     .btn-proceed:hover {
-        background: #E03500;
-        box-shadow: 0 0 12px rgba(255, 61, 0, 0.35);
+        background: #B91C1C;
+        box-shadow: 0 2px 8px rgba(var(--danger-rgb), 0.35);
     }
 
     @keyframes modalSlideIn {
@@ -261,7 +261,7 @@
 
 <!-- ── Synthesis Challenge banner ── -->
 <div class="filter-ribbon" style="justify-content:space-between; align-items:center;
-     {% if synthesis_unlocked %}border-color: rgba(0,230,118,0.4);{% endif %}">
+     {% if synthesis_unlocked %}border-color: rgba(var(--success-rgb),0.4);{% endif %}">
     <div>
         <span style="font-size:11px; font-weight:bold; letter-spacing:1.5px; color:{% if synthesis_passed %}var(--combo-green){% elif synthesis_unlocked %}var(--constant-gold){% else %}var(--text-muted){% endif %};">
             ⚗ SYNTHESIS CHALLENGE
@@ -291,7 +291,7 @@
         ALL TYPES <span class="filter-count" id="count-all">0</span>
     </button>
     <button class="filter-btn" onclick="filterCategory('mol_to_mol', this)" data-type="mol_to_mol">
-        <span style="display:inline-block; width:8px; height:8px; border-radius:50%; background:#4A90D9;"></span>
+        <span style="display:inline-block; width:8px; height:8px; border-radius:50%; background:#3c486a;"></span>
         mol → mol <span class="filter-count" id="count-mol_to_mol">0</span>
     </button>
     <button class="filter-btn" onclick="filterCategory('mol_to_g', this)" data-type="mol_to_g">
@@ -357,7 +357,7 @@
                 🔄 Retry
             </button>
         {% else %}
-            <span style="color: var(--text-muted); font-size: 12px; font-style: italic; border: 1px solid #2A303C; padding: 8px 12px; border-radius: 4px; pointer-events: none; opacity: 0.5;">
+            <span style="color: var(--text-muted); font-size: 12px; font-style: italic; border: 1px solid var(--border); padding: 8px 12px; border-radius: 4px; pointer-events: none; opacity: 0.5;">
                 🔒 Locked (Untouched)
             </span>
         {% endif %}
@@ -369,7 +369,7 @@
     {% endfor %}
 
     <!-- Empty search/filter dynamic notice -->
-    <div id="noResultsNotice" style="display: none; text-align: center; padding: 40px; background: #171A21; border: 1px dashed #2A303C; border-radius: 8px;">
+    <div id="noResultsNotice" style="display: none; text-align: center; padding: 40px; background: var(--bg-slate); border: 1px dashed var(--border); border-radius: 8px;">
         <p style="color: var(--text-muted); margin: 0; font-size: 15px;">No problems available under this conversion category.</p>
     </div>
 

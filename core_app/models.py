@@ -285,6 +285,7 @@ class PartProgress(models.Model):
     part_label  = models.CharField(max_length=10)
     lane_cleared = models.BooleanField(default=False)
     chain_json  = models.JSONField(default=list, blank=True)
+    verified_prefix_json = models.JSONField(default=list, blank=True)
 
     class Meta:
         unique_together = [('user', 'problem_id', 'part_label')]

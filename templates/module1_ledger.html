@@ -4,7 +4,7 @@
 <style>
     .ledger-card {
         border-left: 4px solid var(--constant-gold);
-        background: #171A21;
+        background: var(--surface-sunken);
         padding: 20px;
         margin-bottom: 25px;
         border-radius: 4px;
@@ -15,36 +15,6 @@
         line-height: 1.7;
         margin-bottom: 0;
         color: var(--text-light);
-    }
-
-    /* Explanation Accordion Box */
-    .edu-expander {
-        background: rgba(0, 240, 255, 0.05);
-        border: 1px solid rgba(0, 240, 255, 0.2);
-        border-radius: 6px;
-        padding: 12px 16px;
-        margin-bottom: 20px;
-        font-size: 13px;
-        color: var(--text-light);
-        line-height: 1.6;
-    }
-
-    .edu-expander summary {
-        cursor: pointer;
-        font-weight: bold;
-        color: var(--cyber-teal);
-        letter-spacing: 0.5px;
-        user-select: none;
-    }
-
-    .edu-expander summary:hover {
-        color: #FFF;
-    }
-
-    .edu-content {
-        margin-top: 10px;
-        border-top: 1px dashed rgba(255, 255, 255, 0.1);
-        padding-top: 10px;
     }
 
     /* Side Indicator Badges */
@@ -58,14 +28,14 @@
         display: inline-block;
     }
     .badge-reactant {
-        background: rgba(0, 240, 255, 0.15);
+        background: rgba(var(--accent-rgb), 0.12);
         color: var(--cyber-teal);
-        border: 1px solid rgba(0, 240, 255, 0.3);
+        border: 1px solid rgba(var(--accent-rgb), 0.3);
     }
     .badge-product {
-        background: rgba(255, 184, 0, 0.15);
+        background: rgba(var(--warning-rgb), 0.1);
         color: var(--constant-gold);
-        border: 1px solid rgba(255, 184, 0, 0.3);
+        border: 1px solid rgba(var(--warning-rgb), 0.3);
     }
 
     /* ── Equation Builder ── */
@@ -78,7 +48,7 @@
         background: var(--bg-dark);
         padding: 18px 20px;
         border-radius: 6px;
-        border: 1px solid #2A303C;
+        border: 1px solid var(--border);
         margin-bottom: 30px;
         flex-wrap: wrap;
     }
@@ -94,7 +64,7 @@
         width: 52px;
         background: var(--bg-slate);
         border: 2px solid var(--text-muted);
-        color: #FFF;
+        color: var(--text-light);
         font-size: 20px;
         text-align: center;
         border-radius: 4px;
@@ -119,34 +89,34 @@
     }
     .btn-action:hover:not(:disabled) {
         background: var(--cyber-teal);
-        color: var(--bg-dark);
-        box-shadow: 0 0 10px rgba(0, 240, 255, 0.5);
+        color: #FFFFFF;
+        box-shadow: 0 2px 8px rgba(42,52,76, 0.2);
     }
     .btn-action:disabled {
         opacity: 0.35;
         cursor: not-allowed;
-        border-color: #4B5563 !important;
-        color: #6B7280 !important;
+        border-color: #DADEE9 !important;
+        color: #8A93AB !important;
         box-shadow: none !important;
         pointer-events: none;
     }
 
     /* ── Live Atom Conservation HUD ── */
     .atom-hud-container {
-        background: #141820;
-        border: 1px solid #2A303C;
+        background: var(--surface-header);
+        border: 1px solid var(--border);
         border-radius: 6px;
         padding: 16px 20px;
         margin-top: -15px;
         margin-bottom: 30px;
-        box-shadow: inset 0 0 20px rgba(0,0,0,0.3);
+        box-shadow: inset 0 1px 3px rgba(42,52,76, 0.05);
     }
     .atom-hud-header {
         display: flex;
         justify-content: space-between;
         align-items: center;
         margin-bottom: 12px;
-        border-bottom: 1px solid rgba(255,255,255,0.06);
+        border-bottom: 1px solid var(--border);
         padding-bottom: 8px;
         flex-wrap: wrap;
         gap: 8px;
@@ -168,7 +138,7 @@
     }
     .atom-card {
         background: var(--bg-dark);
-        border: 1px solid #2A303C;
+        border: 1px solid var(--border);
         border-radius: 5px;
         padding: 10px 14px;
         display: flex;
@@ -177,11 +147,11 @@
         transition: border-color 0.2s, box-shadow 0.2s;
     }
     .atom-card.balanced {
-        border-color: rgba(0, 230, 118, 0.5);
-        box-shadow: 0 0 12px rgba(0, 230, 118, 0.12);
+        border-color: rgba(var(--success-rgb), 0.5);
+        box-shadow: 0 1px 8px rgba(var(--success-rgb), 0.15);
     }
     .atom-card.imbalanced {
-        border-color: rgba(255, 61, 0, 0.4);
+        border-color: rgba(var(--danger-rgb), 0.4);
     }
     .atom-card-top {
         display: flex;
@@ -194,7 +164,7 @@
         width: 28px;
         height: 28px;
         border-radius: 4px;
-        background: rgba(0, 240, 255, 0.1);
+        background: rgba(var(--accent-rgb), 0.1);
         border: 1px solid var(--cyber-teal);
         color: var(--cyber-teal);
         display: flex;
@@ -214,7 +184,7 @@
     }
     .atom-meter-track {
         height: 6px;
-        background: #252B37;
+        background: var(--surface-sunken);
         border-radius: 3px;
         overflow: hidden;
         display: flex;
@@ -237,26 +207,26 @@
         border-radius: 3px;
     }
     .atom-status-badge.ok {
-        background: rgba(0, 230, 118, 0.15);
+        background: rgba(var(--success-rgb), 0.12);
         color: var(--combo-green);
-        border: 1px solid rgba(0, 230, 118, 0.3);
+        border: 1px solid rgba(var(--success-rgb), 0.3);
     }
     .atom-status-badge.err {
-        background: rgba(255, 61, 0, 0.15);
-        color: #FCA5A5;
-        border: 1px solid rgba(255, 61, 0, 0.3);
+        background: rgba(var(--danger-rgb), 0.1);
+        color: #B91C1C;
+        border: 1px solid rgba(var(--danger-rgb), 0.3);
     }
     .atom-status-badge.idle {
-        background: rgba(255, 255, 255, 0.05);
+        background: var(--surface-sunken);
         color: var(--text-muted);
-        border: 1px solid rgba(255, 255, 255, 0.1);
+        border: 1px solid var(--border);
     }
     .chamber-blueprint-box {
         display: none;
         margin-top: 15px;
         padding: 14px 18px;
-        background: rgba(0, 230, 118, 0.04);
-        border: 1px solid rgba(0, 230, 118, 0.25);
+        background: rgba(var(--success-rgb), 0.05);
+        border: 1px solid rgba(var(--success-rgb), 0.25);
         border-radius: 6px;
         font-size: 13px;
         line-height: 1.6;
@@ -264,8 +234,8 @@
 
     /* ── Tactical Hint Box ── */
     .tactical-hint-box {
-        background: rgba(255, 214, 0, 0.06);
-        border: 1px solid rgba(255, 214, 0, 0.35);
+        background: rgba(var(--warning-rgb), 0.06);
+        border: 1px solid rgba(var(--warning-rgb), 0.35);
         border-left: 4px solid var(--constant-gold);
         border-radius: 5px;
         padding: 12px 16px;
@@ -308,8 +278,8 @@
 
     .mass-row-wrapper {
         margin-bottom: 16px;
-        background: rgba(255,255,255,0.02);
-        border: 1px solid #2A303C;
+        background: var(--surface-header);
+        border: 1px solid var(--border);
         padding: 12px 16px;
         border-radius: 6px;
     }
@@ -324,7 +294,7 @@
     .mass-input {
         width: 120px;
         background: var(--bg-dark);
-        border: 1px solid #2A303C;
+        border: 1px solid var(--border);
         color: var(--constant-gold);
         font-size: 16px;
         padding: 8px;
@@ -338,7 +308,7 @@
     /* ── Focus Highlight ── */
     .mass-row-wrapper.pt-focus {
         border-left: 3px solid var(--cyber-teal);
-        background: rgba(0, 240, 255, 0.03);
+        background: rgba(var(--accent-rgb), 0.05);
     }
 
     /* ── Scratchpad ── */
@@ -346,8 +316,8 @@
         display: none;
         margin-top: 6px;
         padding: 6px 10px;
-        background: rgba(0, 240, 255, 0.04);
-        border: 1px dashed rgba(0, 240, 255, 0.25);
+        background: rgba(var(--accent-rgb), 0.05);
+        border: 1px dashed rgba(var(--accent-rgb), 0.25);
         border-radius: 4px;
         font-size: 12px;
         color: var(--text-muted);
@@ -355,8 +325,8 @@
     .mass-scratchpad.active { display: block; }
     .mass-scratchpad .sp-item {
         display: inline-block;
-        background: rgba(0, 240, 255, 0.1);
-        border: 1px solid rgba(0, 240, 255, 0.25);
+        background: rgba(var(--accent-rgb), 0.1);
+        border: 1px solid rgba(var(--accent-rgb), 0.25);
         color: var(--cyber-teal);
         padding: 1px 6px;
         border-radius: 3px;
@@ -366,8 +336,8 @@
         transition: background 0.15s, text-decoration 0.15s;
     }
     .mass-scratchpad .sp-item:hover {
-        background: rgba(255, 61, 0, 0.15);
-        border-color: rgba(255, 61, 0, 0.3);
+        background: rgba(var(--danger-rgb), 0.1);
+        border-color: rgba(var(--danger-rgb), 0.3);
         color: var(--coral-red);
         text-decoration: line-through;
     }
@@ -387,11 +357,11 @@
         display: none;
         margin-top: 6px;
         padding: 6px 10px;
-        background: rgba(255, 61, 0, 0.08);
-        border: 1px solid rgba(255, 61, 0, 0.25);
+        background: rgba(var(--danger-rgb), 0.07);
+        border: 1px solid rgba(var(--danger-rgb), 0.25);
         border-radius: 4px;
         font-size: 12px;
-        color: #FCA5A5;
+        color: #B91C1C;
         line-height: 1.5;
     }
 
@@ -404,13 +374,13 @@
     }
     .mastery-bar {
         height: 6px;
-        background: #2A303C;
+        background: var(--border);
         border-radius: 3px;
         overflow: hidden;
     }
     .mastery-bar-fill {
         height: 100%;
-        background: linear-gradient(90deg, var(--cyber-teal), var(--constant-gold));
+        background: linear-gradient(90deg, var(--cyber-teal), var(--accent-bright));
         border-radius: 3px;
         transition: width 0.4s ease;
     }
@@ -422,7 +392,7 @@
     /* ── Periodic Databank ── */
     .periodic-popover {
         background: var(--bg-dark);
-        border: 1px solid #2A303C;
+        border: 1px solid var(--border);
         padding: 15px;
         border-radius: 6px;
         margin-top: 20px;
@@ -438,7 +408,7 @@
 
     .part-nav-btn {
         background: var(--bg-dark);
-        border: 1px solid #2A303C;
+        border: 1px solid var(--border);
         color: var(--text-muted);
         padding: 6px 14px;
         border-radius: 4px;
@@ -456,20 +426,20 @@
         font-weight: bold;
         padding: 4px 10px;
         border-radius: 3px;
-        background: #2D3748;
+        background: var(--surface-sunken);
         color: var(--text-muted);
         vertical-align: middle;
         transition: all 0.3s;
     }
-    .balance-status.ok  { background: #065F46; color: #A7F3D0; }
-    .balance-status.err { background: #7F1D1D; color: #FCA5A5; }
+    .balance-status.ok  { background: #DCFCE7; color: #166534; }
+    .balance-status.err { background: #FEE2E2; color: #991B1B; }
 
     /* ── Full Periodic Table ── */
     .pt-el {
         position: relative;
         aspect-ratio: 1;
-        background: #1A1F28;
-        border: 1px solid #2A303C;
+        background: var(--surface-header);
+        border: 1px solid var(--border);
         border-radius: 3px;
         cursor: pointer;
         display: flex;
@@ -481,24 +451,24 @@
         user-select: none;
         overflow: visible;
     }
-    .pt-el:hover    { transform: scale(1.25); z-index: 50; border-color: #FFF !important; }
+    .pt-el:hover    { transform: scale(1.25); z-index: 50; border-color: #2a344c !important; }
     .pt-el:active   { transform: scale(1.05); }
     .pt-el.pt-empty { background: transparent; border-color: transparent; pointer-events: none; }
     .pt-el.pt-label { cursor: default; pointer-events: none; display: flex; align-items: center;
                     justify-content: center; font-size: 7px; font-weight: bold; text-align: center; }
-    .pt-el.pt-hl    { box-shadow: 0 0 6px rgba(255,214,0,0.45); }
+    .pt-el.pt-hl    { box-shadow: 0 0 6px rgba(var(--warning-rgb), 0.45); }
 
-    .pt-num  { font-size: 7px; color: rgba(255,255,255,0.3); line-height: 1; align-self: flex-start; padding-left: 2px; }
+    .pt-num  { font-size: 7px; color: rgba(42,52,76,0.45); line-height: 1; align-self: flex-start; padding-left: 2px; }
     .pt-sym  { font-size: 11px; font-weight: bold; line-height: 1; }
-    .pt-mass { font-size: 6px; color: rgba(255,255,255,0.4); line-height: 1; margin-top: 1px; }
+    .pt-mass { font-size: 6px; color: rgba(42,52,76,0.55); line-height: 1; margin-top: 1px; }
 
     .pt-tip {
         position: absolute;
         bottom: calc(100% + 5px);
         left: 50%;
         transform: translateX(-50%);
-        background: #0F1115;
-        border: 1px solid #2A303C;
+        background: #FFFFFF;
+        border: 1px solid var(--border);
         border-radius: 4px;
         padding: 6px 10px;
         font-size: 11px;
@@ -508,6 +478,7 @@
         opacity: 0;
         transition: opacity 0.15s;
         text-align: center;
+        box-shadow: 0 2px 8px rgba(42,52,76, 0.15);
     }
     .pt-el:hover .pt-tip { opacity: 1; }
     .pt-tip-name  { color: var(--cyber-teal); font-weight: bold; display: block; margin-bottom: 2px; }
@@ -568,33 +539,33 @@
 
 <!-- Dynamic Concept Check with Reactant/Product Indicators -->
 <details class="edu-expander" id="guideBalancing">
-    <summary>💡 CONCEPT CHECK: How to Balance This Reaction (Simple 3-Step Guide)</summary>
+    <summary>How to Balance This Reaction (Simple 3-Step Guide)</summary>
     <div class="edu-content">
-        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 12px; margin-top: 6px;">
-            <div style="background: rgba(0, 240, 255, 0.05); border: 1px solid rgba(0, 240, 255, 0.2); border-radius: 5px; padding: 10px 14px;">
-                <div style="font-weight: 800; color: var(--cyber-teal); margin-bottom: 4px; font-size: 13px;">
-                    1️⃣ The Core Rule
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 12px;">
+            <div class="cc-tip-card">
+                <div class="cc-tip-card-title">
+                    1. The Core Rule
                 </div>
-                <p style="margin: 0; font-size: 12px; color: var(--text-light); line-height: 1.5;">
+                <p>
                     The <strong>Law of Conservation of Mass</strong> states that atoms cannot be created or destroyed. Total atoms on the <strong>Left (Reactants)</strong> must equal the <strong>Right (Products)</strong>.
                 </p>
             </div>
 
-            <div style="background: rgba(0, 240, 255, 0.05); border: 1px solid rgba(0, 240, 255, 0.2); border-radius: 5px; padding: 10px 14px;">
-                <div style="font-weight: 800; color: var(--cyber-teal); margin-bottom: 4px; font-size: 13px;">
-                    2️⃣ Multiplication Rule
+            <div class="cc-tip-card">
+                <div class="cc-tip-card-title">
+                    2. Multiplication Rule
                 </div>
-                <p style="margin: 0; font-size: 12px; color: var(--text-light); line-height: 1.5;">
+                <p>
                     The big number you enter (<strong>Coefficient</strong>) multiplies every subscript in the formula.
                     <br><em>Example:</em> <code>2 H₂O</code> = <strong>4 H atoms</strong> (2×2) and <strong>2 O atoms</strong> (2×1).
                 </p>
             </div>
 
-            <div style="background: rgba(0, 240, 255, 0.05); border: 1px solid rgba(0, 240, 255, 0.2); border-radius: 5px; padding: 10px 14px;">
-                <div style="font-weight: 800; color: var(--cyber-teal); margin-bottom: 4px; font-size: 13px;">
-                    3️⃣ Strategy Order
+            <div class="cc-tip-card">
+                <div class="cc-tip-card-title">
+                    3. Strategy Order
                 </div>
-                <p style="margin: 0; font-size: 12px; color: var(--text-light); line-height: 1.5;">
+                <p>
                     • <strong>Step 1:</strong> Balance unique elements/metals first.<br>
                     • <strong>Step 2:</strong> Balance Hydrogen (H).<br>
                     • <strong>Step 3:</strong> Balance pure elements (like O₂ or N₂) <strong>last</strong>!
@@ -669,32 +640,32 @@
     </h3>
 
     <!-- Dynamic Problem-Aligned Concept Check: Molar Mass -->
-    <details class="edu-expander" id="guideMolarMass" style="border-color: rgba(255, 184, 0, 0.3); background: rgba(255, 184, 0, 0.05);">
-        <summary style="color: var(--constant-gold);">💡 CONCEPT CHECK: How to Calculate Compound Molar Mass</summary>
+    <details class="edu-expander" id="guideMolarMass">
+        <summary>How to Calculate Compound Molar Mass</summary>
         <div class="edu-content">
-            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 12px; margin-top: 6px;">
-                <div style="background: rgba(255, 184, 0, 0.05); border: 1px solid rgba(255, 184, 0, 0.25); border-radius: 5px; padding: 10px 14px;">
-                    <div style="font-weight: 800; color: var(--constant-gold); margin-bottom: 4px; font-size: 13px;">
-                        🛒 The "Recipe" Formula
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 12px;">
+                <div class="cc-tip-card">
+                    <div class="cc-tip-card-title" style="color: var(--constant-gold);">
+                        The "Recipe" Formula
                     </div>
-                    <p style="margin: 0; font-size: 12px; color: var(--text-light); line-height: 1.5;">
+                    <p>
                         Molar mass is the total mass of <strong>1 mole</strong> of a substance. Find each element's atomic mass in the databank and sum them up:
                         <br>
                         <code>Total Mass = ∑ (Atom Count × Atomic Mass)</code>
                     </p>
                 </div>
 
-                <div style="background: rgba(255, 184, 0, 0.05); border: 1px solid rgba(255, 184, 0, 0.25); border-radius: 5px; padding: 10px 14px;">
-                    <div style="font-weight: 800; color: var(--constant-gold); margin-bottom: 4px; font-size: 13px;">
-                        ⚠️ Important Rule
+                <div class="cc-tip-card">
+                    <div class="cc-tip-card-title" style="color: var(--constant-gold);">
+                        Important Rule
                     </div>
-                    <p style="margin: 0; font-size: 12px; color: var(--text-light); line-height: 1.5;">
+                    <p>
                         <strong>Do NOT</strong> multiply by the balancing coefficients ($2, 3\dots$) from Step 1A! Molar mass always measures <strong>1 single mole</strong> of the chemical formula alone.
                     </p>
                 </div>
             </div>
 
-            <div style="margin-top: 10px; padding: 8px 12px; background: rgba(0,0,0,0.25); border-radius: 4px; font-size: 12px; color: var(--text-muted);">
+            <div style="margin-top: 10px; padding: 8px 12px; background: var(--surface-header); border: 1px solid var(--border); border-radius: 4px; font-size: 12px; color: var(--text-muted);">
                 <strong style="color: var(--text-light);">Formula Blueprints for this reaction:</strong>
                 {% for formula in target_substances %}
                 <span style="display: inline-block; margin-right: 12px; margin-top: 4px; color: var(--constant-gold);">
@@ -763,7 +734,7 @@
         </button>
 
         <button class="btn-action"
-                style="border-color: var(--combo-green); color: var(--combo-green); background: rgba(0, 230, 153, 0.08);"
+                style="border-color: var(--combo-green); color: var(--combo-green); background: rgba(var(--success-rgb), 0.08);"
                 id="btn-next-module"
                 disabled
                 onclick="proceedToWorkspace()">
@@ -800,8 +771,8 @@
 
 <!-- ── Held-Out Retrieval Check Modal (databank suspended) ── -->
 <div id="retrievalModal" style="display:none; position:fixed; inset:0; z-index:99000;
-     background:rgba(11,14,20,0.94); backdrop-filter:blur(6px);">
-    <div style="max-width:460px; margin:12vh auto 0 auto; background:#171A21;
+     background:rgba(42,52,76,0.45); backdrop-filter:blur(6px);">
+    <div style="max-width:460px; margin:12vh auto 0 auto; background:var(--bg-slate);
                 border:1px solid var(--constant-gold); border-radius:8px; padding:28px;">
         <div style="font-size:11px; font-weight:bold; letter-spacing:2px; color:var(--constant-gold); margin-bottom:10px;">
             RETENTION GATE &nbsp;·&nbsp; DATABANK SUSPENDED
@@ -813,11 +784,11 @@
         <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
             <input type="number" step="0.001" id="retrievalInput"
                    placeholder="g/mol"
-                   style="width:140px; background:#0F1115; border:1px solid #2A303C; color:var(--constant-gold);
+                   style="width:140px; background:#FFFFFF; border:1px solid var(--border); color:var(--constant-gold);
                           padding:9px; border-radius:4px; font-size:15px;">
             <button class="btn-action" style="border-color:var(--constant-gold); color:var(--constant-gold);"
                     onclick="submitRetrievalAnswer()">Submit Recall</button>
-            <button class="btn-action" style="border-color:#2A303C; color:var(--text-muted);"
+            <button class="btn-action" style="border-color:var(--border); color:var(--text-muted);"
                     onclick="closeRetrievalModal(false)">Later</button>
         </div>
         <div class="tactical-hint-box" id="retrievalHintBox" style="display:none;">
@@ -1152,7 +1123,7 @@ function updateTransitionButtonState() {
     if (module1Unlocked()) {
         nextBtn.disabled = false;
         nextBtn.style.cursor = 'pointer';
-        nextBtn.style.boxShadow = '0 0 12px rgba(0, 230, 153, 0.4)';
+        nextBtn.style.boxShadow = '0 1px 10px rgba(21, 128, 61, 0.35)';
     } else {
         nextBtn.disabled = true;
         nextBtn.style.boxShadow = 'none';
@@ -1412,16 +1383,16 @@ function quickHarvest() {
 
 (function buildPeriodicTable() {
     const CATS = {
-        alkali:     { label: 'Alkali Metal',      color: '#FF6B35' },
-        alkaline:   { label: 'Alkaline Earth',    color: '#FFD600' },
-        transition: { label: 'Transition Metal',  color: '#A78BFA' },
-        post:       { label: 'Post-Trans. Metal', color: '#34D399' },
-        metalloid:  { label: 'Metalloid',         color: '#60A5FA' },
-        reactive:   { label: 'Reactive Nonmetal', color: '#00F0FF' },
-        halogen:    { label: 'Halogen',           color: '#F472B6' },
-        noble:      { label: 'Noble Gas',         color: '#94A3B8' },
-        lanthanide: { label: 'Lanthanide',        color: '#FB923C' },
-        actinide:   { label: 'Actinide',          color: '#E879F9' },
+    alkali:     { label: 'Alkali Metal',      color: '#DC2626' },
+    alkaline:   { label: 'Alkaline Earth',    color: '#CA8A04' },
+    transition: { label: 'Transition Metal',  color: '#7C3AED' },
+    post:       { label: 'Post-Trans. Metal', color: '#059669' },
+    metalloid:  { label: 'Metalloid',         color: '#2563EB' },
+    reactive:   { label: 'Reactive Nonmetal', color: '#0891B2' },
+    halogen:    { label: 'Halogen',           color: '#DB2777' },
+    noble:      { label: 'Noble Gas',         color: '#64748B' },
+    lanthanide: { label: 'Lanthanide',        color: '#EA580C' },
+    actinide:   { label: 'Actinide',          color: '#C026D3' },
     };
 
     const ELDATA = [
@@ -1560,7 +1531,7 @@ function quickHarvest() {
         const div = document.createElement('div');
         if (!data) { div.className = 'pt-el pt-empty'; return div; }
         const [num, sym, name, mass, cat] = data;
-        const color = CATS[cat]?.color || '#888';
+        const color = CATS[cat]?.color || '#64748B';
         div.className = 'pt-el';
         div.style.cssText = `border-color:${color}40; background:${color}12;`;
         div.innerHTML = `
@@ -2052,7 +2023,7 @@ function flashError(elementId) {
     const el = document.getElementById(elementId);
     if (!el) return;
     const original = el.style.boxShadow;
-    el.style.boxShadow = '0 0 18px rgba(255,61,0,0.55)';
+    el.style.boxShadow = '0 0 18px rgba(220,38,38,0.55)';
     el.style.borderColor = 'var(--coral-red)';
     setTimeout(() => {
         el.style.boxShadow   = original;
@@ -2089,17 +2060,17 @@ function showToast(msg, type = 'info') {
             position:fixed; bottom:28px; left:50%; transform:translateX(-50%);
             padding:10px 22px; border-radius:5px; font-size:14px; font-weight:bold;
             z-index:9999; transition:opacity 0.3s; pointer-events:none;
-            box-shadow: 0 4px 16px rgba(0,0,0,0.5);
+            box-shadow: 0 4px 16px rgba(42,52,76,0.18);
         `;
         document.body.appendChild(toast);
     }
     toast.textContent = msg;
     toast.style.opacity = '1';
-    toast.style.background = type === 'ok'  ? '#065F46' :
-                              type === 'err' ? '#7F1D1D' : '#1E222B';
-    toast.style.color      = type === 'ok'  ? '#A7F3D0' :
-                              type === 'err' ? '#FCA5A5' : '#E2E8F0';
-    toast.style.border     = `1px solid ${type === 'ok' ? 'var(--combo-green)' : type === 'err' ? 'var(--coral-red)' : '#2A303C'}`;
+    toast.style.background = type === 'ok'  ? '#DCFCE7' :
+                              type === 'err' ? '#FEE2E2' : '#FFFFFF';
+    toast.style.color      = type === 'ok'  ? '#166534' :
+                              type === 'err' ? '#991B1B' : '#2a344c';
+    toast.style.border     = `1px solid ${type === 'ok' ? 'var(--combo-green)' : type === 'err' ? 'var(--coral-red)' : 'var(--border)'}`;
 
     clearTimeout(_toastTimeout);
     _toastTimeout = setTimeout(() => { toast.style.opacity = '0'; }, 3000);

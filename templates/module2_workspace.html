@@ -3,39 +3,12 @@
 {% block content %}
 <style>
     .grid-info-header {
-        background: #171A21;
+        background: var(--surface-sunken);
         border-bottom: 2px solid var(--cyber-teal);
         padding: 15px 18px;
         margin-bottom: 20px;
         border-radius: 4px;
         font-size: 14px;
-    }
-
-    .edu-expander {
-        background: rgba(0, 240, 255, 0.05);
-        border: 1px solid rgba(0, 240, 255, 0.2);
-        border-radius: 6px;
-        padding: 12px 16px;
-        margin-bottom: 22px;
-        font-size: 13px;
-        color: var(--text-light);
-        line-height: 1.6;
-    }
-
-    .edu-expander summary {
-        cursor: pointer;
-        font-weight: bold;
-        color: var(--cyber-teal);
-        letter-spacing: 0.5px;
-        user-select: none;
-    }
-
-    .edu-expander summary:hover { color: #FFF; }
-
-    .edu-content {
-        margin-top: 10px;
-        border-top: 1px dashed rgba(255, 255, 255, 0.1);
-        padding-top: 10px;
     }
 
     .part-strip {
@@ -51,7 +24,7 @@
         font-weight: bold;
         padding: 5px 13px;
         border-radius: 3px;
-        border: 1px solid #2A303C;
+        border: 1px solid var(--border);
         color: var(--text-muted);
         background: var(--bg-dark);
         letter-spacing: 0.5px;
@@ -60,7 +33,7 @@
     .part-pill.active-pill {
         border-color: var(--cyber-teal);
         color: var(--cyber-teal);
-        background: rgba(0,240,255,0.07);
+        background: rgba(var(--accent-rgb), 0.08);
     }
 
     .bridge-builder-chasm {
@@ -97,33 +70,33 @@
         display: flex;
         flex-direction: column;
         gap: 8px;
-        box-shadow: 0 3px 10px rgba(0,0,0,0.3);
+        box-shadow: 0 2px 8px rgba(42,52,76,0.12);
         transition: all 0.25s ease;
         flex-shrink: 0;
         width: 220px;
     }
 
-    .fraction-card.active-link   { border-color: var(--cyber-teal); box-shadow: 0 0 12px rgba(0,240,255,0.18); }
-    .fraction-card.verified-link { border-color: var(--combo-green); box-shadow: 0 0 14px rgba(0,230,118,0.25); }
-    .fraction-card.error-link    { border-color: var(--coral-red); box-shadow: 0 0 14px rgba(255,61,0,0.35); }
+    .fraction-card.active-link   { border-color: var(--cyber-teal); box-shadow: 0 0 12px rgba(var(--accent-rgb),0.25); }
+    .fraction-card.verified-link { border-color: var(--combo-green); box-shadow: 0 0 14px rgba(var(--success-rgb),0.25); }
+    .fraction-card.error-link    { border-color: var(--coral-red); box-shadow: 0 0 14px rgba(var(--danger-rgb),0.25); }
 
     .slot-container { display: flex; align-items: center; gap: 6px; }
 
     .slot-input {
         background: var(--bg-dark);
-        border: 1px solid #2A303C;
-        color: #FFF;
+        border: 1px solid var(--border);
+        color: var(--text-light);
         padding: 6px;
         text-align: center;
         border-radius: 4px;
         width: 65px;
         font-size: 13px;
     }
-    .slot-input:disabled { color: #A0AEC0; background: #1A202C; }
+    .slot-input:disabled { color: #8A93AB; background: var(--surface-sunken); }
 
     .unit-select {
         background: var(--bg-dark);
-        border: 1px solid #2A303C;
+        border: 1px solid var(--border);
         color: var(--cyber-teal);
         font-size: 11px;
         font-weight: bold;
@@ -150,7 +123,7 @@
         opacity: 0.6;
     }
 
-    .btn-verify-node, .btn-audit-chain {
+    .btn-verify-node {
         background: transparent;
         border: 1px solid var(--cyber-teal);
         color: var(--cyber-teal);
@@ -161,30 +134,12 @@
         font-weight: bold;
         transition: all 0.2s ease;
     }
-    .btn-verify-node:hover, .btn-audit-chain:hover:not(:disabled) { background: var(--cyber-teal); color: var(--bg-dark); }
-    .btn-audit-chain:disabled { opacity: 0.35; cursor: not-allowed; }
-
-    .btn-add-node {
-        background: rgba(0, 240, 255, 0.1);
-        border: 2px dashed var(--cyber-teal);
-        color: var(--cyber-teal);
-        padding: 20px;
-        border-radius: 6px;
-        cursor: pointer;
-        font-weight: bold;
-        font-size: 14px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        min-width: 160px;
-        transition: all 0.2s ease;
-        flex-shrink: 0;
-    }
-    .btn-add-node:hover { background: rgba(0, 240, 255, 0.2); transform: scale(1.02); }
+    .btn-verify-node:hover:not(:disabled) { background: var(--cyber-teal); color: #FFFFFF; }
+    .btn-verify-node:disabled { opacity: 0.35; cursor: not-allowed; }
 
     .feedback-box {
-        background: #171A21;
-        border: 1px solid #2A303C;
+        background: var(--bg-slate);
+        border: 1px solid var(--border);
         border-left: 4px solid var(--cyber-teal);
         padding: 14px 18px;
         border-radius: 4px;
@@ -203,13 +158,13 @@
         font-weight: bold;
     }
     .report-chip { padding: 2px 8px; border-radius: 10px; font-size: 10px; letter-spacing: 0.5px; }
-    .report-ok   { background: rgba(0,230,118,0.15); color: var(--combo-green); border: 1px solid rgba(0,230,118,0.4); }
-    .report-bad  { background: rgba(255,61,0,0.15); color: #FCA5A5; border: 1px solid rgba(255,61,0,0.4); }
+    .report-ok   { background: rgba(var(--success-rgb),0.12); color: var(--combo-green); border: 1px solid rgba(var(--success-rgb),0.4); }
+    .report-bad  { background: rgba(var(--danger-rgb),0.12); color: #B91C1C; border: 1px solid rgba(var(--danger-rgb),0.4); }
 
     .lock-banner {
         display: none;
-        background: rgba(255, 61, 0, 0.08);
-        border: 1px solid rgba(255, 61, 0, 0.45);
+        background: rgba(var(--danger-rgb), 0.07);
+        border: 1px solid rgba(var(--danger-rgb), 0.45);
         border-left: 4px solid var(--coral-red);
         border-radius: 5px;
         padding: 14px 18px;
@@ -275,36 +230,36 @@
 </div>
 
 <details class="edu-expander" open>
-    <summary>💡 CONCEPT CHECK: The Diagonal Unit Cancellation Method</summary>
+    <summary>The Diagonal Unit Cancellation Method</summary>
     <div class="edu-content">
-        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 12px; margin-top: 6px;">
-            <div style="background: rgba(0, 240, 255, 0.05); border: 1px solid rgba(0, 240, 255, 0.2); border-radius: 5px; padding: 10px 14px;">
-                <div style="font-weight: 800; color: var(--cyber-teal); margin-bottom: 4px; font-size: 13px;">
-                    🔄 1. The Diagonal Cancellation Rule
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 12px;">
+            <div class="cc-tip-card">
+                <div class="cc-tip-card-title">
+                    1. The Diagonal Cancellation Rule
                 </div>
-                <p style="margin: 0; font-size: 12px; color: var(--text-light); line-height: 1.5;">
+                <p>
                     Units cancel out diagonally across fractions.
                     <br>• Put the <strong>unit you want to CANCEL on the BOTTOM (Denominator)</strong>.
                     <br>• Put the <strong>unit you want to REACH on the TOP (Numerator)</strong>.
                 </p>
             </div>
 
-            <div style="background: rgba(0, 240, 255, 0.05); border: 1px solid rgba(0, 240, 255, 0.2); border-radius: 5px; padding: 10px 14px;">
-                <div style="font-weight: 800; color: var(--cyber-teal); margin-bottom: 4px; font-size: 13px;">
-                    ⚖️ 2. Molar Mass Cards (g ↔ mol)
+            <div class="cc-tip-card">
+                <div class="cc-tip-card-title">
+                    2. Molar Mass Cards (g ↔ mol)
                 </div>
-                <p style="margin: 0; font-size: 12px; color: var(--text-light); line-height: 1.5;">
+                <p>
                     Converts between mass and moles of the <strong>same</strong> substance.
                     <br>• Always pair the periodic molar mass (in grams) with <strong>1 mol</strong>!
                     <br><em>(e.g., <code>18.015 g / 1 mol</code> or <code>1 mol / 18.015 g</code>)</em>
                 </p>
             </div>
 
-            <div style="background: rgba(0, 240, 255, 0.05); border: 1px solid rgba(0, 240, 255, 0.2); border-radius: 5px; padding: 10px 14px;">
-                <div style="font-weight: 800; color: var(--cyber-teal); margin-bottom: 4px; font-size: 13px;">
-                    🧪 3. Mole Ratio Cards (mol A → mol B)
+            <div class="cc-tip-card">
+                <div class="cc-tip-card-title">
+                    3. Mole Ratio Cards (mol A → mol B)
                 </div>
-                <p style="margin: 0; font-size: 12px; color: var(--text-light); line-height: 1.5;">
+                <p>
                     Switches from <strong>Substance A</strong> to <strong>Substance B</strong>.
                     <br>• Numbers come directly from your <strong>balanced equation coefficients</strong> from Module 1!
                 </p>
@@ -317,9 +272,10 @@
 <div class="feedback-box" id="explanationConsole">
     <strong style="color:var(--cyber-teal);">TUTOR CONSOLE:</strong>
     <span id="explanationText">
-        Build your conversion chain: fill in a value and choose units for each of the
-        (<span id="requiredNodeCount">{{ node_count }}</span> total) pre-placed step-factor cards,
-        so units cancel diagonally, then run the full chain audit.
+        Work through this conversion one step at a time. Fill in step factor
+        (<span id="requiredNodeCount">{{ node_count }}</span> total) so its denominator cancels
+        the previous unit diagonally, press <strong>&#10003; Verify Step</strong>, and the next
+        fraction card will unlock.
     </span>
     <div id="nodeReports" style="margin-top:10px;"></div>
 </div>
@@ -341,10 +297,6 @@
 
     <div id="nodeContainer" style="display:contents;"></div>
 
-    <button class="btn-add-node" id="btnAddNode" onclick="appendUserStep()">
-        + Add Step Factor
-    </button>
-
     <span class="operator-sign" id="op_eq" style="display:none;">＝</span>
     <div class="terminal-yield-node" id="yieldNode">
         <span style="font-size:18px; font-weight:bold; display:block; color:var(--constant-gold);" id="yieldValue">—</span>
@@ -355,8 +307,8 @@
 </div>
 
 <div style="display:flex; gap:12px; align-items:center; margin-bottom:10px;">
-    <button class="btn-audit-chain" id="btnAuditChain" onclick="auditFullChain()" disabled>
-        🔍 Audit Full Chain
+    <button class="btn-verify-node" id="btnVerifyStep" onclick="verifyCurrentNode()" disabled>
+        ✓ Verify Step 1
     </button>
     <span style="font-size:12px; color:var(--text-muted);" id="chainProgressLabel"></span>
 </div>
@@ -396,6 +348,7 @@ const TARGET_FORMULA  = "{{ target_formula }}";
 
 const UNITS_SPEC = {{ nodes_json|safe }};
 let VERIFIED_CHAIN = {{ verified_chain_json|safe }};
+let VERIFIED_PREFIX = {{ verified_prefix_json|safe }};
 let laneCleared  = {{ lane_cleared|yesno:'true,false' }};
 const STEP_LOCK_THRESHOLD = {{ step_lock_threshold }};
 
@@ -418,56 +371,43 @@ function extractUniqueUnits() {
 const UNIT_OPTIONS_HTML = extractUniqueUnits();
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Draft persistence (non-authoritative convenience cache)
+// Draft persistence for the ACTIVE card only (verified steps live server-side)
 // ─────────────────────────────────────────────────────────────────────────────
 function saveDraft() {
-    if (laneCleared) return;
-    const state = { steps: [] };
-    document.querySelectorAll('#nodeContainer .fraction-card').forEach(card => {
-        const idx = parseInt(card.id.replace('node_', ''), 10);
-        state.steps.push({
-            numVal:  document.getElementById(`num_val_${idx}`)?.value || '',
-            numUnit: document.getElementById(`num_unit_${idx}`)?.value || '',
-            denVal:  document.getElementById(`den_val_${idx}`)?.value || '',
-            denUnit: document.getElementById(`den_unit_${idx}`)?.value || '',
-        });
-    });
+    if (laneCleared || lockedUntil) return;
+    const i = activeNodeIndex;
+    const state = {
+        numVal:  document.getElementById(`num_val_${i}`)?.value || '',
+        numUnit: document.getElementById(`num_unit_${i}`)?.value || '',
+        denVal:  document.getElementById(`den_val_${i}`)?.value || '',
+        denUnit: document.getElementById(`den_unit_${i}`)?.value || '',
+    };
     try { localStorage.setItem(STORE_KEY, JSON.stringify(state)); } catch(e) {}
 }
 
 function restoreDraft() {
     let state;
     try { state = JSON.parse(localStorage.getItem(STORE_KEY)); } catch(e) {}
-    if (!state || !state.steps) return false;
+    if (!state || typeof state !== 'object' || Array.isArray(state)) return false;
 
-    let restored = false;
-    state.steps.forEach((stepData, idx) => {
-        if (idx >= REQUIRED_NODES) return;
-        const numValEl  = document.getElementById(`num_val_${idx}`);
-        if (!numValEl) return;
-        numValEl.value = stepData.numVal || '';
-        const nu = document.getElementById(`num_unit_${idx}`);
-        const dv = document.getElementById(`den_val_${idx}`);
-        const du = document.getElementById(`den_unit_${idx}`);
-        if (nu) nu.value = stepData.numUnit || '';
-        if (dv) dv.value = stepData.denVal || '';
-        if (du) du.value = stepData.denUnit || '';
-        restored = true;
-    });
-    return restored;
+    const i = activeNodeIndex;
+    const numValEl = document.getElementById(`num_val_${i}`);
+    if (!numValEl) return false;
+    numValEl.value = state.numVal || '';
+    const nu = document.getElementById(`num_unit_${i}`);
+    const dv = document.getElementById(`den_val_${i}`);
+    const du = document.getElementById(`den_unit_${i}`);
+    if (nu) nu.value = state.numUnit || '';
+    if (dv) dv.value = state.denVal || '';
+    if (du) du.value = state.denUnit || '';
+    return true;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Card construction
 // ─────────────────────────────────────────────────────────────────────────────
-function appendUserStep(isInteractive = true) {
-    if (activeNodeIndex >= REQUIRED_NODES) {
-        showToast(`This conversion needs exactly ${REQUIRED_NODES} step factor(s).`, 'info');
-        return;
-    }
-
+function spawnCard(idx) {
     const container = document.getElementById('nodeContainer');
-    const idx = activeNodeIndex;
 
     const op = document.createElement('span');
     op.className = 'operator-sign';
@@ -491,57 +431,61 @@ function appendUserStep(isInteractive = true) {
         </div>
     `;
     container.appendChild(card);
+}
 
-    activeNodeIndex++;
-    updateAuditControls();
+function fillCardValues(idx, node) {
+    const set = (f, v) => {
+        const el = document.getElementById(`${f}_${idx}`);
+        if (el) el.value = v ?? '';
+    };
+    set('num_val', node.num_value);
+    set('num_unit', node.num_unit);
+    set('den_val', node.den_value);
+    set('den_unit', node.den_unit);
+}
 
-    if (isInteractive) {
-        updateConsole(`Step ${activeNodeIndex} card added. Choose numerator/denominator units so they cancel diagonally.`);
+function lockCard(idx) {
+    ['num_val', 'num_unit', 'den_val', 'den_unit'].forEach(f => {
+        const el = document.getElementById(`${f}_${idx}`);
+        if (el) el.disabled = true;
+    });
+    const card = document.getElementById(`node_${idx}`);
+    if (card) {
+        card.classList.remove('active-link', 'error-link');
+        card.classList.add('verified-link');
     }
 }
 
-function collectSubmittedNodes() {
-    const nodes = [];
-    for (let i = 0; i < activeNodeIndex; i++) {
-        nodes.push({
-            num_value: parseFloat(document.getElementById(`num_val_${i}`)?.value),
-            num_unit:  document.getElementById(`num_unit_${i}`)?.value || '',
-            den_value: parseFloat(document.getElementById(`den_val_${i}`)?.value),
-            den_unit:  document.getElementById(`den_unit_${i}`)?.value || '',
-        });
-    }
-    return nodes;
-}
-
-function lockAllCards() {
-    for (let i = 0; i < activeNodeIndex; i++) {
-        ['num_val', 'num_unit', 'den_val', 'den_unit'].forEach(f => {
-            const el = document.getElementById(`${f}_${i}`);
-            if (el) el.disabled = true;
-        });
-        const card = document.getElementById(`node_${i}`);
-        if (card) {
-            card.classList.remove('active-link', 'error-link');
-            card.classList.add('verified-link');
-        }
-        applyUnitCancellationVisual(i);
-    }
+function activeCardFilled() {
+    return ['num_val', 'num_unit', 'den_val', 'den_unit'].every(f => {
+        const el = document.getElementById(`${f}_${activeNodeIndex}`);
+        return el && String(el.value).trim() !== '';
+    });
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Chain audit (all grading server-side)
+// Progressive per-step verification (all grading server-side)
 // ─────────────────────────────────────────────────────────────────────────────
-async function auditFullChain() {
-    if (laneCleared) return;
+async function verifyCurrentNode() {
+    if (laneCleared || lockedUntil || !activeCardFilled()) return;
 
+    const btn = document.getElementById('btnVerifyStep');
+    if (btn) btn.disabled = true;
+
+    const idx = activeNodeIndex;
     const payload = {
         problem_id: PROBLEM_ID,
         part_label: PART_LABEL,
-        nodes: collectSubmittedNodes(),
+        node: {
+            num_value: parseFloat(document.getElementById(`num_val_${idx}`)?.value),
+            num_unit:  document.getElementById(`num_unit_${idx}`)?.value || '',
+            den_value: parseFloat(document.getElementById(`den_val_${idx}`)?.value),
+            den_unit:  document.getElementById(`den_unit_${idx}`)?.value || '',
+        },
     };
 
     try {
-        const resp = await fetch('/api/audit-chain/', {
+        const resp = await fetch('/api/verify-node/', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -549,18 +493,19 @@ async function auditFullChain() {
             },
             body: JSON.stringify(payload),
         });
-        const data = await resp.json();
-        handleAuditResponse(data);
+        handleNodeResponse(await resp.json());
     } catch (err) {
-        console.error('[Chain Audit] error:', err);
-        showToast('Error auditing chain. Please try again.', 'err');
+        console.error('[Step Verify] error:', err);
+        showToast('Error verifying step. Please try again.', 'err');
+        updateControls();
     }
 }
 
-function handleAuditResponse(data) {
+function handleNodeResponse(data) {
     if (data.already_cleared) {
         laneCleared = true;
         renderVerifiedReplay();
+        updateControls();
         return;
     }
 
@@ -569,53 +514,47 @@ function handleAuditResponse(data) {
         return;
     }
 
-    renderNodeReports(data.reports || []);
+    const idx = activeNodeIndex;
 
-    if (data.success && data.all_ok) {
-        laneCleared = true;
+    if (data.success && data.correct) {
         try { localStorage.removeItem(STORE_KEY); } catch(e) {}
-        lockAllCards();
-        revealFinalYield(data.correct_answer);
-        updateConsole(`🎉 <strong>Conversion Chain Complete!</strong> All intermediate units cancelled out cleanly, leaving only <code>${TARGET_UNIT} ${TARGET_FORMULA}</code>.`);
+        lockCard(idx);
+        applyUnitCancellationVisual(idx);
+
+        if (data.complete) {
+            laneCleared = true;
+            revealFinalYield(data.correct_answer);
+            updateConsole(`🎉 <strong>Conversion Chain Complete!</strong> All intermediate units cancelled out cleanly, leaving only <code>${TARGET_UNIT} ${TARGET_FORMULA}</code>.`);
+            showToast(data.message, 'ok');
+            updateControls();
+            return;
+        }
+
+        activeNodeIndex++;
+        spawnCard(activeNodeIndex);
+        updateConsole(`<strong style="color:#15803D;">Step ${idx + 1} verified ✓</strong> — the numerator unit carried forward is now <code>${document.getElementById('num_unit_' + idx).value.replace(/_/g, ' ')}</code>. Fill in Step ${activeNodeIndex + 1} so its denominator cancels it.`);
         showToast(data.message, 'ok');
+        updateControls();
         return;
     }
 
-    flashFailingCards(data.reports || []);
-    let consoleMsg = `<strong style="color:#FCA5A5;">Audit failed.</strong> ${data.message || ''}`;
+    // Failed attempt
+    const card = document.getElementById(`node_${idx}`);
+    if (card) {
+        card.classList.remove('active-link');
+        card.classList.add('error-link');
+        setTimeout(() => {
+            card.classList.remove('error-link');
+            card.classList.add('active-link');
+        }, 1400);
+    }
+
+    let consoleMsg = `<strong style="color:#B91C1C;">${data.unit_ok === false ? 'Unit mismatch.' : 'Value check failed.'}</strong> ${data.message || ''}`;
     if (data.rolling_accuracy !== undefined && data.rolling_accuracy !== null && data.rolling_accuracy < STEP_LOCK_THRESHOLD) {
         consoleMsg += `<br><em>Rolling accuracy: ${data.rolling_accuracy}% — at risk of step lock (threshold ${STEP_LOCK_THRESHOLD}%). Slow down and use the strategy guide.</em>`;
     }
     updateConsole(consoleMsg);
-}
-
-function flashFailingCards(reports) {
-    reports.forEach(rep => {
-        if (rep.unit_ok === false || rep.value_ok === false) {
-            const card = document.getElementById(`node_${rep.index}`);
-            if (!card) return;
-            card.classList.remove('active-link');
-            card.classList.add('error-link');
-            setTimeout(() => {
-                card.classList.remove('error-link');
-                card.classList.add('active-link');
-            }, 1400);
-        }
-    });
-}
-
-function renderNodeReports(reports) {
-    const holder = document.getElementById('nodeReports');
-    if (!holder) return;
-    holder.innerHTML = reports.map(rep => {
-        const unitChip = rep.unit_ok === null
-            ? ''
-            : `<span class="report-chip ${rep.unit_ok ? 'report-ok' : 'report-bad'}">UNITS ${rep.unit_ok ? '✓' : '✗'}</span>`;
-        const valChip = rep.value_ok === null || rep.unit_ok === false
-            ? `<span class="report-chip report-bad">VALUE —</span>`
-            : `<span class="report-chip ${rep.value_ok ? 'report-ok' : 'report-bad'}">VALUE ${rep.value_ok ? '✓' : '✗'}</span>`;
-        return `<span class="node-report-row">Step ${rep.index + 1}: ${unitChip}${valChip}</span>`;
-    }).join('');
+    updateControls();
 }
 
 function engageStepLock(seconds, message) {
@@ -630,35 +569,32 @@ function engageStepLock(seconds, message) {
         if (remaining <= 0) {
             banner.style.display = 'none';
             lockedUntil = null;
-            updateAuditControls();
-            updateConsole('Step lock released. Re-read the concept check, rebuild your chain carefully, then audit.');
+            updateControls();
+            updateConsole('Step lock released. Re-read the concept check and verify the current step carefully.');
             return;
         }
         textEl.textContent = ` Inputs are locked for ${remaining}s. Rolling accuracy fell below ${STEP_LOCK_THRESHOLD}% — review the strategy guide above.`;
         setTimeout(tick, 500);
     };
     tick();
-    updateAuditControls();
+    updateControls();
 }
 
-function updateAuditControls() {
-    const addBtn = document.getElementById('btnAddNode');
-    const auditBtn = document.getElementById('btnAuditChain');
+function updateControls() {
+    const btn = document.getElementById('btnVerifyStep');
     const label = document.getElementById('chainProgressLabel');
 
     if (laneCleared) {
-        addBtn.style.display = 'none';
-        auditBtn.style.display = 'none';
+        btn.style.display = 'none';
         label.textContent = 'Part verified.';
         document.getElementById('actionsBar').style.display = 'flex';
         return;
     }
 
-    addBtn.style.display = activeNodeIndex < REQUIRED_NODES ? 'flex' : 'none';
-    const complete = activeNodeIndex === REQUIRED_NODES;
-    auditBtn.disabled = !complete || !!lockedUntil;
-    auditBtn.style.display = activeNodeIndex > 0 ? 'inline-block' : 'none';
-    label.textContent = `${activeNodeIndex} / ${REQUIRED_NODES} cards placed${complete ? ' — ready to audit' : ''}`;
+    btn.style.display = 'inline-block';
+    btn.textContent = `✓ Verify Step ${activeNodeIndex + 1}`;
+    btn.disabled = !activeCardFilled() || !!lockedUntil;
+    label.textContent = `${activeNodeIndex} / ${REQUIRED_NODES} steps verified`;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -692,20 +628,16 @@ function revealFinalYield(answerString) {
 // Verified replay + boot
 // ─────────────────────────────────────────────────────────────────────────────
 function renderVerifiedReplay() {
-    if (!VERIFIED_CHAIN || !VERIFIED_CHAIN.length) return;
-    VERIFIED_CHAIN.forEach((n, idx) => {
-        appendUserStep(false);
-        const set = (f, v) => {
-            const el = document.getElementById(`${f}_${idx}`);
-            if (el) el.value = v ?? '';
-        };
-        set('num_val', n.num_value);
-        set('num_unit', n.num_unit);
-        set('den_val', n.den_value);
-        set('den_unit', n.den_unit);
-    });
+    if (VERIFIED_CHAIN && VERIFIED_CHAIN.length) {
+        VERIFIED_CHAIN.forEach((n, idx) => {
+            spawnCard(idx);
+            fillCardValues(idx, n);
+            lockCard(idx);
+            applyUnitCancellationVisual(idx);
+        });
+        activeNodeIndex = VERIFIED_CHAIN.length;
+    }
     laneCleared = true;
-    lockAllCards();
     revealFinalYield({% if verified_answer %}"{{ verified_answer|escapejs }}"{% else %}null{% endif %});
     updateConsole('🎉 <strong>Problem Completed Previously:</strong> Review your verified step factors and cancellation chain above.');
 }
@@ -713,21 +645,42 @@ function renderVerifiedReplay() {
 document.addEventListener('input', e => {
     if (e.target.classList.contains('slot-input') || e.target.classList.contains('unit-select')) {
         saveDraft();
+        updateControls();
     }
+});
+
+document.addEventListener('keydown', e => {
+    if (e.key !== 'Enter') return;
+    const t = e.target;
+    if (!t.classList || !(t.classList.contains('slot-input') || t.classList.contains('unit-select'))) return;
+    const card = t.closest('.fraction-card');
+    if (!card || card.id !== `node_${activeNodeIndex}`) return;
+    e.preventDefault();
+    verifyCurrentNode();
 });
 
 if (laneCleared) {
     renderVerifiedReplay();
 } else {
-    while (activeNodeIndex < REQUIRED_NODES) {
-        appendUserStep(false);
-    }
-    const restored = restoreDraft();
-    if (restored) {
-        updateConsole('Draft inputs restored. Complete any missing pieces, then run the audit.');
+    VERIFIED_PREFIX.forEach((n, idx) => {
+        spawnCard(idx);
+        fillCardValues(idx, n);
+        lockCard(idx);
+        applyUnitCancellationVisual(idx);
+    });
+    activeNodeIndex = VERIFIED_PREFIX.length;
+
+    if (activeNodeIndex < REQUIRED_NODES) {
+        spawnCard(activeNodeIndex);
+        const restored = restoreDraft();
+        if (restored) {
+            updateConsole(`Welcome back. Steps 1–${activeNodeIndex} are already verified — your draft for Step ${activeNodeIndex + 1} was restored. Finish it and press <strong>✓ Verify Step</strong>.`);
+        } else if (activeNodeIndex > 0) {
+            updateConsole(`Steps 1–${activeNodeIndex} verified ✓. Fill in Step ${activeNodeIndex + 1} so its denominator cancels the previous numerator unit.`);
+        }
     }
 }
-updateAuditControls();
+updateControls();
 
 let _toastTimeout;
 function showToast(msg, type = 'info') {
@@ -739,15 +692,15 @@ function showToast(msg, type = 'info') {
             position:fixed; bottom:28px; left:50%; transform:translateX(-50%);
             padding:10px 22px; border-radius:5px; font-size:14px; font-weight:bold;
             z-index:9999; transition:opacity 0.3s; pointer-events:none;
-            box-shadow:0 4px 16px rgba(0,0,0,0.5); max-width:520px; text-align:center;
+            box-shadow:0 4px 16px rgba(42,52,76,0.18); max-width:520px; text-align:center;
         `;
         document.body.appendChild(toast);
     }
     toast.textContent = msg;
     toast.style.opacity = '1';
-    toast.style.background = type === 'ok' ? '#065F46' : type === 'err' ? '#7F1D1D' : '#1E222B';
-    toast.style.color = type === 'ok' ? '#A7F3D0' : type === 'err' ? '#FCA5A5' : '#E2E8F0';
-    toast.style.border = `1px solid ${type === 'ok' ? 'var(--combo-green)' : type === 'err' ? 'var(--coral-red)' : '#2A303C'}`;
+    toast.style.background = type === 'ok' ? '#DCFCE7' : type === 'err' ? '#FEE2E2' : '#FFFFFF';
+    toast.style.color = type === 'ok' ? '#166534' : type === 'err' ? '#991B1B' : '#2a344c';
+    toast.style.border = `1px solid ${type === 'ok' ? 'var(--combo-green)' : type === 'err' ? 'var(--coral-red)' : 'var(--border)'}`;
     clearTimeout(_toastTimeout);
     _toastTimeout = setTimeout(() => { toast.style.opacity = '0'; }, 3200);
 }

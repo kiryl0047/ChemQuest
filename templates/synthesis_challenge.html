@@ -5,25 +5,25 @@
     .exam-header {
         border-left: 4px solid var(--combo-green);
         padding: 15px 20px;
-        background: #171A21;
+        background: var(--bg-slate);
         border-radius: 4px;
         margin-bottom: 25px;
     }
     .exam-item {
         background: var(--bg-dark);
-        border: 1px solid #2A303C;
+        border: 1px solid var(--border);
         padding: 22px;
         border-radius: 8px;
         margin-bottom: 25px;
     }
-    .exam-item.verified-item { border-color: #059669 !important; }
+    .exam-item.verified-item { border-color: var(--combo-green) !important; }
     .exam-item.failed-item   { border-color: var(--coral-red) !important; }
     .row-layout {
         display: flex;
         align-items: center;
         flex-wrap: wrap;
         gap: 10px;
-        background: #0F1115;
+        background: var(--bg-slate);
         padding: 15px;
         border-radius: 6px;
     }
@@ -31,29 +31,29 @@
         display: flex;
         flex-direction: column;
         align-items: center;
-        background: #141822;
-        border: 1px solid #222A3B;
+        background: var(--bg-slate);
+        border: 1px solid var(--border);
         border-radius: 4px;
         min-width: 110px;
     }
-    .fraction-bar { width: 100%; height: 2px; background: #222A3B; }
+    .fraction-bar { width: 100%; height: 2px; background: #8A93AB; }
     .fraction-input-cell {
-        width: 95px; background: transparent; border: none; color: #FFF;
+        width: 95px; background: transparent; border: none; color: var(--text-light);
         text-align: center; padding: 6px; font-size: 13px;
     }
-    .fraction-input-cell:focus { outline: none; background: rgba(0,240,255,0.02); }
+    .fraction-input-cell:focus { outline: none; background: rgba(var(--accent-rgb),0.06); }
     .fraction-multiply { font-weight: bold; color: var(--text-muted); font-size: 18px; }
     .btn-submit-exam {
         background: var(--combo-green);
         border: none;
-        color: #0F1115;
+        color: #FFFFFF;
         padding: 12px 26px;
         font-size: 14px;
         font-weight: bold;
         border-radius: 4px;
         cursor: pointer;
     }
-    .btn-submit-exam:hover { filter: brightness(1.15); box-shadow: 0 0 14px rgba(0,230,118,0.35); }
+    .btn-submit-exam:hover { filter: brightness(1.1); box-shadow: 0 2px 10px rgba(42,52,76,0.2); }
     .result-banner {
         display: none;
         border-radius: 8px;
@@ -81,11 +81,11 @@
     <div class="exam-item" id="item_{{ forloop.counter0 }}"
          data-problem="{{ item.problem_id }}" data-part="{{ item.part_label }}">
         <div style="display:flex; justify-content:space-between; margin-bottom:12px; flex-wrap:wrap; gap:8px;">
-            <strong style="color:#CBD5E1; font-size:13px;">ITEM {{ forloop.counter }} · {{ item.part_prompt }}</strong>
+            <strong style="color:#3c486a; font-size:13px;">ITEM {{ forloop.counter }} · {{ item.part_prompt }}</strong>
             <span style="font-size:11px; color:var(--text-muted);">{{ item.problem_title }}</span>
         </div>
         <div class="row-layout">
-            <div class="fraction-block" style="border-color:#1E293B;">
+            <div class="fraction-block" style="border-color:var(--border);">
                 <span style="font-size:13px; font-weight:bold; color:var(--cyber-teal); padding:6px;">{{ item.given_quantity }}</span>
                 <div class="fraction-bar"></div>
                 <span style="font-size:11px; color:var(--text-muted); padding:6px;">{{ item.given_unit }} {{ item.given_formula }}</span>
@@ -168,9 +168,9 @@ async function submitExam() {
 
         const banner = document.getElementById('resultBanner');
         banner.style.display = 'block';
-        banner.style.background = data.passed ? 'rgba(4,120,87,0.15)' : 'rgba(127,29,29,0.2)';
-        banner.style.border = `1px solid ${data.passed ? '#059669' : '#7F1D1D'}`;
-        banner.style.color = data.passed ? '#6EE7B7' : '#FCA5A5';
+    banner.style.background = data.passed ? 'rgba(var(--success-rgb),0.12)' : 'rgba(var(--danger-rgb),0.1)';
+    banner.style.border = `1px solid ${data.passed ? 'var(--combo-green)' : 'var(--coral-red)'}`;
+    banner.style.color = data.passed ? '#166534' : '#991B1B';
         banner.textContent = data.passed
             ? `✓ PASSED — ${data.score_pct}% retention confirmed! Credential awarded.`
             : `Score ${data.score_pct}% — below the ${data.threshold}% threshold. Review your weak skills and retry anytime.`;
@@ -190,8 +190,8 @@ function showToast(message, type) {
     toast.style.cssText = `
         position: fixed; bottom: 24px; right: 24px; z-index: 9999;
         padding: 12px 20px; border-radius: 6px; font-size: 13px; font-weight: bold; color: white;
-        background: ${type === 'ok' ? '#065F46' : '#7F1D1D'};
-        border: 1px solid ${type === 'ok' ? '#34D399' : '#F87171'};
+    background: ${type === 'ok' ? '#DCFCE7' : '#FEE2E2'};
+    border: 1px solid ${type === 'ok' ? '#15803D' : '#DC2626'};
     `;
     document.body.appendChild(toast);
     setTimeout(() => toast.remove(), 3200);

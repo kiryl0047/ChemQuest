@@ -5,7 +5,7 @@
     .inst-header {
         border-left: 4px solid var(--combo-green);
         padding: 15px 20px;
-        background: #171A21;
+        background: var(--bg-slate);
         border-radius: 4px;
         margin-bottom: 25px;
     }
@@ -16,8 +16,8 @@
         margin-bottom: 30px;
     }
     .cohort-metric {
-        background: #171A21;
-        border: 1px solid #2A303C;
+        background: var(--bg-slate);
+        border: 1px solid var(--border);
         border-radius: 6px;
         padding: 18px;
         text-align: center;
@@ -25,8 +25,8 @@
     .cohort-metric .num { font-size: 30px; font-weight: bold; color: var(--cyber-teal); margin-top: 6px; }
 
     .heatmap-wrap {
-        background: #171A21;
-        border: 1px solid #2A303C;
+        background: var(--bg-slate);
+        border: 1px solid var(--border);
         border-radius: 8px;
         padding: 22px;
         overflow-x: auto;
@@ -38,12 +38,12 @@
         font-size: 13px;
     }
     table.heatmap th, table.heatmap td {
-        border: 1px solid #2A303C;
+        border: 1px solid var(--border);
         padding: 9px 12px;
         text-align: center;
     }
     table.heatmap th {
-        background: #0F1115;
+        background: var(--surface-header);
         color: var(--text-muted);
         font-size: 11px;
         letter-spacing: 0.5px;
@@ -55,10 +55,10 @@
         font-weight: bold;
         white-space: nowrap;
     }
-    .cell-mastered   { background: rgba(0, 200, 100, 0.22); color: #34D399; font-weight: bold; }
-    .cell-developing { background: rgba(255, 214, 0, 0.16); color: var(--constant-gold); font-weight: bold; }
-    .cell-critical   { background: rgba(255, 61, 0, 0.2);  color: #FCA5A5; font-weight: bold; }
-    .cell-none       { color: #4B5563; }
+    .cell-mastered   { background: #DCFCE7; color: #15803D; font-weight: bold; }
+    .cell-developing { background: rgba(var(--warning-rgb), 0.12); color: var(--constant-gold); font-weight: bold; }
+    .cell-critical   { background: #FEE2E2; color: #B91C1C; font-weight: bold; }
+    .cell-none       { color: #8A93AB; }
 
     .legend-row { display: flex; gap: 16px; margin-top: 14px; flex-wrap: wrap; align-items: center; }
     .legend-swatch { width: 12px; height: 12px; border-radius: 3px; display: inline-block; margin-right: 5px; vertical-align: middle; }
@@ -118,7 +118,7 @@
                     </td>
                     {% endwith %}
                 {% endfor %}
-                <td style="color:#94A3B8; font-size:12px;">{{ row.weakest|default:"—" }}</td>
+                <td style="color:var(--text-muted); font-size:12px;">{{ row.weakest|default:"—" }}</td>
             </tr>
             {% empty %}
             <tr><td colspan="{{ conversion_types|length|add:5 }}" style="color:var(--text-muted); padding:24px;">
