@@ -17,3 +17,8 @@ media/
 
 .vercel
 .env*
+
+# AI agent skills (local tooling only)
+.agents/
+.claude/
+skills-lock.json
