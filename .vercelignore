@@ -1,0 +1,10 @@
+env/
+.env*
+.vercel/
+.git/
+.idea/
+.vscode/
+db.sqlite3
+staticfiles/
+__pycache__/
+*.pyc
