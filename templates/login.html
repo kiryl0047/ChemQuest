@@ -94,6 +94,19 @@
         color: var(--coral-red);
         margin-bottom: 20px;
     }
+
+    .auth-alt {
+        margin-top: 18px;
+        text-align: center;
+        font-size: 13px;
+        color: var(--text-muted);
+    }
+
+    .auth-alt a {
+        color: var(--cyber-teal);
+        text-decoration: none;
+        font-weight: bold;
+    }
 </style>
 
 <div class="login-card">
@@ -136,5 +149,7 @@
 
         <button type="submit" class="btn-login">LOGIN</button>
     </form>
+
+    <p class="auth-alt">New to ChemQuest? <a href="{% url 'register' %}">Create an account</a></p>
 </div>
 {% endblock content %}

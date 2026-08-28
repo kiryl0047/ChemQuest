@@ -4,7 +4,7 @@ import re
 from datetime import timedelta
 from itertools import permutations
 
-from django.contrib.auth.forms import AuthenticationForm
+from django.contrib.auth.forms import AuthenticationForm, UserCreationForm
 from django.contrib.auth.models import User
 from django.http import HttpResponse, JsonResponse
 from django.contrib.admin.views.decorators import staff_member_required
@@ -87,6 +87,23 @@ def student_login(request):
 def student_logout(request):
     logout(request)
     return redirect('student_login')
+
+
+def register(request):
+    if request.user.is_authenticated:
+        return redirect('problem_lobby')
+
+    if request.method == 'POST':
+        form = UserCreationForm(request.POST)
+        if form.is_valid():
+            user = form.save()
+            UserProfile.objects.get_or_create(user=user)
+            login(request, user)
+            return redirect('problem_lobby')
+    else:
+        form = UserCreationForm()
+
+    return render(request, 'register.html', {'form': form})
 
 
 # ===========================================================================

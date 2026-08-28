@@ -471,3 +471,35 @@ class SynthesisTests(BaseFixture):
                            ]},
                            content_type='application/json').json()
         self.assertTrue(resp['success'])
+
+
+class RegistrationTests(TestCase):
+
+    def test_register_page_loads(self):
+        resp = self.client.get(reverse('register'))
+        self.assertEqual(resp.status_code, 200)
+        self.assertContains(resp, 'REGISTER')
+
+    def test_register_creates_user_and_profiles_logged_in(self):
+        resp = self.client.post(reverse('register'), {
+            'username': 'newbie',
+            'password1': 'CorrectHorse2!',
+            'password2': 'CorrectHorse2!',
+        })
+        self.assertRedirects(resp, reverse('problem_lobby'))
+        self.assertTrue(User.objects.filter(username='newbie').exists())
+
+    def test_register_mismatched_passwords_fails(self):
+        resp = self.client.post(reverse('register'), {
+            'username': 'badpass',
+            'password1': 'CorrectHorse2!',
+            'password2': 'DifferentPass3!',
+        })
+        self.assertEqual(resp.status_code, 200)
+        self.assertFalse(User.objects.filter(username='badpass').exists())
+
+    def test_register_redirects_when_authenticated(self):
+        User.objects.create_user('existing', password='pw')
+        self.client.login(username='existing', password='pw')
+        resp = self.client.get(reverse('register'))
+        self.assertRedirects(resp, reverse('problem_lobby'))
