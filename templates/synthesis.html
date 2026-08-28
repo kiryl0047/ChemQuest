@@ -22,6 +22,14 @@
     .syn-passed  { background: rgba(var(--success-rgb),0.12); color: #15803D; border: 1px solid var(--combo-green); }
     .syn-current { background: rgba(var(--warning-rgb),0.1); color: var(--constant-gold); border: 1px solid var(--constant-gold); }
     .syn-locked  { background: var(--surface-sunken); color: var(--text-muted); border: 1px solid var(--border); }
+
+    @media (max-width: 768px) {
+        .syn-card { padding: 16px; }
+    }
+
+    @media (max-width: 480px) {
+        .syn-entry { padding: 12px 14px; }
+    }
 </style>
 
 <div style="max-width: 900px; margin: 0 auto; padding: 20px;">

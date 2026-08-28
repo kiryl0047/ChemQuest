@@ -215,6 +215,21 @@
     }
     .nav-btn.primary { border-color: var(--constant-gold); color: var(--constant-gold); }
     .nav-btn:hover { opacity: 0.8; }
+
+    @media (max-width: 768px) {
+        .bridge-builder-chasm { padding: 12px; }
+        .starting-node, .terminal-yield-node { min-width: 100px; padding: 12px 12px; }
+        .fraction-card { width: 178px; padding: 12px; }
+        .slot-input { width: 56px; }
+        .unit-select { max-width: 110px; }
+        .verify-row { flex-wrap: wrap; }
+    }
+
+    @media (max-width: 480px) {
+        .fraction-card { width: 160px; }
+        .starting-node, .terminal-yield-node { min-width: 92px; }
+        .chain-row { gap: 10px; }
+    }
 </style>
 
 <!-- ── Header ── -->

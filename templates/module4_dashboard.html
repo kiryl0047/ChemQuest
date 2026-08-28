@@ -187,6 +187,20 @@
         box-shadow: 0 1px 8px rgba(var(--warning-rgb), 0.4);
     }
 
+    @media (max-width: 768px) {
+        .dashboard-grid, .trend-grid { gap: 14px; }
+        .metric-card, .diagnostic-panel, .trend-panel { padding: 16px; }
+    }
+
+    @media (max-width: 640px) {
+        .dashboard-grid { grid-template-columns: 1fr; }
+        .trend-grid { grid-template-columns: 1fr; }
+    }
+
+    @media (max-width: 480px) {
+        .metric-num { font-size: 30px; }
+    }
+
 </style>
 
 <!-- ── Dashboard Concept Check ── -->
@@ -393,7 +407,7 @@
     {% for problem in recommended_problems %}
     <div class="reentry-card">
         <div>
-            <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 6px;">
+            <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 6px; flex-wrap: wrap;">
                 <h4 style="margin: 0; color: var(--text-light);">{{ problem.title }}</h4>
                 {% if problem.concept_label %}
                     <span class="status-badge status-unmapped">{{ problem.concept_label }}</span>

@@ -488,6 +488,29 @@
     .pt-legend-item { display:flex; align-items:center; gap:5px; font-size:10px;
                     color:var(--text-muted); font-weight:bold; letter-spacing:0.5px; }
     .pt-legend-dot  { width:8px; height:8px; border-radius:2px; flex-shrink:0; opacity:0.85; }
+
+    .guide-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+        gap: 12px;
+    }
+
+    @media (max-width: 768px) {
+        .atom-card-top { flex-wrap: wrap; row-gap: 4px; }
+        .atom-counts-row { flex-wrap: wrap; gap: 6px; }
+        .mastery-label { white-space: normal; }
+        .pt-tip { white-space: normal; max-width: 150px; }
+        .ledger-card { padding: 14px; }
+        .problem-prompt { font-size: 15px; }
+    }
+
+    @media (max-width: 480px) {
+        .atom-hud-grid, .guide-grid {
+            grid-template-columns: 1fr;
+        }
+        .pt-scroll { overflow-x: auto; }
+        .eq-group { flex-wrap: wrap; }
+    }
 </style>
 
 <!-- ── Ledger Header ── -->
@@ -541,7 +564,7 @@
 <details class="edu-expander" id="guideBalancing">
     <summary>How to Balance This Reaction (Simple 3-Step Guide)</summary>
     <div class="edu-content">
-        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 12px;">
+        <div class="guide-grid">
             <div class="cc-tip-card">
                 <div class="cc-tip-card-title">
                     1. The Core Rule
@@ -643,7 +666,7 @@
     <details class="edu-expander" id="guideMolarMass">
         <summary>How to Calculate Compound Molar Mass</summary>
         <div class="edu-content">
-            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 12px;">
+            <div class="guide-grid">
                 <div class="cc-tip-card">
                     <div class="cc-tip-card-title" style="color: var(--constant-gold);">
                         The "Recipe" Formula
@@ -762,10 +785,14 @@
         <div id="ptLegend" style="display:flex; flex-wrap:wrap; gap:8px; margin-bottom:12px;"></div>
 
         <!-- Main grid -->
-        <div id="ptGrid" style="display:grid; grid-template-columns:repeat(18,1fr); gap:2px; margin-bottom:6px;"></div>
+        <div class="pt-scroll" style="overflow-x:auto; margin-bottom:6px;">
+            <div id="ptGrid" style="display:grid; grid-template-columns:repeat(18,minmax(30px,1fr)); gap:2px;"></div>
+        </div>
 
         <!-- Footnote rows (lanthanides + actinides) -->
-        <div id="ptFootnote" style="display:grid; grid-template-columns:repeat(18,1fr); gap:2px;"></div>
+        <div class="pt-scroll" style="overflow-x:auto; margin-bottom:6px;">
+            <div id="ptFootnote" style="display:grid; grid-template-columns:repeat(18,minmax(30px,1fr)); gap:2px;"></div>
+        </div>
     </div>
 </div>
 

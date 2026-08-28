@@ -250,6 +250,19 @@
         from { opacity: 0; transform: translateY(-15px); }
         to { opacity: 1; transform: translateY(0); }
     }
+
+    @media (max-width: 768px) {
+        .problem-card { padding: 16px; }
+        .problem-card-header { flex-wrap: wrap; gap: 8px; }
+        .modal-box { padding: 18px; }
+        .modal-actions { flex-wrap: wrap; }
+    }
+
+    @media (max-width: 480px) {
+        .problem-title { font-size: 16px; }
+        .modal-actions { flex-direction: column; align-items: stretch; }
+        .modal-actions .btn-modal { width: 100%; text-align: center; }
+    }
 </style>
 
 <div class="lobby-header">
