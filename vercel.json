@@ -1,8 +1,0 @@
-{
-  "buildCommand": "python manage.py migrate --noinput && python manage.py collectstatic --noinput",
-  "functions": {
-    "core/wsgi.py": {
-      "maxDuration": 30
-    }
-  }
-}
