@@ -14,6 +14,7 @@ from django.views.decorators.csrf import csrf_exempt
 from django.contrib.auth import login, logout
 from django.contrib.auth.decorators import login_required
 from django.shortcuts import get_object_or_404, redirect, render
+from django.urls import reverse
 
 from .models import (
     StoichiometryProblem, ProblemPart, StudentTelemetryLog,
@@ -873,6 +874,12 @@ def limiting_workspace(request, prob_id):
 
             if is_correct:
                 progress.deduction_cleared = True
+                progress.limiting_reagent = limiting_reagent or ''
+                progress.theoretical_yield = str(theoretical_yield) if theoretical_yield not in (None, '') else ''
+                try:
+                    progress.excess_remaining_json = json.dumps(excess_remaining)
+                except (TypeError, ValueError):
+                    progress.excess_remaining_json = ''
                 progress.save()
                 _award_xp(request, XP_PER_DEDUCTION)
                 return JsonResponse({
@@ -957,6 +964,9 @@ def limiting_workspace(request, prob_id):
         'excess_formulas_json': json.dumps(excess_formulas),
         'comparison_verified':  progress.yield_comparison_verified,
         'deduction_cleared':    progress.deduction_cleared,
+        'deduction_limiting':   progress.limiting_reagent,
+        'deduction_yield':      progress.theoretical_yield,
+        'deduction_excess':     progress.excess_remaining_json or '{}',
     }
     return render(request, 'module3_limiting.html', context)
 
@@ -1186,6 +1196,9 @@ def dashboard_export_pdf(request):
     from reportlab.pdfgen import canvas
 
     ctx = _dashboard_context(request.user)
+    if not ctx['has_history']:
+        return redirect(f"{reverse('student_dashboard')}?export=empty")
+
     buffer = BytesIO()
     pdf = canvas.Canvas(buffer, pagesize=letter)
     width, height = letter

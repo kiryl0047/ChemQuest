@@ -38,15 +38,33 @@
 
     .bridge-builder-chasm {
         display: flex;
-        align-items: center;
-        gap: 14px;
-        overflow-x: auto;
+        flex-direction: column;
+        align-items: stretch;
+        gap: 18px;
+        overflow: hidden;
         padding: 22px;
         background: var(--bg-dark);
         border: 1px dashed var(--text-muted);
         border-radius: 8px;
         margin-bottom: 25px;
-        min-height: 220px;
+    }
+
+    .chain-row {
+        display: flex;
+        align-items: center;
+        gap: 14px;
+        overflow-x: auto;
+        padding-bottom: 4px;
+    }
+
+    .verify-row {
+        display: flex;
+        gap: 12px;
+        align-items: center;
+    }
+
+    #chainCanvas .feedback-box {
+        margin-bottom: 0;
     }
 
     .starting-node, .terminal-yield-node {
@@ -268,18 +286,6 @@
     </div>
 </details>
 
-<!-- ── Tutor Console ── -->
-<div class="feedback-box" id="explanationConsole">
-    <strong style="color:var(--cyber-teal);">TUTOR CONSOLE:</strong>
-    <span id="explanationText">
-        Work through this conversion one step at a time. Fill in step factor
-        (<span id="requiredNodeCount">{{ node_count }}</span> total) so its denominator cancels
-        the previous unit diagonally, press <strong>&#10003; Verify Step</strong>, and the next
-        fraction card will unlock.
-    </span>
-    <div id="nodeReports" style="margin-top:10px;"></div>
-</div>
-
 <!-- ── Step-Lock Banner ── -->
 <div class="lock-banner" id="lockBanner">
     <strong style="color:var(--coral-red);">⏳ STEP LOCK ENGAGED</strong>
@@ -288,29 +294,42 @@
 
 <!-- ── Interactive Conversion Chain Canvas ── -->
 <div class="bridge-builder-chasm" id="chainCanvas">
-    <div class="starting-node">
-        <span style="font-size:18px; font-weight:bold; display:block;">
-            {{ given_quantity }} <span>{{ given_unit }}</span>
+    <div class="feedback-box" id="explanationConsole">
+        <strong style="color:var(--cyber-teal);">TUTOR CONSOLE:</strong>
+        <span id="explanationText">
+            Work through this conversion one step at a time. Fill in step factor
+            (<span id="requiredNodeCount">{{ node_count }}</span> total) so its denominator cancels
+            the previous unit diagonally, press <strong>&#10003; Verify Step</strong>, and the next
+            fraction card will unlock.
         </span>
-        <span style="color:var(--text-muted); font-size:12px;">{{ given_formula }} (Given)</span>
+        <div id="nodeReports" style="margin-top:10px;"></div>
     </div>
 
-    <div id="nodeContainer" style="display:contents;"></div>
+    <div class="chain-row" id="chainRow">
+        <div class="starting-node">
+            <span style="font-size:18px; font-weight:bold; display:block;">
+                {{ given_quantity }} <span>{{ given_unit }}</span>
+            </span>
+            <span style="color:var(--text-muted); font-size:12px;">{{ given_formula }} (Given)</span>
+        </div>
 
-    <span class="operator-sign" id="op_eq" style="display:none;">＝</span>
-    <div class="terminal-yield-node" id="yieldNode">
-        <span style="font-size:18px; font-weight:bold; display:block; color:var(--constant-gold);" id="yieldValue">—</span>
-        <span style="color:var(--text-muted); font-size:12px;">
-            {{ target_unit }} {{ target_formula }} (Calculated Yield)
-        </span>
+        <div id="nodeContainer" style="display:contents;"></div>
+
+        <span class="operator-sign" id="op_eq" style="display:none;">＝</span>
+        <div class="terminal-yield-node" id="yieldNode">
+            <span style="font-size:18px; font-weight:bold; display:block; color:var(--constant-gold);" id="yieldValue">—</span>
+            <span style="color:var(--text-muted); font-size:12px;">
+                {{ target_unit }} {{ target_formula }} (Calculated Yield)
+            </span>
+        </div>
     </div>
-</div>
 
-<div style="display:flex; gap:12px; align-items:center; margin-bottom:10px;">
-    <button class="btn-verify-node" id="btnVerifyStep" onclick="verifyCurrentNode()" disabled>
-        ✓ Verify Step 1
-    </button>
-    <span style="font-size:12px; color:var(--text-muted);" id="chainProgressLabel"></span>
+    <div class="verify-row">
+        <button class="btn-verify-node" id="btnVerifyStep" onclick="verifyCurrentNode()" disabled>
+            ✓ Verify Step 1
+        </button>
+        <span style="font-size:12px; color:var(--text-muted);" id="chainProgressLabel"></span>
+    </div>
 </div>
 
 <div class="module-actions-bar" id="actionsBar">

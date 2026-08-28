@@ -352,13 +352,13 @@
         </a>
         
         {% if problem.has_telemetry %}
-            <button onclick="return performSystemWipe('{{ problem.problem_id }}');"
-            style="text-decoration: none; padding: 8px 12px; border: 1px dashed var(--coral-red); color: var(--coral-red); font-size: 13px; border-radius: 4px; font-weight: bold; display: inline-flex; align-items: center; background-color: transparent; cursor: pointer;">
-                🔄 Retry
+            <button title="Retry" onclick="return performSystemWipe('{{ problem.problem_id }}');"
+            style="text-decoration: none; padding: 6px 10px; border: 1px dashed var(--coral-red); color: var(--coral-red); font-size: 15px; border-radius: 4px; font-weight: bold; display: inline-flex; align-items: center; background-color: transparent; cursor: pointer;">
+                🔄
             </button>
         {% else %}
-            <span style="color: var(--text-muted); font-size: 12px; font-style: italic; border: 1px solid var(--border); padding: 8px 12px; border-radius: 4px; pointer-events: none; opacity: 0.5;">
-                🔒 Locked (Untouched)
+            <span title="Locked (Untouched)" style="color: var(--text-muted); font-size: 15px; border: 1px solid var(--border); padding: 6px 10px; border-radius: 4px; pointer-events: none; opacity: 0.5; display: inline-flex; align-items: center;">
+                🔒
             </span>
         {% endif %}
     </div>

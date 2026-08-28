@@ -368,12 +368,26 @@
         Foundational Launch Targets (Recommended Onboarding)
     {% endif %}
     </span>
+    {% if has_history %}
     <a href="{% url 'dashboard_export_pdf' %}"
        style="color:var(--constant-gold); font-size:12px; text-decoration:none;
               border:1px solid var(--constant-gold); padding:8px 16px; border-radius:4px; font-weight:bold;">
         ⬇ Export Report (PDF)
     </a>
+    {% else %}
+    <span style="color:var(--text-muted); font-size:12px; border:1px dashed var(--border);
+                padding:8px 16px; border-radius:4px; pointer-events:none; opacity:0.6;">
+        No data to export yet
+    </span>
+    {% endif %}
 </h3>
+
+{% if request.GET.export == 'empty' %}
+<div style="margin:18px 0; padding:12px 16px; border:1px dashed var(--coral-red);
+            border-radius:6px; background:rgba(255,80,80,0.06); color:var(--coral-red); font-size:13px;">
+    No performance data has been gathered yet. Complete at least one problem to generate an exportable report.
+</div>
+{% endif %}
 
 <div class="problem-strip">
     {% for problem in recommended_problems %}

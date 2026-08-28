@@ -324,6 +324,10 @@
     let comparisonVerified = {{ comparison_verified|yesno:'true,false' }};
     let deductionCleared = {{ deduction_cleared|yesno:'true,false' }};
 
+    const DEDUCTION_LIMITING = "{{ deduction_limiting|escapejs }}";
+    const DEDUCTION_YIELD = "{{ deduction_yield|escapejs }}";
+    const DEDUCTION_EXCESS = {{ deduction_excess|safe }};
+
     // Server-authoritative lane states (no localStorage)
     const LANE_STATE = {};
     {% for part in processed_parts %}
@@ -389,6 +393,44 @@
         evaluateLockStates();
         buildTrackButtons();
         buildExcessInputs();
+        restoreDeductionState();
+    }
+
+    function restoreDeductionState() {
+        if (!deductionCleared) return;
+
+        const card = document.getElementById('deductionCard');
+        if (!card) return;
+
+        const reagent = document.getElementById('selectLimiting');
+        if (reagent && DEDUCTION_LIMITING) reagent.value = DEDUCTION_LIMITING;
+
+        const yieldInput = document.getElementById('inputYield');
+        if (yieldInput && DEDUCTION_YIELD) yieldInput.value = DEDUCTION_YIELD;
+
+        if (DEDUCTION_EXCESS && typeof DEDUCTION_EXCESS === 'object') {
+            Object.entries(DEDUCTION_EXCESS).forEach(([formula, val]) => {
+                const el = document.getElementById(`excess_${formula}`);
+                if (el && val) el.value = val;
+            });
+        }
+
+        card.querySelectorAll('input, select').forEach(i => i.disabled = true);
+        const commitBtn = card.querySelector('button');
+        if (commitBtn) commitBtn.disabled = true;
+
+        if (!card.querySelector('.answer-reveal-panel')) {
+            const panel = document.createElement('div');
+            panel.className = 'answer-reveal-panel';
+            panel.style.cssText = `
+                margin-top: 16px; padding: 14px 18px; border-radius: 6px;
+                background: rgba(var(--success-rgb), 0.1);
+                border: 1px solid rgba(var(--success-rgb), 0.5);
+                color: var(--combo-green); font-size: 13px; font-weight: bold;
+            `;
+            panel.textContent = '✓ SYNTHESIS BOUNDARY COMMITTED — FINAL ANALYSIS LOCKED (master cleared). These committed values are your record for the problem.';
+            card.appendChild(panel);
+        }
     }
 
     function evaluateLockStates() {

@@ -339,6 +339,12 @@ class LimitingWorkspaceTests(BaseFixture):
                                 content_type='application/json').json()
         self.assertTrue(deduction['success'])
 
+        progress = ProblemProgress.objects.get(user=self.user, problem_id='P_LIM')
+        self.assertTrue(progress.deduction_cleared)
+        self.assertEqual(progress.limiting_reagent, 'H2')
+        self.assertEqual(progress.theoretical_yield, '35.7429')
+        self.assertIn('O2', progress.excess_remaining_json)
+
     def test_wrong_excess_flagged_by_formula(self):
         client = self.complete_m1_for_limiting()
         self.clear_lane(client, 'a')
@@ -391,11 +397,20 @@ class DashboardTests(BaseFixture):
         self.assertEqual(resp.context['total_attempts'], 0)
 
     def test_pdf_export_returns_pdf_bytes(self):
+        StudentTelemetryLog.objects.create(
+            user=self.user, problem_id='P_TST', part_label='balance',
+            sub_step='1A', module_phase=1, is_correct=True, attempts_count=0)
         client = self.login()
         resp = client.get(reverse('dashboard_export_pdf'))
         self.assertEqual(resp.status_code, 200)
         self.assertEqual(resp['Content-Type'], 'application/pdf')
         self.assertTrue(resp.content.startswith(b'%PDF'))
+
+    def test_pdf_export_blocked_when_no_history(self):
+        client = self.login()
+        resp = client.get(reverse('dashboard_export_pdf'))
+        self.assertEqual(resp.status_code, 302)
+        self.assertIn('export=empty', resp.url)
 
     def test_instructor_dashboard_staff_only(self):
         staff = User.objects.create_user('teacher', password='pass12345',

@@ -251,6 +251,9 @@ class ProblemProgress(models.Model):
     yield_comparison_verified = models.BooleanField(default=False)
     deduction_cleared       = models.BooleanField(default=False)
     synthesis_passed        = models.BooleanField(default=False)
+    limiting_reagent        = models.CharField(max_length=50, blank=True, default='')
+    theoretical_yield       = models.CharField(max_length=50, blank=True, default='')
+    excess_remaining_json   = models.TextField(blank=True, default='')
     updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:

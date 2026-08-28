@@ -329,38 +329,25 @@
                 <a href="{% url 'instructor_dashboard' %}" style="color:var(--green-bright); font-size:13px; text-decoration:none; border:1px solid var(--green-bright); padding:3px 9px; border-radius:3px;">Instructor</a>
             </span>
             {% endif %}
-        {% endif %}
 
-        <span id="xp-level-display">LVL {{ user_level }}</span>
-        <span class="xp-display" id="xp-total-display">XP: {{ user_total_xp }}</span>
+            <span id="xp-level-display">LVL {{ user_level }}</span>
+            <span class="xp-display" id="xp-total-display">XP: {{ user_total_xp }}</span>
 
-        <!-- XP progress bar -->
-        <div style="width:110px; height:6px; background:rgba(238,240,246,0.25); border-radius:3px;
-                    overflow:hidden; cursor:default;"
-             title="{{ user_xp_into_level }} / 500 XP into level {{ user_level }}">
-            <div id="xp-bar-fill"
-                 style="width:{{ user_level_progress_pct }}%; height:100%;
-                        background:var(--gold-bright); border-radius:3px;
-                        transition:width 0.5s ease;"></div>
-        </div>
+            <!-- XP progress bar -->
+            <div style="width:110px; height:6px; background:rgba(238,240,246,0.25); border-radius:3px;
+                        overflow:hidden; cursor:default;"
+                 title="{{ user_xp_into_level }} / 500 XP into level {{ user_level }}">
+                <div id="xp-bar-fill"
+                     style="width:{{ user_level_progress_pct }}%; height:100%;
+                            background:var(--gold-bright); border-radius:3px;
+                            transition:width 0.5s ease;"></div>
+            </div>
 
-        {% if request.user.is_authenticated %}
-        <a href="{% url 'student_logout' %}"
-           style="color:var(--on-navy-muted); font-size:12px; text-decoration:none;
-                  border:1px solid rgba(238,240,246,0.25); padding:3px 9px; border-radius:3px;">
-            Logout
-        </a>
-        {% else %}
-        <a href="{% url 'student_login' %}"
-           style="color:var(--accent-bright); font-size:12px; text-decoration:none;
-                  border:1px solid var(--accent-bright); padding:3px 9px; border-radius:3px;">
-            Login
-        </a>
-        <a href="{% url 'register' %}"
-           style="color:var(--on-navy-muted); font-size:12px; text-decoration:none;
-                  border:1px solid rgba(238,240,246,0.25); padding:3px 9px; border-radius:3px;">
-            Register
-        </a>
+            <a href="{% url 'student_logout' %}"
+               style="color:var(--on-navy-muted); font-size:12px; text-decoration:none;
+                      border:1px solid rgba(238,240,246,0.25); padding:3px 9px; border-radius:3px;">
+                Logout
+            </a>
         {% endif %}
     </div>
 </header>
