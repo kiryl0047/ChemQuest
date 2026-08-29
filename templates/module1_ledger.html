@@ -737,18 +737,6 @@
     </div>
 
     <div style="display: flex; align-items: center; gap: 15px; margin-top: 12px; flex-wrap: wrap;">
-        <span class="mastery-label" id="masteryLabel">Mastery: 0 / 5</span>
-        <div class="mastery-bar" style="flex: 1; max-width: 180px;">
-            <div class="mastery-bar-fill" id="masteryFill" style="width: 0%;"></div>
-        </div>
-        <button class="btn-action btn-quick-harvest" id="btnQuickHarvest"
-                style="border-color: var(--text-muted); color: var(--text-muted); font-size: 12px;"
-                disabled onclick="quickHarvest()">
-            &#9889; Quick-Harvest (Review)
-        </button>
-    </div>
-
-    <div style="display: flex; align-items: center; gap: 15px; margin-top: 8px; flex-wrap: wrap;">
         <button class="btn-action"
                 style="border-color: var(--constant-gold); color: var(--constant-gold);"
                 id="btnLockConstants"
@@ -765,13 +753,25 @@
         </button>
     </div>
 
+    <!-- ── Pre-Module-2 Reasoning Checkpoint (replaces the old retention gate) ── -->
+    <div class="ledger-card" id="exitCheckpointCard" style="border-left-color: var(--cyber-teal); margin-top: 14px; display:none;">
+        <span style="color: var(--cyber-teal); font-weight: bold; font-size: 11px; letter-spacing: 2px;">
+            REASONING CHECK &nbsp;·&nbsp; BEFORE LEAVING MODULE 1
+        </span>
+        <p id="exitCheckpointQuestion" style="font-size:14px; margin:10px 0 12px 0; color:var(--text-light);"></p>
+        <div id="exitCheckpointOptions" style="display:flex; flex-direction:column; gap:8px;"></div>
+        <div class="tactical-hint-box" id="exitCheckpointHintBox" style="display:none;">
+            <div class="hint-header"><span>💡 Reasoning Hint</span></div>
+            <div id="exitCheckpointHintText" class="hint-body"></div>
+        </div>
+    </div>
+
     <!-- ── Progression gate chips (server-tracked requirements) ── -->
     <div style="display:flex; gap:10px; flex-wrap:wrap; margin-top:12px;" id="gateChips">
         <span class="balance-status" id="chipCheckpoint">CHECKPOINT: PENDING</span>
         <span class="balance-status" id="chipBalance">1A BALANCE: PENDING</span>
         <span class="balance-status" id="chipMass">1B CONSTANTS: PENDING</span>
-        <span class="balance-status" id="chipRetrieval">RETENTION CHECK: PENDING</span>
-        <span class="balance-status" id="chipAccuracy">ACCURACY GATE (&ge;80%): —</span>
+        <span class="balance-status" id="chipExitCheckpoint">REASONING CHECK: PENDING</span>
     </div>
 
     <!-- Atomic Databank — Full Periodic Table -->
@@ -793,36 +793,6 @@
         <div class="pt-scroll" style="overflow-x:auto; margin-bottom:6px;">
             <div id="ptFootnote" style="display:grid; grid-template-columns:repeat(18,minmax(30px,1fr)); gap:2px;"></div>
         </div>
-    </div>
-</div>
-
-<!-- ── Held-Out Retrieval Check Modal (databank suspended) ── -->
-<div id="retrievalModal" style="display:none; position:fixed; inset:0; z-index:99000;
-     background:rgba(42,52,76,0.45); backdrop-filter:blur(6px);">
-    <div style="max-width:460px; margin:12vh auto 0 auto; background:var(--bg-slate);
-                border:1px solid var(--constant-gold); border-radius:8px; padding:28px;">
-        <div style="font-size:11px; font-weight:bold; letter-spacing:2px; color:var(--constant-gold); margin-bottom:10px;">
-            RETENTION GATE &nbsp;·&nbsp; DATABANK SUSPENDED
-        </div>
-        <p style="font-size:14px; color:var(--text-light); line-height:1.6; margin:0 0 16px 0;">
-            Before progressing, recall from memory: what is the molar mass of
-            <strong id="retrievalFormula" style="color:var(--cyber-teal);">—</strong>?
-        </p>
-        <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
-            <input type="number" step="0.001" id="retrievalInput"
-                   placeholder="g/mol"
-                   style="width:140px; background:#FFFFFF; border:1px solid var(--border); color:var(--constant-gold);
-                          padding:9px; border-radius:4px; font-size:15px;">
-            <button class="btn-action" style="border-color:var(--constant-gold); color:var(--constant-gold);"
-                    onclick="submitRetrievalAnswer()">Submit Recall</button>
-            <button class="btn-action" style="border-color:var(--border); color:var(--text-muted);"
-                    onclick="closeRetrievalModal(false)">Later</button>
-        </div>
-        <div class="tactical-hint-box" id="retrievalHintBox" style="display:none;">
-            <div class="hint-header"><span>💡 Recall Hint (<span id="retrievalAttemptLabel">Attempt 1</span>)</span></div>
-            <div id="retrievalHintText" class="hint-body"></div>
-        </div>
-        <p style="font-size:11px; color:var(--text-muted); margin-top:14px; font-style:italic;" id="retrievalNote"></p>
     </div>
 </div>
 
@@ -873,13 +843,10 @@ const ALL_FORMULAS      = [...REACTANT_FORMULAS, ...PRODUCT_FORMULAS];
 const PROGRESS = {{ progress_json|safe }};
 const CHECKPOINT = {{ checkpoint_json|safe }};
 
-let balancingCleared   = !!PROGRESS.balancingCleared;
-let molarMassCleared   = !!PROGRESS.molarMassCleared;
-let checkpointCleared  = !!PROGRESS.checkpointCleared;
-let retrievalPassed    = !!PROGRESS.retrievalPassed;
-let accuracyGatePassed = !!PROGRESS.accuracyGatePassed;
-let m1Accuracy         = PROGRESS.m1Accuracy;
-let masteryCount       = PROGRESS.masteryCount || 0;
+let balancingCleared      = !!PROGRESS.balancingCleared;
+let molarMassCleared      = !!PROGRESS.molarMassCleared;
+let checkpointCleared     = !!PROGRESS.checkpointCleared;
+let exitCheckpointCleared = !!PROGRESS.exitCheckpointCleared;
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Exact Atomic Reference Table & Atom Mapping
@@ -1118,34 +1085,22 @@ function setChip(elId, ok, label) {
     el.className = 'balance-status ' + (ok ? 'ok' : '');
 }
 
-function renderAccuracyChip() {
-    const el = document.getElementById('chipAccuracy');
-    if (!el) return;
-    if (m1Accuracy === null || m1Accuracy === undefined) {
-        el.textContent = 'ACCURACY GATE (\u226580%): \u2014';
-        el.className = 'balance-status';
-    } else {
-        el.textContent = `ACCURACY GATE (\u226580%): ${m1Accuracy}% ${accuracyGatePassed ? '\u2713' : '\u2717'}`;
-        el.className = 'balance-status ' + (accuracyGatePassed ? 'ok' : 'err');
-    }
-}
-
 function renderGateChips() {
     setChip('chipCheckpoint', checkpointCleared, 'CHECKPOINT');
     setChip('chipBalance', balancingCleared, '1A BALANCE');
     setChip('chipMass', molarMassCleared, '1B CONSTANTS');
-    setChip('chipRetrieval', retrievalPassed, 'RETENTION CHECK');
-    renderAccuracyChip();
+    setChip('chipExitCheckpoint', exitCheckpointCleared, 'REASONING CHECK');
 }
 
 function module1Unlocked() {
     return checkpointCleared && balancingCleared && molarMassCleared &&
-           retrievalPassed && accuracyGatePassed;
+           exitCheckpointCleared;
 }
 
 function updateTransitionButtonState() {
     const nextBtn = document.getElementById('btn-next-module');
     renderGateChips();
+    if (typeof maybeRevealExitCheckpoint === 'function') maybeRevealExitCheckpoint();
     if (!nextBtn) return;
     if (module1Unlocked()) {
         nextBtn.disabled = false;
@@ -1176,6 +1131,10 @@ function saveDraftState() {
 function applyServerClearedState() {
     if (checkpointCleared) {
         const card = document.getElementById('checkpointCard');
+        if (card) card.style.display = 'none';
+    }
+    if (exitCheckpointCleared) {
+        const card = document.getElementById('exitCheckpointCard');
         if (card) card.style.display = 'none';
     }
 
@@ -1362,50 +1321,6 @@ function diagnoseMassError(formula, entered) {
 
     return `Expected <strong>${expected.toFixed(3)}</strong> g/mol. ` +
            `Check each element's atomic mass and subscript count.`;
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Gamified Mastery Tracker & Quick-Harvest (POST-completion review tool only)
-// ─────────────────────────────────────────────────────────────────────────────
-const MASTERY_THRESHOLD = 5;
-
-function updateMasteryUI() {
-    const label = document.getElementById('masteryLabel');
-    const fill = document.getElementById('masteryFill');
-    const btn = document.getElementById('btnQuickHarvest');
-
-    if (label) label.textContent = `Mastery: ${masteryCount} / ${MASTERY_THRESHOLD}`;
-    if (fill) fill.style.width = `${Math.min(masteryCount / MASTERY_THRESHOLD, 1) * 100}%`;
-    if (btn) {
-        const ready = masteryCount >= MASTERY_THRESHOLD && molarMassCleared;
-        btn.disabled = !ready;
-        btn.title = ready
-            ? 'Review mode: auto-fill verified constants to re-check your work.'
-            : (molarMassCleared
-                ? `Unlocks at mastery ${MASTERY_THRESHOLD}/5.`
-                : 'Unlocks after this problem\u2019s constants are verified \u2014 it is a review tool, not a shortcut.');
-        btn.style.borderColor = ready ? 'var(--constant-gold)' : 'var(--text-muted)';
-        btn.style.color = ready ? 'var(--constant-gold)' : 'var(--text-muted)';
-    }
-}
-
-function quickHarvest() {
-    if (!molarMassCleared) {
-        showToast('Quick-Harvest unlocks in review mode after constants are verified.', 'err');
-        return;
-    }
-    ALL_FORMULAS.forEach(formula => {
-        const input = document.getElementById(`mass_${formula}`);
-        if (!input || input.disabled) return;
-        const atoms = parseFormulaAtoms(formula);
-        let sum = 0;
-        Object.entries(atoms).forEach(([sym, count]) => {
-            sum += (IUPAC_MASSES[sym] || 0) * count;
-        });
-        input.value = sum.toFixed(3);
-        input.dispatchEvent(new Event('input'));
-    });
-    showToast('All molar masses auto-filled. Click Verify to lock.', 'ok');
 }
 
 (function buildPeriodicTable() {
@@ -1689,11 +1604,6 @@ async function checkBalancing() {
                 statusEl.className   = 'balance-status ok';
             }
 
-            if (data.m1_accuracy !== undefined && data.m1_accuracy !== null) {
-                m1Accuracy = data.m1_accuracy;
-            }
-            if (data.accuracy_gate_passed) accuracyGatePassed = true;
-
             if (data.xp_reward) {
                 await awardXP(data.xp_reward, 'equation_balanced');
             }
@@ -1837,19 +1747,11 @@ async function verifyMolarMasses() {
                 await awardXP(data.xp_reward, 'constants_locked');
             }
 
-            if (typeof data.mastery_count === 'number') masteryCount = data.mastery_count;
-            if (data.m1_accuracy !== undefined && data.m1_accuracy !== null) m1Accuracy = data.m1_accuracy;
-            if (data.accuracy_gate_passed) accuracyGatePassed = true;
-
             if (window.cqRefreshTray) window.cqRefreshTray(PROBLEM_ID);
 
             updateTransitionButtonState();
             saveDraftState();
             showToast(data.message, 'ok');
-
-            if (!retrievalPassed) {
-                setTimeout(openRetrievalModal, 700);
-            }
         } else {
             // Client-side diagnostic feedback
             const diagParts = [];
@@ -1904,9 +1806,8 @@ function proceedToWorkspace() {
         showToast('Complete Sub-Steps 1A and 1B before proceeding!', 'err');
         return;
     }
-    if (!retrievalPassed) { showToast('Pass the databank-free retention check first!', 'err'); return; }
-    if (!accuracyGatePassed) {
-        showToast(`Module 1 accuracy is ${m1Accuracy ?? 0}% — below the 80% gate. Use Retry in the lobby to reset and re-attempt.`, 'err');
+    if (!exitCheckpointCleared) {
+        showToast('Complete the reasoning check before proceeding!', 'err');
         return;
     }
 
@@ -1926,25 +1827,31 @@ function proceedToWorkspace() {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Predict-Before-Calculate Checkpoint
+// Scaffold / Guide Checkpoints (entry before balancing, exit before M2)
 // ─────────────────────────────────────────────────────────────────────────────
-function renderCheckpoint() {
-    const wrap = document.getElementById('checkpointOptions');
-    const qEl = document.getElementById('checkpointQuestion');
-    if (!wrap || !qEl) return;
-    qEl.textContent = CHECKPOINT.question;
+function renderCheckpoint(kind) {
+    const isEntry = kind === 'entry';
+    const wrap = document.getElementById(isEntry ? 'checkpointOptions' : 'exitCheckpointOptions');
+    const qEl = document.getElementById(isEntry ? 'checkpointQuestion' : 'exitCheckpointQuestion');
+    const q = CHECKPOINT[isEntry ? 'entry' : 'exit'];
+    if (!wrap || !qEl || !q) return;
+    qEl.textContent = q.question;
 
-    CHECKPOINT.options.forEach(opt => {
+    q.options.forEach(opt => {
         const btn = document.createElement('button');
         btn.className = 'btn-action';
         btn.style.cssText += 'text-align:left; font-size:13px; padding:10px 14px;';
         btn.textContent = opt;
-        btn.onclick = () => submitCheckpoint(opt, btn);
+        btn.onclick = () => submitCheckpoint(opt, btn, kind);
         wrap.appendChild(btn);
     });
 }
 
-async function submitCheckpoint(choice, btnEl) {
+async function submitCheckpoint(choice, btnEl, kind) {
+    const isEntry = kind !== 'exit';
+    const cardId = isEntry ? 'checkpointCard' : 'exitCheckpointCard';
+    const hintBoxId = isEntry ? 'checkpointHintBox' : 'exitCheckpointHintBox';
+    const hintTextId = isEntry ? 'checkpointHintText' : 'exitCheckpointHintText';
     try {
         const resp = await fetch('/api/m1-checkpoint/', {
             method: 'POST',
@@ -1952,26 +1859,32 @@ async function submitCheckpoint(choice, btnEl) {
                 'Content-Type': 'application/json',
                 'X-CSRFToken': '{{ csrf_token }}'
             },
-            body: JSON.stringify({ problem_id: PROBLEM_ID, choice }),
+            body: JSON.stringify({ problem_id: PROBLEM_ID, choice, kind }),
         });
         const data = await resp.json();
         if (data.success) {
-            checkpointCleared = true;
-            const card = document.getElementById('checkpointCard');
-            if (card) card.style.display = 'none';
-            setCoeffInputsEnabled(true);
+            if (isEntry) {
+                checkpointCleared = true;
+                const card = document.getElementById(cardId);
+                if (card) card.style.display = 'none';
+                setCoeffInputsEnabled(true);
+            } else {
+                exitCheckpointCleared = true;
+                const card = document.getElementById(cardId);
+                if (card) card.style.display = 'none';
+            }
             updateTransitionButtonState();
             showToast(data.message, 'ok');
         } else {
-            flashError('checkpointCard');
+            flashError(cardId);
             showToast(data.message, 'err');
             if (data.hint) {
-                const box = document.getElementById('checkpointHintBox');
-                const txt = document.getElementById('checkpointHintText');
+                const box = document.getElementById(hintBoxId);
+                const txt = document.getElementById(hintTextId);
                 if (box && txt) { txt.textContent = data.hint; box.style.display = 'block'; }
             }
             if (data.attempts >= 3 && btnEl) {
-                showToast('Checkpoint locked until you reconsider — re-read the strategy guide above.', 'err');
+                showToast('Still not quite — re-read the reasoning above before trying again.', 'err');
             }
         }
     } catch (err) {
@@ -1979,70 +1892,17 @@ async function submitCheckpoint(choice, btnEl) {
     }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Held-Out Retrieval Check
-// ─────────────────────────────────────────────────────────────────────────────
-let retrievalTargetFormula = null;
-
-async function openRetrievalModal() {
-    try {
-        const res = await fetch(`/api/m1-retrieval/?problem_id=${encodeURIComponent(PROBLEM_ID)}`);
-        const data = await res.json();
-        if (!data.success) return;
-        retrievalTargetFormula = data.formula;
-        document.getElementById('retrievalFormula').textContent = data.formula;
-        document.getElementById('retrievalInput').value = '';
-        document.getElementById('retrievalHintBox').style.display = 'none';
-        document.getElementById('retrievalNote').textContent = data.note || '';
-        document.getElementById('retrievalModal').style.display = 'block';
-    } catch (err) {
-        console.error('[Retrieval] challenge fetch failed:', err);
-    }
-}
-
-function closeRetrievalModal() {
-    document.getElementById('retrievalModal').style.display = 'none';
-}
-
-async function submitRetrievalAnswer() {
-    if (!retrievalTargetFormula) return;
-    const value = document.getElementById('retrievalInput').value.trim();
-    if (!value) { showToast('Enter your recalled molar mass.', 'err'); return; }
-
-    try {
-        const resp = await fetch('/api/m1-retrieval/', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-CSRFToken': '{{ csrf_token }}'
-            },
-            body: JSON.stringify({
-                problem_id: PROBLEM_ID,
-                formula: retrievalTargetFormula,
-                value: parseFloat(value),
-            }),
-        });
-        const data = await resp.json();
-        if (data.success) {
-            retrievalPassed = true;
-            closeRetrievalModal();
-            updateTransitionButtonState();
-            showToast(data.message, 'ok');
-        } else {
-            showToast(data.message, 'err');
-            if (data.hint) {
-                const box = document.getElementById('retrievalHintBox');
-                const txt = document.getElementById('retrievalHintText');
-                const label = document.getElementById('retrievalAttemptLabel');
-                if (box && txt) {
-                    txt.textContent = data.hint;
-                    if (label) label.textContent = `Attempt ${data.attempts || 1}`;
-                    box.style.display = 'block';
-                }
-            }
+// Reveal the exit checkpoint once the core Module 1 work is done.
+function maybeRevealExitCheckpoint() {
+    if (exitCheckpointCleared) return;
+    if (!checkpointCleared || !balancingCleared || !molarMassCleared) return;
+    const card = document.getElementById('exitCheckpointCard');
+    if (card) {
+        card.style.display = 'block';
+        if (!card.dataset.rendered) {
+            card.dataset.rendered = '1';
+            renderCheckpoint('exit');
         }
-    } catch (err) {
-        console.error('[Retrieval] submission failed:', err);
     }
 }
 
@@ -2072,9 +1932,9 @@ function setCoeffInputsEnabled(enabled) {
 applyServerClearedState();
 restoreDraftState();
 if (!checkpointCleared) setCoeffInputsEnabled(false);
-renderCheckpoint();
+renderCheckpoint('entry');
 updateAtomInventory();
-updateMasteryUI();
+maybeRevealExitCheckpoint();
 updateTransitionButtonState();
 
 let _toastTimeout;

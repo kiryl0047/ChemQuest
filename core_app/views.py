@@ -27,9 +27,6 @@ from .models import (
 # Tunable assessment-policy constants
 # ===========================================================================
 M1_ACCURACY_THRESHOLD       = 80.0   # documented Module 1 accuracy gate (%)
-STEP_LOCK_ACCURACY          = 75.0   # rolling accuracy below which M2 locks
-STEP_LOCK_MIN_SAMPLES       = 3
-STEP_LOCK_COOLDOWN_SECONDS  = 30
 SYNTHESIS_ELIGIBILITY_COUNT = 5      # completed problems to unlock review
 SYNTHESIS_PASS_PCT          = 60.0
 SYNTHESIS_ITEM_COUNT        = 3
@@ -179,31 +176,6 @@ def _log_attempt(request, prob_id, part_label, sub_step, module_phase, is_correc
     return log
 
 
-def _m1_accuracy(user, prob_id):
-    """(accuracy_pct_or_None, correct_events, total_tries) for sub-steps 1A+1B."""
-    logs = StudentTelemetryLog.objects.filter(
-        user=user, problem_id=prob_id, module_phase=1,
-        sub_step__in=['1A', '1B'],
-    )
-    tries = 0
-    correct_rows = 0
-    for lg in logs:
-        tries += lg.attempts_count + (1 if lg.is_correct else 0)
-        if lg.is_correct:
-            correct_rows += 1
-    if tries == 0:
-        return None, 0, 0
-    return round(correct_rows / tries * 100, 1), correct_rows, tries
-
-
-def _refresh_m1_gate(progress):
-    acc, _, _ = _m1_accuracy(progress.user, progress.problem_id)
-    progress.accuracy_gate_passed = (
-        acc is not None and acc >= M1_ACCURACY_THRESHOLD
-    )
-    return acc
-
-
 def _backfill_progress_from_telemetry(progress):
     """One-time adoption shim: derive 1A/1B clears from pre-existing telemetry."""
     if progress.balancing_cleared and progress.molar_mass_cleared:
@@ -331,7 +303,8 @@ def _grade_chain(part, submitted_nodes):
     """
     node_count = part.node_count
     if len(submitted_nodes) != node_count:
-        return {'count_ok': False, 'matched': False, 'reports': [], 'all_ok': False}
+        return {'count_ok': False, 'matched': False, 'expected': None,
+                'reports': [], 'all_ok': False}
 
     chains = _valid_chains(part)
     sig = _unit_signature(submitted_nodes)
@@ -347,7 +320,8 @@ def _grade_chain(part, submitted_nodes):
             reports.append({'index': i, 'unit_ok': unit_ok, 'value_ok': None})
             if den_u == prev:
                 prev = num_u
-        return {'count_ok': True, 'matched': False, 'reports': reports, 'all_ok': False}
+        return {'count_ok': True, 'matched': False, 'expected': None,
+                'reports': reports, 'all_ok': False}
 
     reports = []
     all_ok = True
@@ -364,28 +338,8 @@ def _grade_chain(part, submitted_nodes):
         all_ok = all_ok and value_ok
         reports.append({'index': i, 'unit_ok': True, 'value_ok': value_ok})
 
-    return {'count_ok': True, 'matched': True, 'reports': reports, 'all_ok': all_ok}
-
-
-def _step_lock_state(user, prob_id):
-    logs = list(StudentTelemetryLog.objects.filter(
-        user=user, problem_id=prob_id, module_phase=2,
-    ).order_by('-created_at')[:8])
-    if len(logs) < STEP_LOCK_MIN_SAMPLES:
-        return {'locked': False, 'rolling_accuracy': None}
-
-    acc = sum(1 for lg in logs if lg.is_correct) / len(logs) * 100
-    if acc >= STEP_LOCK_ACCURACY:
-        return {'locked': False, 'rolling_accuracy': round(acc, 1)}
-
-    elapsed = (timezone.now() - logs[0].created_at).total_seconds()
-    if elapsed < STEP_LOCK_COOLDOWN_SECONDS:
-        return {
-            'locked': True,
-            'retry_after': int(STEP_LOCK_COOLDOWN_SECONDS - elapsed) + 1,
-            'rolling_accuracy': round(acc, 1),
-        }
-    return {'locked': False, 'rolling_accuracy': round(acc, 1)}
+    return {'count_ok': True, 'matched': True, 'expected': matched,
+            'reports': reports, 'all_ok': all_ok}
 
 
 # ---------------------------------------------------------------------------
@@ -450,34 +404,57 @@ def _compute_limiting_analysis(problem):
 
 
 # ---------------------------------------------------------------------------
-# Module 1 predict-before-calculate checkpoint builder
+# Module 1 scaffold / guide checkpoints
+#
+# These gates verify UNDERSTANDING rather than a preferred balancing order.
+# Balancing is trial-and-error: a student may legally begin on any element
+# and still reach a correct result. The questions below therefore have a
+# single correct answer independent of ordering strategy, and frame
+# balancing around conservation of mass.
+#
+#   kind='entry'  -> asked before balancing begins (conceptual gate)
+#   kind='exit'   -> asked before leaving Module 1 for Module 2
+#                    (replaces the removed retention/retrieval gate)
 # ---------------------------------------------------------------------------
-GENERIC_CHECKPOINT_OPTIONS = [
-    "Compounds with unique metals or carbon (balance these FIRST)",
-    "Hydrogen-containing compounds (balance SECOND)",
-    "Pure diatomic elements such as O2 or N2 (save for LAST)",
-    "The heaviest molecule in the reaction",
-]
+_ENTRY_CHECKPOINT = {
+    'question': ('In balancing, why is it correct to change only the '
+                 'coefficients in front of formulas, and never the '
+                 'subscripts inside a formula?'),
+    'options': [
+        'Coefficients scale the whole compound while preserving its identity',
+        'Subscripts are easier to rewrite than coefficients',
+        'Coefficients are the only numbers provided in the problem',
+        'Changing subscripts makes the numbers on each side match more easily',
+    ],
+    'accept': [
+        'Coefficients scale the whole compound while preserving its identity',
+    ],
+}
+
+_EXIT_CHECKPOINT = {
+    'question': ('After a reaction is balanced, which statement must be '
+                 'true for every element on both sides of the arrow?'),
+    'options': [
+        'The number of atoms of each element is equal on both sides',
+        'The two sides contain the same total number of compounds',
+        'Each compound shares at least one element with the other side',
+        'The heaviest element is listed first on each side',
+    ],
+    'accept': [
+        'The number of atoms of each element is equal on both sides',
+    ],
+}
 
 
-def _build_checkpoint_question(problem):
-    formulas = _unique_formulas(problem)
-    diatomics = [f for f in formulas if f in DIATOMIC_FORMULAS]
-    if diatomics:
-        return {
-            'kind': 'formula',
-            'question': ('Predict before you calculate: per the standard '
-                         'inspection strategy, which substance should you '
-                         'balance LAST?'),
-            'options': formulas,
-            'accept': diatomics,
-        }
+def _build_checkpoint_question(problem, kind='entry'):
     return {
-        'kind': 'generic',
-        'question': ('Predict before you calculate: which category of '
-                     'substance should you always balance LAST?'),
-        'options': GENERIC_CHECKPOINT_OPTIONS,
-        'accept': [GENERIC_CHECKPOINT_OPTIONS[2]],
+        'kind': 'entry' if kind == 'entry' else 'exit',
+        'question': _ENTRY_CHECKPOINT['question'] if kind == 'entry'
+                    else _EXIT_CHECKPOINT['question'],
+        'options': _ENTRY_CHECKPOINT['options'] if kind == 'entry'
+                   else _EXIT_CHECKPOINT['options'],
+        'accept': _ENTRY_CHECKPOINT['accept'] if kind == 'entry'
+                  else _EXIT_CHECKPOINT['accept'],
     }
 
 
@@ -594,8 +571,6 @@ def preparation_ledger(request, prob_id=None):
     progress = ProblemProgress.get_or_default(request.user, problem.problem_id)
     if progress:
         _backfill_progress_from_telemetry(progress)
-    profile, _ = UserProfile.objects.get_or_create(user=request.user)
-    acc, _, _ = _m1_accuracy(request.user, problem.problem_id)
 
     first_part = problem.parts.first()
     first_label = first_part.part_label if first_part else 'a'
@@ -610,7 +585,8 @@ def preparation_ledger(request, prob_id=None):
             for s in Substance.objects.filter(formula__in=_unique_formulas(problem)):
                 verified_masses[s.formula] = round(s.molar_mass, 4)
 
-    checkpoint = _build_checkpoint_question(problem)
+    entry_checkpoint = _build_checkpoint_question(problem, 'entry')
+    exit_checkpoint = _build_checkpoint_question(problem, 'exit')
 
     context = {
         'problem_id':           problem.problem_id,
@@ -624,19 +600,22 @@ def preparation_ledger(request, prob_id=None):
         'is_limiting_problem':  problem.is_limiting_problem,
         'all_problems':         list(_all_problems()),
         'progress_json': json.dumps({
-            'balancingCleared':    progress.balancing_cleared if progress else False,
-            'molarMassCleared':    progress.molar_mass_cleared if progress else False,
-            'checkpointCleared':   progress.checkpoint_cleared if progress else False,
-            'retrievalPassed':     progress.retrieval_check_passed if progress else False,
-            'accuracyGatePassed':  progress.accuracy_gate_passed if progress else False,
-            'm1Accuracy':          acc,
-            'verifiedMasses':      verified_masses,
-            'verifiedCoeffs':      verified_coeffs,
-            'masteryCount':        profile.quickharvest_mastery_count,
+            'balancingCleared':      progress.balancing_cleared if progress else False,
+            'molarMassCleared':      progress.molar_mass_cleared if progress else False,
+            'checkpointCleared':     progress.checkpoint_cleared if progress else False,
+            'exitCheckpointCleared': progress.exit_checkpoint_cleared if progress else False,
+            'verifiedMasses':        verified_masses,
+            'verifiedCoeffs':        verified_coeffs,
         }),
         'checkpoint_json': json.dumps({
-            'question': checkpoint['question'],
-            'options':  checkpoint['options'],
+            'entry': {
+                'question': entry_checkpoint['question'],
+                'options':  entry_checkpoint['options'],
+            },
+            'exit': {
+                'question': exit_checkpoint['question'],
+                'options':  exit_checkpoint['options'],
+            },
         }),
     }
     return render(request, 'module1_ledger.html', context)
@@ -677,7 +656,6 @@ def step_grid_workspace(request, prob_id, part_label='a'):
         'verified_prefix_json': json.dumps(part_progress.verified_prefix_json or []),
         'lane_cleared': part_progress.lane_cleared,
         'verified_answer': verified_answer,
-        'step_lock_threshold': int(STEP_LOCK_ACCURACY),
     }
     return render(request, 'module2_workspace.html', context)
 
@@ -972,11 +950,14 @@ def limiting_workspace(request, prob_id):
 
 
 def _lane_hint(attempts, expected_node):
-    if attempts < 2:
-        return ''
+    if attempts == 1:
+        return (f"This step converts from '{expected_node['den_unit']}' to "
+                f"'{expected_node['num_unit']}'. The value you entered does not "
+                f"match — recheck which constant belongs in this slot.")
     return (f"Node units: numerator '{expected_node['num_unit']}' over "
-            f"denominator '{expected_node['den_unit']}'. Recheck which "
-            f"constant belongs in which slot.")
+            f"denominator '{expected_node['den_unit']}' should be "
+            f"num {expected_node['num_value']} over den {expected_node['den_value']}. "
+            f"Recompute the conversion constant and its placement.")
 
 
 def _deduction_hint(attempts, limiting_match, yield_match, excess_ok,
@@ -1525,11 +1506,9 @@ def verify_balancing_backend(request):
 
         progress = ProblemProgress.get_or_default(request.user, prob_id)
         first_clear = False
-        accuracy = None
         if progress and is_correct:
             first_clear = not progress.balancing_cleared
             progress.balancing_cleared = True
-            accuracy = _refresh_m1_gate(progress)
             progress.save()
         if first_clear:
             _award_xp(request, XP_PER_BALANCE)
@@ -1578,10 +1557,6 @@ def verify_balancing_backend(request):
                         else:
                             hint = (f"Try increasing the coefficient of the reactant containing {first_el} "
                                     f"to supply more {first_el} atoms on the left side.")
-                    elif log.attempts_count == 2:
-                        hint = ("Inspection Strategy: Balance metals and carbon first, then hydrogen, and "
-                                "save pure diatomic molecules (like O2 or N2) for last since adjusting them "
-                                "won't alter other elements.")
                     else:
                         hint = ("Check the odd/even atom parity: If an element appears with an odd subscript "
                                 "in a product but as a diatomic reactant (like O2), try doubling the odd "
@@ -1599,8 +1574,6 @@ def verify_balancing_backend(request):
             'xp_reward': XP_PER_BALANCE if first_clear else 0,
             'message':   message,
             'hint':      hint,
-            'm1_accuracy': accuracy,
-            'accuracy_gate_passed': progress.accuracy_gate_passed if progress else None,
         })
 
     except StoichiometryProblem.DoesNotExist:
@@ -1665,19 +1638,12 @@ def verify_molar_mass_backend(request):
 
     progress = ProblemProgress.get_or_default(request.user, prob_id)
     first_clear = False
-    accuracy = None
-    mastery_count = None
     if progress and all_ok:
         first_clear = not progress.molar_mass_cleared
         progress.molar_mass_cleared = True
-        accuracy = _refresh_m1_gate(progress)
         progress.save()
     if first_clear:
         _award_xp(request, XP_PER_BALANCE)
-        profile, _ = UserProfile.objects.get_or_create(user=request.user)
-        profile.quickharvest_mastery_count += 1
-        profile.save()
-        mastery_count = profile.quickharvest_mastery_count
 
     molar_mass_hints = []
     if not all_ok:
@@ -1697,9 +1663,6 @@ def verify_molar_mass_backend(request):
             'Molar mass mismatch detected — check highlighted compounds.'
         ),
         'hint':      hint,
-        'm1_accuracy': accuracy,
-        'accuracy_gate_passed': progress.accuracy_gate_passed if progress else None,
-        'mastery_count': mastery_count,
     })
 
 
@@ -1719,110 +1682,46 @@ def m1_checkpoint(request):
 
     prob_id = data.get('problem_id', '')
     choice = str(data.get('choice', '')).strip()
+    kind = str(data.get('kind', 'entry')).strip()
 
     try:
         problem = StoichiometryProblem.objects.get(problem_id=prob_id)
     except StoichiometryProblem.DoesNotExist:
         return JsonResponse({'success': False, 'message': 'Problem not found.'})
 
-    question = _build_checkpoint_question(problem)
+    question = _build_checkpoint_question(problem, kind)
     is_correct = choice in question['accept']
 
-    log = _log_attempt(request, prob_id, 'checkpoint', '1P', 1, is_correct)
+    sub_step = '1P' if kind == 'entry' else '1Q'
+    log = _log_attempt(request, prob_id, 'checkpoint', sub_step, 1, is_correct)
 
     progress = ProblemProgress.get_or_default(request.user, prob_id)
     if progress and is_correct:
-        progress.checkpoint_cleared = True
+        if kind == 'entry':
+            progress.checkpoint_cleared = True
+        else:
+            progress.exit_checkpoint_cleared = True
         progress.save()
+
+    if is_correct:
+        message = ('Good — you reasoned about what balancing preserves. '
+                   'Coefficient inputs unlocked.'
+                   if kind == 'entry' else
+                   'Module 1 confirmed — you are ready for the solving workspace.')
+    else:
+        message = ('Not quite — think about what balancing must preserve '
+                   'between the two sides.'
+                   if kind == 'entry' else
+                   'Not quite — reconsider what a balanced reaction guarantees.')
 
     return JsonResponse({
         'success': is_correct,
         'attempts': log.attempts_count,
-        'message': ('Prediction locked in — coefficient inputs unlocked.'
-                    if is_correct else
-                    'Not quite — reconsider the balancing strategy order.'),
-        'hint': ('Strategy recap: unique elements/metals first, then hydrogen; '
-                 'pure diatomic elements are adjusted LAST because changing '
-                 'them does not disturb the others.'
+        'kind': question['kind'],
+        'message': message,
+         'hint': (question['question']
                  if not is_correct and log.attempts_count >= 2 else ''),
     })
-
-
-# ===========================================================================
-# API: Module 1 held-out retrieval check (databank-free recall)
-# ===========================================================================
-
-@csrf_exempt
-def m1_retrieval_check(request):
-    if request.method == 'POST':
-        try:
-            data = json.loads(request.body)
-        except json.JSONDecodeError:
-            return JsonResponse({'success': False, 'message': 'Invalid JSON.'})
-        prob_id = str(data.get('problem_id', ''))
-    else:
-        prob_id = request.GET.get('problem_id', '')
-
-    try:
-        problem = StoichiometryProblem.objects.get(problem_id=prob_id)
-    except StoichiometryProblem.DoesNotExist:
-        return JsonResponse({'success': False, 'message': 'Problem not found.'})
-
-    if request.method == 'GET':
-        formulas = _unique_formulas(problem)
-        if not formulas:
-            return JsonResponse({'success': False, 'message': 'No substances configured.'})
-        return JsonResponse({
-            'success': True,
-            'formula': random.choice(formulas),
-            'note': 'Databank access is suspended during this retention check.',
-        })
-
-    if request.method == 'POST':
-        formula = data.get('formula', '')
-        value = data.get('value')
-
-        if formula not in _unique_formulas(problem):
-            return JsonResponse({'success': False, 'message': 'Unknown substance for this problem.'})
-
-        try:
-            expected = Substance.objects.get(formula=formula).molar_mass
-        except Substance.DoesNotExist:
-            return JsonResponse({'success': False, 'message': 'Substance registry missing entry.'})
-
-        try:
-            entered = float(value)
-        except (TypeError, ValueError):
-            return JsonResponse({'success': False, 'message': 'Numeric value required.'})
-
-        tolerance = _mass_tolerance(formula)
-        is_correct = abs(entered - expected) <= tolerance
-        log = _log_attempt(request, prob_id, 'retrieval', '1R', 1, is_correct)
-
-        progress = ProblemProgress.get_or_default(request.user, prob_id)
-        if progress and is_correct:
-            progress.retrieval_check_passed = True
-            progress.save()
-
-        hint = ''
-        if not is_correct:
-            if log.attempts_count >= 2:
-                hints = _molar_mass_breakdown_hints([formula], problem=problem)
-                hint = hints[0] if hints else ''
-            else:
-                hint = 'Recompute the atom-by-atom sum using exact IUPAC masses.'
-
-        return JsonResponse({
-            'success': is_correct,
-            'attempts': log.attempts_count,
-            'tolerance': round(tolerance, 2),
-            'hint': hint,
-            'message': ('Retention verified — recall without the databank confirmed!'
-                        if is_correct else
-                        'Recall mismatch. Try again.'),
-        })
-
-    return JsonResponse({'success': False, 'message': 'Unsupported method.'})
 
 
 # ===========================================================================
@@ -1857,18 +1756,6 @@ def audit_chain(request):
 
     if part_progress.lane_cleared:
         return JsonResponse({'success': True, 'already_cleared': True, 'all_ok': True})
-
-    lock = _step_lock_state(request.user, prob_id)
-    if lock['locked']:
-        return JsonResponse({
-            'success': False,
-            'locked': True,
-            'retry_after': lock['retry_after'],
-            'rolling_accuracy': lock['rolling_accuracy'],
-            'message': (f'Rolling accuracy {lock["rolling_accuracy"]}% is below the '
-                        f'{STEP_LOCK_ACCURACY:.0f}% threshold. Review the strategy guide; '
-                        f'inputs unlock in {lock["retry_after"]}s.'),
-        })
 
     parsed_nodes = []
     for raw in submitted:
@@ -1919,27 +1806,37 @@ def audit_chain(request):
         node_ok = bool(rep['unit_ok'] and rep['value_ok'])
         _log_attempt(request, prob_id, part_label, str(i), 2, node_ok)
 
+    start_unit = f"{part.given_unit}_{part.given_substance.formula}"
+    prev = start_unit
     messages = []
     for rep in grade['reports']:
         idx = rep['index'] + 1
         if not rep['unit_ok']:
-            messages.append(
-                f'Step {idx}: unit mismatch — the denominator must cancel the '
-                f'previous numerator unit so it simplifies to 1.')
+            num_unit = str(parsed_nodes[rep['index']].get('num_unit') or '')
+            den_unit = str(parsed_nodes[rep['index']].get('den_unit') or '')
+            need = prev.replace('_', ' ')
+            entered = den_unit.replace('_', ' ') if den_unit else '(empty)'
+            if num_unit == prev:
+                messages.append(
+                    f'Step {idx}: the denominator must cancel "{need}" '
+                    f'(the unit the previous step ended in), but you wrote '
+                    f'"{entered}".')
+            else:
+                messages.append(
+                    f'Step {idx}: this factor should convert "{need}" forward, '
+                    f'but your units ({entered}) do not continue from it.')
         elif rep['value_ok'] is False:
+            exp = grade['expected'][rep['index']]
             messages.append(
-                f'Step {idx}: units are correct but the VALUES are off — '
-                f'recheck your arithmetic for that conversion constant.')
-
-    lock_now = _step_lock_state(request.user, prob_id)
+                f'Step {idx}: units are correct but the VALUES are off — for '
+                f'this constant use num {exp["num_value"]} over den {exp["den_value"]}.')
+        if rep['unit_ok']:
+            prev = str(parsed_nodes[rep['index']].get('num_unit') or '')
     return JsonResponse({
         'success': False,
         'matched_units': grade['matched'],
         'reports': grade['reports'],
         'message': ' '.join(messages) or 'Chain verification failed.',
-        'locked': lock_now['locked'] or False,
-        'retry_after': lock_now.get('retry_after'),
-        'rolling_accuracy': lock_now.get('rolling_accuracy'),
     })
 
 
@@ -1986,18 +1883,6 @@ def verify_node(request):
     if part_progress.lane_cleared:
         return JsonResponse({'success': True, 'already_cleared': True, 'complete': True})
 
-    lock = _step_lock_state(request.user, prob_id)
-    if lock['locked']:
-        return JsonResponse({
-            'success': False,
-            'locked': True,
-            'retry_after': lock['retry_after'],
-            'rolling_accuracy': lock['rolling_accuracy'],
-            'message': (f'Rolling accuracy {lock["rolling_accuracy"]}% is below the '
-                        f'{STEP_LOCK_ACCURACY:.0f}% threshold. Review the strategy guide; '
-                        f'inputs unlock in {lock["retry_after"]}s.'),
-        })
-
     prefix = part_progress.verified_prefix_json or []
     index = len(prefix)
 
@@ -2037,20 +1922,32 @@ def verify_node(request):
         prev_unit = (f"{part.given_unit}_{part.given_substance.formula}"
                      if index == 0 else prefix[-1]['num_unit'])
         if not unit_ok:
-            message = (f'Step {index + 1}: unit mismatch — the denominator must '
-                       f'cancel "{prev_unit.replace("_", " ")}" so it simplifies to 1.')
+            need = prev_unit.replace('_', ' ')
+            entered_num = str(current['num_unit'] or '').replace('_', ' ')
+            entered_den = str(current['den_unit'] or '').replace('_', ' ')
+            message = (f'Step {index + 1}: this factor must cancel "{need}" '
+                       f'(the unit the previous step ended in), but you wrote '
+                       f'"{entered_num} over {entered_den}".')
         else:
-            message = (f'Step {index + 1}: units are correct but the VALUES are off — '
-                       f'recheck your arithmetic for that conversion constant.')
+            expected_value = None
+            for c in candidates:
+                if _prefix_matches(c, prefix) and c[index]['num_unit'] == current['num_unit'] \
+                        and c[index]['den_unit'] == current['den_unit']:
+                    expected_value = c[index]
+                    break
+            if expected_value:
+                message = (f'Step {index + 1}: units are correct but the VALUES '
+                           f'are off — for this constant use num '
+                           f'{expected_value["num_value"]} over den '
+                           f'{expected_value["den_value"]}.')
+            else:
+                message = (f'Step {index + 1}: units are correct but the VALUES '
+                           f'are off — recheck your arithmetic for that constant.')
 
-        lock_now = _step_lock_state(request.user, prob_id)
         return JsonResponse({
             'success': False,
             'unit_ok': unit_ok,
             'message': message,
-            'locked': lock_now['locked'] or False,
-            'retry_after': lock_now.get('retry_after'),
-            'rolling_accuracy': lock_now.get('rolling_accuracy'),
         })
 
     verified_entry = {

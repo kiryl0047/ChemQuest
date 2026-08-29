@@ -8,7 +8,9 @@ from .models import (
     Substance, StoichiometryProblem, ProblemPart,
     StudentTelemetryLog, ProblemProgress, PartProgress,
 )
-from .views import _m1_accuracy
+
+ENTRY_ANSWER = 'Coefficients scale the whole compound while preserving its identity'
+EXIT_ANSWER = 'The number of atoms of each element is equal on both sides'
 
 
 class BaseFixture(TestCase):
@@ -89,8 +91,8 @@ def _nodes_payload(part, override=None):
 
 
 def complete_module1(client, prob_id='P_TST', perfect=True):
-    checkpoint = client.post(reverse('m1_checkpoint'),
-                             {'problem_id': prob_id, 'choice': 'H2'},
+    seed = {'problem_id': prob_id, 'kind': 'entry', 'choice': ENTRY_ANSWER}
+    checkpoint = client.post(reverse('m1_checkpoint'), seed,
                              content_type='application/json')
     balance = client.post(reverse('verify_balancing'),
                           {'problem_id': prob_id, 'coefficients': [2, 1, 2]},
@@ -101,33 +103,47 @@ def complete_module1(client, prob_id='P_TST', perfect=True):
     molar = client.post(reverse('verify_molar_mass'),
                         {'problem_id': prob_id, 'molar_masses': masses},
                         content_type='application/json')
-    retrieval_challenge = client.get(f'/api/m1-retrieval/?problem_id={prob_id}')
-    formula = retrieval_challenge.json()['formula']
-    from .models import Substance as S
-    correct_value = S.objects.get(formula=formula).molar_mass
-    if not perfect:
-        correct_value += 40
-    retrieval = client.post(reverse('m1_retrieval'),
-                            {'problem_id': prob_id, 'formula': formula,
-                             'value': correct_value},
-                            content_type='application/json')
-    return checkpoint, balance, molar, retrieval
+    exit_ck = client.post(reverse('m1_checkpoint'),
+                          {'problem_id': prob_id, 'kind': 'exit',
+                           'choice': EXIT_ANSWER},
+                          content_type='application/json')
+    return checkpoint, balance, molar, exit_ck
 
 
 class Module1GateTests(BaseFixture):
-    def test_checkpoint_accepts_diatomic_answer(self):
+    def test_entry_checkpoint_accepts_correct_reasoning(self):
         client = self.login()
         resp = client.post(reverse('m1_checkpoint'),
-                           {'problem_id': 'P_TST', 'choice': 'O2'},
+                           {'problem_id': 'P_TST', 'kind': 'entry',
+                            'choice': ENTRY_ANSWER},
                            content_type='application/json').json()
         self.assertTrue(resp['success'])
         progress = ProblemProgress.objects.get(user=self.user, problem_id='P_TST')
         self.assertTrue(progress.checkpoint_cleared)
 
-    def test_checkpoint_rejects_wrong_choice(self):
+    def test_entry_checkpoint_rejects_wrong_choice(self):
         client = self.login()
         resp = client.post(reverse('m1_checkpoint'),
-                           {'problem_id': 'P_TST', 'choice': 'H2O'},
+                           {'problem_id': 'P_TST', 'kind': 'entry',
+                            'choice': EXIT_ANSWER},
+                           content_type='application/json').json()
+        self.assertFalse(resp['success'])
+
+    def test_exit_checkpoint_accepts_correct_choice(self):
+        client = self.login()
+        resp = client.post(reverse('m1_checkpoint'),
+                           {'problem_id': 'P_TST', 'kind': 'exit',
+                            'choice': EXIT_ANSWER},
+                           content_type='application/json').json()
+        self.assertTrue(resp['success'])
+        progress = ProblemProgress.objects.get(user=self.user, problem_id='P_TST')
+        self.assertTrue(progress.exit_checkpoint_cleared)
+
+    def test_exit_checkpoint_rejects_wrong_choice(self):
+        client = self.login()
+        resp = client.post(reverse('m1_checkpoint'),
+                           {'problem_id': 'P_TST', 'kind': 'exit',
+                            'choice': ENTRY_ANSWER},
                            content_type='application/json').json()
         self.assertFalse(resp['success'])
 
@@ -140,27 +156,29 @@ class Module1GateTests(BaseFixture):
         self.assertFalse(resp['success'])
         self.assertFalse(resp['results']['H2']['correct'])
 
-    def test_perfect_run_passes_accuracy_gate(self):
+    def test_full_run_clears_exit_gate_and_completes_module1(self):
         client = self.login()
         complete_module1(client)
         progress = ProblemProgress.objects.get(user=self.user, problem_id='P_TST')
-        acc, _, tries = _m1_accuracy(self.user, 'P_TST')
-        self.assertEqual(acc, 100.0)
-        self.assertTrue(progress.accuracy_gate_passed)
+        self.assertTrue(progress.exit_checkpoint_cleared)
+        self.assertTrue(progress.module1_complete())
 
-    def test_imperfect_run_blocks_accuracy_gate(self):
+    def test_imperfect_run_completes_after_retry(self):
         client = self.login()
-        checkpoint, balance, molar, retrieval = complete_module1(client, perfect=False)
+        _, _, molar, _ = complete_module1(client, perfect=False)
         self.assertFalse(molar.json()['success'])
         masses = {'H2': 2.016, 'O2': 31.998, 'H2O': 18.015}
         molar2 = client.post(reverse('verify_molar_mass'),
                              {'problem_id': 'P_TST', 'molar_masses': masses},
                              content_type='application/json').json()
         self.assertTrue(molar2['success'])
+        exit_ck = client.post(reverse('m1_checkpoint'),
+                              {'problem_id': 'P_TST', 'kind': 'exit',
+                               'choice': EXIT_ANSWER},
+                              content_type='application/json').json()
+        self.assertTrue(exit_ck['success'])
         progress = ProblemProgress.objects.get(user=self.user, problem_id='P_TST')
-        acc, _, tries = _m1_accuracy(self.user, 'P_TST')
-        self.assertLess(acc, 80)
-        self.assertFalse(progress.accuracy_gate_passed)
+        self.assertTrue(progress.module1_complete())
 
     def test_workspace_blocked_without_module1_completion(self):
         client = self.login()
@@ -169,16 +187,27 @@ class Module1GateTests(BaseFixture):
         self.assertRedirects(resp, reverse('preparation_ledger',
                                            args=['P_TST']))
 
+    def test_workspace_blocked_without_exit_gate(self):
+        client = self.login()
+        client.post(reverse('m1_checkpoint'),
+                    {'problem_id': 'P_TST', 'kind': 'entry',
+                     'choice': ENTRY_ANSWER},
+                    content_type='application/json')
+        client.post(reverse('verify_balancing'),
+                    {'problem_id': 'P_TST', 'coefficients': [2, 1, 2]},
+                    content_type='application/json')
+        client.post(reverse('verify_molar_mass'),
+                    {'problem_id': 'P_TST',
+                     'molar_masses': {'H2': 2.016, 'O2': 31.998, 'H2O': 18.015}},
+                    content_type='application/json')
+        resp = client.get(reverse('step_grid_workspace',
+                                  args=['P_TST', 'a']), follow=True)
+        self.assertRedirects(resp, reverse('preparation_ledger',
+                                           args=['P_TST']))
+
     def test_workspace_accessible_after_full_module1(self):
         client = self.login()
         complete_module1(client)
-        progress = ProblemProgress.objects.get(user=self.user, problem_id='P_TST')
-        progress.checkpoint_cleared = True
-        progress.retrieval_check_passed = True
-        progress.accuracy_gate_passed = True
-        progress.balancing_cleared = True
-        progress.molar_mass_cleared = True
-        progress.save()
         resp = client.get(reverse('step_grid_workspace', args=['P_TST', 'a']))
         self.assertEqual(resp.status_code, 200)
 
@@ -193,7 +222,8 @@ class MolarMassHintTests(BaseFixture):
     def test_coefficient_trap_hint_returned(self):
         client = self.login()
         client.post(reverse('m1_checkpoint'),
-                    {'problem_id': 'P_TST', 'choice': 'O2'},
+                    {'problem_id': 'P_TST', 'kind': 'entry',
+                     'choice': ENTRY_ANSWER},
                     content_type='application/json')
         client.post(reverse('verify_balancing'),
                     {'problem_id': 'P_TST', 'coefficients': [2, 1, 2]},
@@ -213,8 +243,7 @@ class ChainAuditTests(BaseFixture):
         progress.checkpoint_cleared = True
         progress.balancing_cleared = True
         progress.molar_mass_cleared = True
-        progress.retrieval_check_passed = True
-        progress.accuracy_gate_passed = True
+        progress.exit_checkpoint_cleared = True
         progress.save()
 
     def test_correct_chain_succeeds_and_persists(self):
@@ -256,39 +285,15 @@ class ChainAuditTests(BaseFixture):
         self.assertTrue(resp['matched_units'])
         self.assertFalse(resp['reports'][0]['value_ok'])
 
-    def test_step_lock_engages_on_low_rolling_accuracy(self):
-        from django.utils import timezone
-        for i in range(5):
-            StudentTelemetryLog.objects.create(
-                user=self.user, problem_id='P_TST', part_label='a',
-                sub_step=str(i), module_phase=2,
-                is_correct=False, attempts_count=1,
-            )
-        StudentTelemetryLog.objects.create(
-            user=self.user, problem_id='P_TST', part_label='a',
-            sub_step='9', module_phase=2, is_correct=False, attempts_count=1,
-            created_at=timezone.now(),
-        )
-        part = ProblemPart.objects.get(problem__problem_id='P_TST', part_label='a')
-        payload = {'problem_id': 'P_TST', 'part_label': 'a',
-                   'nodes': _nodes_payload(part)}
-        resp = self.client_inst.post(reverse('audit_chain'), payload,
-                                     content_type='application/json').json()
-        self.assertTrue(resp.get('locked'))
-        self.assertGreater(resp.get('retry_after', 0), 0)
-
 
 class LimitingWorkspaceTests(BaseFixture):
     def complete_m1_for_limiting(self):
         client = self.login()
-        checkpoint, balance, molar, retrieval = complete_module1(client, prob_id='P_LIM')
+        checkpoint, balance, molar, exit_ck = complete_module1(client, prob_id='P_LIM')
         assert checkpoint.json()['success'], f'checkpoint: {checkpoint.json()}'
         assert balance.json()['success'], f'balance: {balance.json()}'
         assert molar.json()['success'], f'molar: {molar.json()}'
-        assert retrieval.json()['success'], f'retrieval: {retrieval.json()}'
-        p = ProblemProgress.objects.get(user=self.user, problem_id='P_LIM')
-        p.accuracy_gate_passed = True
-        p.save()
+        assert exit_ck.json()['success'], f'exit checkpoint: {exit_ck.json()}'
         return client
 
     def clear_lane(self, client, label):
@@ -466,8 +471,7 @@ class SynthesisTests(BaseFixture):
             ProblemProgress.objects.create(
                 user=self.user, problem_id=pid,
                 balancing_cleared=True, molar_mass_cleared=True,
-                checkpoint_cleared=True, retrieval_check_passed=True,
-                accuracy_gate_passed=True)
+                checkpoint_cleared=True, exit_checkpoint_cleared=True)
         part_a = ProblemPart.objects.get(problem__problem_id='S1', part_label='a')
         good_nodes = [{'num_value': str(n['num_value']),
                        'num_unit': n['num_unit'],

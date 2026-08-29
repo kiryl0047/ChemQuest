@@ -179,18 +179,6 @@
     .report-ok   { background: rgba(var(--success-rgb),0.12); color: var(--combo-green); border: 1px solid rgba(var(--success-rgb),0.4); }
     .report-bad  { background: rgba(var(--danger-rgb),0.12); color: #B91C1C; border: 1px solid rgba(var(--danger-rgb),0.4); }
 
-    .lock-banner {
-        display: none;
-        background: rgba(var(--danger-rgb), 0.07);
-        border: 1px solid rgba(var(--danger-rgb), 0.45);
-        border-left: 4px solid var(--coral-red);
-        border-radius: 5px;
-        padding: 14px 18px;
-        margin-bottom: 20px;
-        font-size: 13px;
-        line-height: 1.6;
-    }
-
     .module-actions-bar {
         display: none;
         justify-content: space-between;
@@ -302,12 +290,6 @@
     </div>
 </details>
 
-<!-- ── Step-Lock Banner ── -->
-<div class="lock-banner" id="lockBanner">
-    <strong style="color:var(--coral-red);">⏳ STEP LOCK ENGAGED</strong>
-    <span id="lockBannerText"></span>
-</div>
-
 <!-- ── Interactive Conversion Chain Canvas ── -->
 <div class="bridge-builder-chasm" id="chainCanvas">
     <div class="feedback-box" id="explanationConsole">
@@ -385,11 +367,9 @@ const UNITS_SPEC = {{ nodes_json|safe }};
 let VERIFIED_CHAIN = {{ verified_chain_json|safe }};
 let VERIFIED_PREFIX = {{ verified_prefix_json|safe }};
 let laneCleared  = {{ lane_cleared|yesno:'true,false' }};
-const STEP_LOCK_THRESHOLD = {{ step_lock_threshold }};
 
 const STORE_KEY = `cq_m2_${PROBLEM_ID}_${PART_LABEL}`;
 let activeNodeIndex = 0;
-let lockedUntil = null;
 function extractUniqueUnits() {
     const unitsSet = new Set();
     if (GIVEN_UNIT && GIVEN_FORMULA) unitsSet.add(`${GIVEN_UNIT}_${GIVEN_FORMULA}`);
@@ -409,7 +389,7 @@ const UNIT_OPTIONS_HTML = extractUniqueUnits();
 // Draft persistence for the ACTIVE card only (verified steps live server-side)
 // ─────────────────────────────────────────────────────────────────────────────
 function saveDraft() {
-    if (laneCleared || lockedUntil) return;
+    if (laneCleared) return;
     const i = activeNodeIndex;
     const state = {
         numVal:  document.getElementById(`num_val_${i}`)?.value || '',
@@ -502,7 +482,7 @@ function activeCardFilled() {
 // Progressive per-step verification (all grading server-side)
 // ─────────────────────────────────────────────────────────────────────────────
 async function verifyCurrentNode() {
-    if (laneCleared || lockedUntil || !activeCardFilled()) return;
+    if (laneCleared || !activeCardFilled()) return;
 
     const btn = document.getElementById('btnVerifyStep');
     if (btn) btn.disabled = true;
@@ -544,11 +524,6 @@ function handleNodeResponse(data) {
         return;
     }
 
-    if (data.locked) {
-        engageStepLock(data.retry_after || 30, data.message);
-        return;
-    }
-
     const idx = activeNodeIndex;
 
     if (data.success && data.correct) {
@@ -585,33 +560,7 @@ function handleNodeResponse(data) {
     }
 
     let consoleMsg = `<strong style="color:#B91C1C;">${data.unit_ok === false ? 'Unit mismatch.' : 'Value check failed.'}</strong> ${data.message || ''}`;
-    if (data.rolling_accuracy !== undefined && data.rolling_accuracy !== null && data.rolling_accuracy < STEP_LOCK_THRESHOLD) {
-        consoleMsg += `<br><em>Rolling accuracy: ${data.rolling_accuracy}% — at risk of step lock (threshold ${STEP_LOCK_THRESHOLD}%). Slow down and use the strategy guide.</em>`;
-    }
     updateConsole(consoleMsg);
-    updateControls();
-}
-
-function engageStepLock(seconds, message) {
-    lockedUntil = Date.now() + seconds * 1000;
-    const banner = document.getElementById('lockBanner');
-    const textEl = document.getElementById('lockBannerText');
-    banner.style.display = 'block';
-    textEl.textContent = ` ${message}`;
-
-    const tick = () => {
-        const remaining = Math.ceil((lockedUntil - Date.now()) / 1000);
-        if (remaining <= 0) {
-            banner.style.display = 'none';
-            lockedUntil = null;
-            updateControls();
-            updateConsole('Step lock released. Re-read the concept check and verify the current step carefully.');
-            return;
-        }
-        textEl.textContent = ` Inputs are locked for ${remaining}s. Rolling accuracy fell below ${STEP_LOCK_THRESHOLD}% — review the strategy guide above.`;
-        setTimeout(tick, 500);
-    };
-    tick();
     updateControls();
 }
 
@@ -628,7 +577,7 @@ function updateControls() {
 
     btn.style.display = 'inline-block';
     btn.textContent = `✓ Verify Step ${activeNodeIndex + 1}`;
-    btn.disabled = !activeCardFilled() || !!lockedUntil;
+    btn.disabled = !activeCardFilled();
     label.textContent = `${activeNodeIndex} / ${REQUIRED_NODES} steps verified`;
 }
 

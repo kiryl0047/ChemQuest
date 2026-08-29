@@ -40,7 +40,6 @@ urlpatterns = [
     path('api/verify-balancing/',    views.verify_balancing_backend,  name='verify_balancing'),
     path('api/verify-molar-mass/',   views.verify_molar_mass_backend, name='verify_molar_mass'),
     path('api/m1-checkpoint/',       views.m1_checkpoint,             name='m1_checkpoint'),
-    path('api/m1-retrieval/',        views.m1_retrieval_check,        name='m1_retrieval'),
 path('api/audit-chain/',         views.audit_chain,                name='audit_chain'),
 path('api/verify-node/',         views.verify_node,                name='verify_node'),
     path('api/constants/<str:prob_id>/', views.api_locked_constants,  name='api_locked_constants'),

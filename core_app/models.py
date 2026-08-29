@@ -44,7 +44,6 @@ class UserProfile(models.Model):
     user     = models.OneToOneField(User, on_delete=models.CASCADE,
                                     related_name='profile')
     total_xp = models.IntegerField(default=0)
-    quickharvest_mastery_count = models.IntegerField(default=0)
  
     def __str__(self):
         return f"{self.user.username} -- LVL {self.level} ({self.total_xp} XP)"
@@ -246,8 +245,7 @@ class ProblemProgress(models.Model):
     balancing_cleared       = models.BooleanField(default=False)
     molar_mass_cleared      = models.BooleanField(default=False)
     checkpoint_cleared      = models.BooleanField(default=False)
-    retrieval_check_passed  = models.BooleanField(default=False)
-    accuracy_gate_passed    = models.BooleanField(default=False)
+    exit_checkpoint_cleared = models.BooleanField(default=False)
     yield_comparison_verified = models.BooleanField(default=False)
     deduction_cleared       = models.BooleanField(default=False)
     synthesis_passed        = models.BooleanField(default=False)
@@ -271,8 +269,7 @@ class ProblemProgress(models.Model):
 
     def module1_complete(self):
         return (self.balancing_cleared and self.molar_mass_cleared
-                and self.checkpoint_cleared and self.retrieval_check_passed
-                and self.accuracy_gate_passed)
+                and self.checkpoint_cleared and self.exit_checkpoint_cleared)
 
     def is_completed(self, problem=None):
         base = self.module1_complete()
