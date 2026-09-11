@@ -22,3 +22,6 @@ media/
 .agents/
 .claude/
 skills-lock.json
+
+# Documentation files
+FILES/
