@@ -376,7 +376,13 @@
 <body>
 
 <header>
-    <h1><a href="{% url 'problem_lobby' %}" style="text-decoration:none; color:inherit;">CHEMQUEST //</a></h1>
+    <h1>
+        {% if request.user.is_authenticated %}
+            <a href="{% url 'problem_lobby' %}" style="text-decoration:none; color:inherit;">CHEMQUEST //</a>
+        {% else %}
+            <a href="{% url 'student_login' %}" style="text-decoration:none; color:inherit;">CHEMQUEST //</a>
+        {% endif %}
+    </h1>
     <div class="user-status">
         {% if request.user.is_authenticated %}
             <span>
