@@ -95,7 +95,6 @@ def register(request):
         form = UserCreationForm(request.POST)
         if form.is_valid():
             user = form.save()
-            UserProfile.objects.get_or_create(user=user)
             login(request, user)
             return redirect('problem_lobby')
     else:
