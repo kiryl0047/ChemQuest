@@ -1,5 +1,7 @@
 {% extends 'base.html' %}
 
+{% load formula_tags %}
+
 {% block content %}
 <style>
     .grid-info-header {
@@ -308,7 +310,7 @@
             <span style="font-size:18px; font-weight:bold; display:block;">
                 {{ given_quantity }} <span>{{ given_unit }}</span>
             </span>
-            <span style="color:var(--text-muted); font-size:12px;">{{ given_formula }} (Given)</span>
+            <span style="color:var(--text-muted); font-size:12px;">{{ given_formula|formula_subscript|safe }} (Given)</span>
         </div>
 
         <div id="nodeContainer" style="display:contents;"></div>
@@ -317,7 +319,7 @@
         <div class="terminal-yield-node" id="yieldNode">
             <span style="font-size:18px; font-weight:bold; display:block; color:var(--constant-gold);" id="yieldValue">—</span>
             <span style="color:var(--text-muted); font-size:12px;">
-                {{ target_unit }} {{ target_formula }} (Calculated Yield)
+                {{ target_unit }} {{ target_formula|formula_subscript|safe }} (Calculated Yield)
             </span>
         </div>
     </div>

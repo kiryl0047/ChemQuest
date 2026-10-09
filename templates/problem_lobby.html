@@ -268,8 +268,13 @@
 <div class="lobby-header">
     <span style="color: var(--cyber-teal); font-weight: bold; font-size: 12px; letter-spacing: 2px;">CHEMQUEST // PROBLEM SELECTION LOBBY</span>
     <p style="margin: 6px 0 0 0; color: var(--text-light); font-size: 14px;">
-        Select a reaction set to begin. Filter by target conversion type to focus on specific stoichiometry mechanics.
+        <span style="font-weight:bold; color:var(--cyber-teal);">Getting started:</span> Click "<strong>Begin Preparation Ledger</strong>" on any problem card to start. Use the filter ribbon below to narrow problems by conversion type (mol→mol, mol→g, g→mol, g→g).
     </p>
+    {% if in_progress_count > 0 %}
+    <p style="margin: 10px 0 0 0; color: var(--combo-green); font-size: 12px;">
+        <span style="color: var(--combo-green);">🔄</span> You have <strong>{{ in_progress_count }}</strong> problem{{ in_progress_count|pluralize }} in progress. Use the <strong>Retry</strong> button (🔄) to reset any problem's telemetry.
+    </p>
+    {% endif %}
 </div>
 
 <!-- ── Synthesis Challenge banner ── -->
@@ -306,20 +311,34 @@
     <button class="filter-btn" onclick="filterCategory('mol_to_mol', this)" data-type="mol_to_mol">
         <span style="display:inline-block; width:8px; height:8px; border-radius:50%; background:#3c486a;"></span>
         mol → mol <span class="filter-count" id="count-mol_to_mol">0</span>
+        <span style="font-size:10px; margin-left:8px; color:var(--text-muted);">(1 node)</span>
     </button>
     <button class="filter-btn" onclick="filterCategory('mol_to_g', this)" data-type="mol_to_g">
         <span style="display:inline-block; width:8px; height:8px; border-radius:50%; background:var(--combo-green);"></span>
         mol → g <span class="filter-count" id="count-mol_to_g">0</span>
+        <span style="font-size:10px; margin-left:8px; color:var(--text-muted);">(2 nodes)</span>
     </button>
     <button class="filter-btn" onclick="filterCategory('g_to_mol', this)" data-type="g_to_mol">
         <span style="display:inline-block; width:8px; height:8px; border-radius:50%; background:var(--constant-gold);"></span>
         g → mol <span class="filter-count" id="count-g_to_mol">0</span>
+        <span style="font-size:10px; margin-left:8px; color:var(--text-muted);">(2 nodes)</span>
     </button>
     <button class="filter-btn" onclick="filterCategory('g_to_g', this)" data-type="g_to_g">
         <span style="display:inline-block; width:8px; height:8px; border-radius:50%; background:var(--cyber-teal);"></span>
         g → g <span class="filter-count" id="count-g_to_g">0</span>
+        <span style="font-size:10px; margin-left:8px; color:var(--text-muted);">(3 nodes)</span>
     </button>
 </div>
+
+{% if total_problems_count == 0 %}
+<div style="padding: 20px; text-align: center; color: var(--text-muted); font-size: 14px;">
+    <strong>No problems found.</strong> Run <code>python manage.py seed_problems</code> to populate the database.
+</div>
+{% elif in_progress_count > 0 %}
+<div style="padding: 20px; background: rgba(42,52,76,0.1); border: 1px dashed var(--border); border-radius: 6px; margin: 20px 0;">
+    <strong>{{ in_progress_count }} problem{{ in_progress_count|pluralize }} in progress</strong>. Click the <span style="color:var(--coral-red);">🔄</span> button on any card to reset telemetry and restart.
+</div>
+{% endif %}
 
 <div class="problem-grid" id="problemGrid">
     {% for problem in problems %}

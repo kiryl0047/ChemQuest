@@ -1,5 +1,7 @@
 {% extends 'base.html' %}
 
+{% load formula_tags %}
+
 {% block content %}
 <style>
     .grid-info-header {
@@ -227,13 +229,13 @@
             <p style="font-size: 13px; color: #3c486a; margin-bottom: 12px;">{{ part.part_prompt }}</p>
 
             <div class="row-layout">
-                <div class="fraction-block" style="border-color: var(--border);">
+<div class="fraction-block" style="border-color: var(--border);">
                     <span style="font-size: 13px; font-weight: bold; color: var(--cyber-teal); padding: 6px;">
                         {{ part.given_quantity }}
                     </span>
                     <div class="fraction-bar"></div>
                     <span style="font-size: 11px; color: var(--text-muted); padding: 6px;">
-                        {{ part.given_unit }} {{ part.given_formula }}
+                        {{ part.given_unit }} {{ part.given_formula|formula_subscript|safe }}
                     </span>
                 </div>
 
@@ -274,7 +276,7 @@
 
         <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 15px;">
             Both conversion lanes are verified. Click the track that produced the
-            <strong style="color:#B91C1C;">SMALLER</strong> product yield of <code>{{ target_formula }}</code>.
+            <strong style="color:#B91C1C;">SMALLER</strong> product yield of <code>{{ target_formula|formula_subscript|safe }}</code>.
         </p>
 
         <div id="trackButtons" style="display:flex; gap:14px; flex-wrap:wrap;"></div>
@@ -309,7 +311,7 @@
 
             <div>
                 <label style="display: block; font-size: 11px; font-weight: bold; color: var(--text-muted); margin-bottom: 6px;">
-                    THEORETICAL PRODUCT YIELD (g {{ target_formula }})
+                    THEORETICAL PRODUCT YIELD (g {{ target_formula|formula_subscript|safe }})
                 </label>
                 <input type="number" step="0.0001" id="inputYield" placeholder="Total Yield Amount"
                        class="deduction-input">

@@ -1,5 +1,7 @@
 {% extends 'base.html' %}
 
+{% load formula_tags %}
+
 {% block content %}
 <style>
     .ledger-card {
@@ -605,7 +607,7 @@
         {% for r in reactants %}
             {% if not forloop.first %}<span class="eq-plus">+</span>{% endif %}
             <input type="number" class="coeff-input" id="coeff_r{{ forloop.counter0 }}" data-formula="{{ r.formula }}" min="1" max="20" placeholder="?">
-            <span>{{ r.formula }}</span>
+            <span>{{ r.formula|formula_subscript|safe }}</span>
         {% endfor %}
     </div>
 
@@ -616,7 +618,7 @@
         {% for p in products %}
             {% if not forloop.first %}<span class="eq-plus">+</span>{% endif %}
             <input type="number" class="coeff-input" id="coeff_p{{ forloop.counter0 }}" data-formula="{{ p.formula }}" min="1" max="20" placeholder="?">
-            <span>{{ p.formula }}</span>
+            <span>{{ p.formula|formula_subscript|safe }}</span>
         {% endfor %}
     </div>
 
@@ -692,7 +694,7 @@
                 <strong style="color: var(--text-light);">Formula Blueprints for this reaction:</strong>
                 {% for formula in target_substances %}
                 <span style="display: inline-block; margin-right: 12px; margin-top: 4px; color: var(--constant-gold);">
-                    • <code>{{ formula }}</code>
+                    • <code>{{ formula|formula_subscript|safe }}</code>
                 </span>
                 {% endfor %}
             </div>
@@ -707,7 +709,7 @@
     <div class="mass-row-wrapper" id="massWrapper_{{ formula }}">
         <div class="mass-row">
             <span style="min-width: 75px; font-weight: bold; font-size: 18px; color: var(--text-light);">
-                {{ formula }}:
+                {{ formula|formula_subscript|safe }}:
             </span>
             <input type="number" step="0.001" class="mass-input"
                    id="mass_{{ formula }}"

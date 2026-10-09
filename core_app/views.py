@@ -515,10 +515,13 @@ def problem_lobby(request):
         for pp in ProblemProgress.objects.filter(user=request.user)
     }
 
+    in_progress_count = 0
     for problem in problems:
         problem.has_telemetry = problem.problem_id in answered_problem_ids
         prog = progress_map.get(problem.problem_id)
         problem.completed = bool(prog and prog.is_completed(problem))
+        if problem.has_telemetry and not problem.completed:
+            in_progress_count += 1
 
     completed_count = _completed_problems_count(request.user)
     latest_synthesis = SynthesisAttempt.objects.filter(
@@ -527,6 +530,9 @@ def problem_lobby(request):
 
     return render(request, 'problem_lobby.html', {
         'problems':               problems,
+        'completed_count':        completed_count,
+        'in_progress_count':      in_progress_count,
+        'total_problems_count':   problems.count(),
         'synthesis_unlocked':     synthesis_unlocked,
         'synthesis_completed':    completed_count,
         'synthesis_required':     SYNTHESIS_ELIGIBILITY_COUNT,

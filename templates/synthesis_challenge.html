@@ -99,7 +99,7 @@
             <div class="fraction-block" style="border-color:var(--border);">
                 <span style="font-size:13px; font-weight:bold; color:var(--cyber-teal); padding:6px;">{{ item.given_quantity }}</span>
                 <div class="fraction-bar"></div>
-                <span style="font-size:11px; color:var(--text-muted); padding:6px;">{{ item.given_unit }} {{ item.given_formula }}</span>
+                <span style="font-size:11px; color:var(--text-muted); padding:6px;">{{ item.given_unit }} {{ item.given_formula|formula_subscript|safe }}</span>
             </div>
             <span id="nodeCells_{{ forloop.counter0 }}" style="display:contents;"></span>
         </div>
