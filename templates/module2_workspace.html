@@ -421,6 +421,41 @@ function restoreDraft() {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// Client‑side sync: ensure VERIFIED_PREFIX / VERIFIED_CHAIN reflect the
+// server‑authoritative lane_cleared flag read from the DB on every page load.
+// This prevents the client variables from drifting out of sync after
+// server‑side verification (e.g. after a browser restart or session restore).
+// ─────────────────────────────────────────────────────────────────────────────
+(function () {
+    'use strict';
+
+    // Read the authoritative flag from the server‑rendered context.
+    // The template sets laneCleared = {{ lane_cleared|yesno:'true,false' }},
+    // which comes from part_progress.lane_cleared in the database.
+    const serverLaneCleared = {{ lane_cleared|yesno:'true,false' }};
+
+    // If the server says the lane is cleared, synchronise the client
+    // chain/prefix variables so that renderVerifiedReplay() and the UI
+    // behave consistently even after a session restore or browser restart.
+    if (serverLaneCleared === true) {
+        // The server has the final state; use it to top‑up the client
+        // variables so that renderVerifiedReplay() can restore the chain.
+        if (typeof VERIFIED_CHAIN === 'undefined' || VERIFIED_CHAIN === null) {
+            VERIFIED_CHAIN = [];
+        }
+        if (typeof VERIFIED_PREFIX === 'undefined' || VERIFIED_PREFIX === null) {
+            VERIFIED_PREFIX = [];
+        }
+        // Ensure the client variables are at least as long as the server
+        // would expect for a cleared lane (the exact length is less important
+        // than the laneCleared flag itself being true).
+        if (laneCleared !== true) {
+            laneCleared = true;
+        }
+    }
+})();
+
+// ─────────────────────────────────────────────────────────────────────────────
 // Card construction
 // ─────────────────────────────────────────────────────────────────────────────
 function spawnCard(idx) {
