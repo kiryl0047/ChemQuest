@@ -88,6 +88,9 @@ class StoichiometryProblem(models.Model):
     products_str          = models.CharField(max_length=200)
     correct_coefficients  = models.CharField(max_length=50)
     is_limiting_problem   = models.BooleanField(default=False)
+    # Generated on the fly for the Synthesis Challenge only. These never appear
+    # in the Problem Lobby / dashboard catalog and never count as completed work.
+    is_generated          = models.BooleanField(default=False, db_index=True)
  
     def __str__(self):
         return f"[{self.problem_id}] {self.title}"
@@ -268,8 +271,7 @@ class ProblemProgress(models.Model):
         return obj
 
     def module1_complete(self):
-        return (self.balancing_cleared and self.molar_mass_cleared
-                and self.checkpoint_cleared and self.exit_checkpoint_cleared)
+        return (self.balancing_cleared and self.molar_mass_cleared)
 
     def is_completed(self, problem=None):
         base = self.module1_complete()

@@ -22,6 +22,7 @@ from .models import (
     XP_PER_NODE_CORRECT, XP_PER_PART_COMPLETE,
     XP_PER_BALANCE, XP_PER_LIMITING_TRACK, XP_PER_DEDUCTION,
 )
+from .problem_generator import generate_synthesis_part, prune_generated_problems
 
 # ===========================================================================
 # Tunable assessment-policy constants
@@ -108,14 +109,20 @@ def register(request):
 # ===========================================================================
 
 def _all_problems():
-    return StoichiometryProblem.objects.prefetch_related('parts').order_by('problem_id')
+    return (StoichiometryProblem.objects
+            .filter(is_generated=False)
+            .prefetch_related('parts')
+            .order_by('problem_id'))
 
 
 def _get_problem_or_first(prob_id):
     try:
         return StoichiometryProblem.objects.get(problem_id=prob_id)
     except StoichiometryProblem.DoesNotExist:
-        return StoichiometryProblem.objects.order_by('problem_id').first()
+        return (StoichiometryProblem.objects
+                .filter(is_generated=False)
+                .order_by('problem_id')
+                .first())
 
 
 def _get_coeff(problem, formula):
@@ -191,6 +198,35 @@ def _backfill_progress_from_telemetry(progress):
     progress.save()
 
 
+def _problem_constants(problem: StoichiometryProblem):
+    """Canned constants handed to the student for one problem: the balanced
+    equation coefficients and every molar mass involved in that equation."""
+    formulas = _unique_formulas(problem)
+    substances = {
+        s.formula: s for s in Substance.objects.filter(formula__in=formulas)
+    }
+
+    def side(entries):
+        return [{
+            'formula':  entry['formula'],
+            'coeff':    entry['coeff'],
+            'molar_mass': round(float(substances[entry['formula']].molar_mass), 4)
+            if entry['formula'] in substances else None,
+            'display_name': substances[entry['formula']].display_name
+            if entry['formula'] in substances else entry['formula'],
+        } for entry in entries]
+
+    return {
+        'reactants': side(problem.reactants),
+        'products':  side(problem.products),
+        'masses': [{
+            'formula':      sub.formula,
+            'display_name': sub.display_name,
+            'molar_mass':   round(float(sub.molar_mass), 4),
+        } for sub in substances.values()],
+    }
+
+
 def _part_context(part: ProblemPart):
     """Units-only node specs. Expected numeric values never leave the server."""
     nodes = part.expected_node_units()
@@ -213,6 +249,7 @@ def _part_context(part: ProblemPart):
         'target_label':    f"? {'g' if tu == 'g' else 'mol'} {tf}",
         'part_label':      part.part_label,
         'part_prompt':     part.part_prompt,
+        'constants':       _problem_constants(part.problem),
     }
 
 
@@ -236,7 +273,7 @@ def _navigation_context(problem: StoichiometryProblem, current_part: ProblemPart
 
 
 def _completed_problems_count(user):
-    problems = {p.problem_id: p for p in StoichiometryProblem.objects.all()}
+    problems = {p.problem_id: p for p in _all_problems()}
     completed = 0
     for prog in ProblemProgress.objects.filter(user=user):
         problem = problems.get(prog.problem_id)
@@ -568,7 +605,10 @@ def preparation_ledger(request, prob_id=None):
     if prob_id:
         problem = _get_problem_or_first(prob_id)
     else:
-        problem = StoichiometryProblem.objects.order_by('problem_id').first()
+        problem = (StoichiometryProblem.objects
+                   .filter(is_generated=False)
+                   .order_by('problem_id')
+                   .first())
 
     if not problem:
         return render(request, 'no_problems.html')
@@ -1031,12 +1071,15 @@ def _dashboard_context(user):
     trouble_ids = logs.filter(attempts_count__gte=2).values_list(
         'problem_id', flat=True).distinct()
     recommended_problems = list(
-        StoichiometryProblem.objects.filter(problem_id__in=trouble_ids)[:3])
+        StoichiometryProblem.objects
+        .filter(is_generated=False, problem_id__in=trouble_ids)[:3])
 
     if not recommended_problems:
         attempted_ids = logs.values_list('problem_id', flat=True).distinct()
         recommended_problems = list(
-            StoichiometryProblem.objects.exclude(problem_id__in=attempted_ids)[:3])
+            StoichiometryProblem.objects
+            .filter(is_generated=False)
+            .exclude(problem_id__in=attempted_ids)[:3])
 
     trend_series = _trend_series(logs)
     depth_metrics, position_metrics = _skill_depth_metrics(logs)
@@ -1323,7 +1366,9 @@ def instructor_dashboard(request):
 # ===========================================================================
 
 def _synthesis_eligible_parts(user):
-    problems = {p.problem_id: p for p in StoichiometryProblem.objects.prefetch_related('parts')}
+    problems = {p.problem_id: p for p in
+                StoichiometryProblem.objects.filter(is_generated=False)
+                .prefetch_related('parts')}
     eligible = []
     for prog in ProblemProgress.objects.filter(user=user):
         problem = problems.get(prog.problem_id)
@@ -1332,14 +1377,121 @@ def _synthesis_eligible_parts(user):
     return eligible
 
 
+def _user_concept_accuracy(user):
+    """Return a dict mapping conversion_type -> accuracy % (0-100), based on telemetry."""
+    logs = StudentTelemetryLog.objects.filter(user=user)
+    total_attempts = logs.aggregate(t=Sum('attempts_count'))['t'] or 0
+    total_verified = logs.filter(is_correct=True).count()
+    if total_attempts + total_verified == 0:
+        return {ct: 100.0 for ct in CONVERSION_TYPE_LABELS}
+    accuracy = round((total_verified / (total_attempts + total_verified)) * 100, 1)
+    # Per-type breakdown
+    metrics = {}
+    for ct in CONVERSION_TYPE_LABELS:
+        matching_parts = ProblemPart.objects.filter(conversion_type=ct)
+        part_labels = list(matching_parts.values_list('part_label', flat=True))
+        prob_ids = list(matching_parts.values_list('problem__problem_id', flat=True))
+        type_logs = logs.filter(problem_id__in=prob_ids, part_label__in=part_labels)
+        failures = type_logs.aggregate(total=Sum('attempts_count'))['total'] or 0
+        successes = type_logs.filter(is_correct=True).count()
+        if failures + successes > 0:
+            metrics[ct] = round((successes / (failures + successes)) * 100, 1)
+        else:
+            metrics[ct] = 100.0
+    return metrics
+
+
+def _parts_by_conversion_type(eligible):
+    """Group eligible parts by conversion type for prioritized selection."""
+    grouped = {ct: [] for ct in CONVERSION_TYPE_LABELS}
+    for part in eligible:
+        ct = part.conversion_type
+        if ct in grouped:
+            grouped[ct].append(part)
+        else:
+            grouped.setdefault(ct, []).append(part)
+    return grouped
+
+
+def _part_key(part):
+    """Stable identity for a part — part_label is only unique per problem."""
+    return (part.problem.problem_id, part.part_label)
+
+
+def _catalog_synthesis_picks(user, count, exclude=None):
+    """Adaptive fallback that draws review items from completed catalog problems."""
+    eligible = _synthesis_eligible_parts(user)
+    if not eligible or count <= 0:
+        return []
+
+    concept_acc = _user_concept_accuracy(user)
+    parts_by_type = _parts_by_conversion_type(eligible)
+    weakest_first = sorted(
+        CONVERSION_TYPE_LABELS,
+        key=lambda ct: (concept_acc.get(ct, 100.0), random.random())
+    )
+
+    used = set(exclude or ())
+    picks = []
+
+    for ct in weakest_first:
+        if len(picks) >= count:
+            break
+        candidates = [p for p in parts_by_type.get(ct, [])
+                      if _part_key(p) not in used]
+        if not candidates:
+            continue
+        part = random.choice(candidates)
+        used.add(_part_key(part))
+        picks.append(part)
+
+    leftover = [p for p in eligible if _part_key(p) not in used]
+    random.shuffle(leftover)
+    for part in leftover:
+        if len(picks) >= count:
+            break
+        used.add(_part_key(part))
+        picks.append(part)
+
+    while len(picks) < count:
+        picks.append(random.choice(eligible))
+    return picks
+
+
 @login_required
 def synthesis_challenge(request):
-    eligible = _synthesis_eligible_parts(request.user)
-    if len(eligible) < 1 or _completed_problems_count(request.user) < SYNTHESIS_ELIGIBILITY_COUNT:
+    if _completed_problems_count(request.user) < SYNTHESIS_ELIGIBILITY_COUNT:
         return redirect('problem_lobby')
 
-    picks = random.sample(list(eligible),
-                          min(SYNTHESIS_ITEM_COUNT, len(eligible)))
+    # --- Adaptive targeting: weakest conversion types first ---
+    concept_acc = _user_concept_accuracy(request.user)
+    weakest_first = sorted(
+        CONVERSION_TYPE_LABELS,
+        key=lambda ct: (concept_acc.get(ct, 100.0), random.random())
+    )
+    target_types = weakest_first[:SYNTHESIS_ITEM_COUNT]
+
+    # --- Fresh generation: every attempt gets a brand-new problem set ---
+    # Generated problems are flagged is_generated=True, so they live only in
+    # this challenge and never leak into the Problem Lobby.
+    prune_generated_problems()
+    picks = []
+    for ct in target_types:
+        try:
+            picks.append(generate_synthesis_part(conversion_type=ct))
+        except Exception:
+            # Defensive: a generation failure must never block the challenge.
+            pass
+
+    if len(picks) < SYNTHESIS_ITEM_COUNT:
+        picks.extend(_catalog_synthesis_picks(
+            request.user,
+            SYNTHESIS_ITEM_COUNT - len(picks),
+            exclude={_part_key(p) for p in picks},
+        ))
+
+    random.shuffle(picks)
+
     items = []
     for part in picks:
         ctx = _part_context(part)
@@ -1348,13 +1500,18 @@ def synthesis_challenge(request):
         items.append(ctx)
 
     exam_items = [{
-        'problem_id':   it['problem_id'],
-        'part_label':   it['part_label'],
-        'node_count':   it['node_count'],
-        'node_units':   json.loads(it['nodes_json']),
-        'given_label':  it['starting_label'],
-        'target_label': it['target_label'],
-        'title':        it['problem_title'],
+        'problem_id':     it['problem_id'],
+        'part_label':     it['part_label'],
+        'node_count':     it['node_count'],
+        'node_units':     json.loads(it['nodes_json']),
+        'given_label':    it['starting_label'],
+        'target_label':   it['target_label'],
+        'given_quantity': it['given_quantity'],
+        'given_unit':     it['given_unit'],
+        'given_formula':  it['given_formula'],
+        'target_unit':    it['target_unit'],
+        'target_formula': it['target_formula'],
+        'title':          it['problem_title'],
     } for it in items]
 
     return render(request, 'synthesis_challenge.html', {
@@ -1362,6 +1519,131 @@ def synthesis_challenge(request):
         'exam_items_json': json.dumps(exam_items),
         'pass_threshold': SYNTHESIS_PASS_PCT,
     })
+
+
+@login_required
+@csrf_exempt
+def synthesis_verify_node(request):
+    """
+    Progressive per-step verification for a Synthesis Challenge item.
+
+    Mirrors Module 2's step-grid verification semantics (diagonal unit
+    cancellation + value checks), but stays stateless: the client sends the
+    already-verified prefix for this item and nothing is written to
+    PartProgress. The final submission records the attempt.
+    """
+    if request.method != 'POST':
+        return JsonResponse({'success': False, 'message': 'Invalid method.'})
+
+    try:
+        data = json.loads(request.body)
+    except json.JSONDecodeError:
+        return JsonResponse({'success': False, 'message': 'Invalid JSON.'})
+
+    prob_id = data.get('problem_id')
+    part_label = data.get('part_label', 'a')
+    raw_node = data.get('node')
+    prefix = data.get('prefix') or []
+
+    if not isinstance(raw_node, dict):
+        return JsonResponse({'success': False, 'message': 'Missing node payload.'})
+    if not isinstance(prefix, list):
+        return JsonResponse({'success': False, 'message': 'Invalid prefix payload.'})
+
+    current = {
+        'num_value': raw_node.get('num_value'),
+        'num_unit':  str(raw_node.get('num_unit') or '').strip(),
+        'den_value': raw_node.get('den_value'),
+        'den_unit':  str(raw_node.get('den_unit') or '').strip(),
+    }
+
+    try:
+        part = ProblemPart.objects.get(
+            problem__problem_id=prob_id, part_label=part_label)
+    except ProblemPart.DoesNotExist:
+        return JsonResponse({'success': False, 'message': 'Item not found.'})
+
+    index = len(prefix)
+    if index >= part.node_count:
+        return JsonResponse({'success': False,
+                             'message': 'All steps already verified.'})
+
+    candidates = [c for c in _valid_chains(part) if _prefix_matches(c, prefix)]
+    if not candidates:
+        return JsonResponse({
+            'success': False,
+            'unit_ok': False,
+            'message': 'Your verified prefix no longer matches this conversion. '
+                       'Restart the item.',
+        })
+
+    unit_ok = any(
+        c[index]['num_unit'] == current['num_unit'] and
+        c[index]['den_unit'] == current['den_unit']
+        for c in candidates
+    )
+
+    matched_chain = None
+    if unit_ok:
+        try:
+            num_val = float(current['num_value'])
+            den_val = float(current['den_value'])
+        except (TypeError, ValueError):
+            num_val = den_val = None
+
+        if num_val is not None:
+            for c in candidates:
+                exp = c[index]
+                if (abs(num_val - float(exp['num_value'])) < NODE_TOLERANCE and
+                        abs(den_val - float(exp['den_value'])) < NODE_TOLERANCE):
+                    matched_chain = c
+                    break
+
+    if matched_chain is None:
+        prev_unit = (f"{part.given_unit}_{part.given_substance.formula}"
+                     if index == 0 else prefix[-1]['num_unit'])
+        if not unit_ok:
+            need = str(prev_unit).replace('_', ' ')
+            entered_num = current['num_unit'].replace('_', ' ')
+            entered_den = current['den_unit'].replace('_', ' ')
+            message = (f'Step {index + 1}: this factor must cancel "{need}" '
+                       f'(the unit the previous step ended in), but you wrote '
+                       f'"{entered_num} over {entered_den}".')
+        else:
+            expected_value = None
+            for c in candidates:
+                if (c[index]['num_unit'] == current['num_unit'] and
+                        c[index]['den_unit'] == current['den_unit']):
+                    expected_value = c[index]
+                    break
+            if expected_value:
+                message = (f'Step {index + 1}: units are correct but the VALUES '
+                           f'are off — for this constant use num '
+                           f'{expected_value["num_value"]} over den '
+                           f'{expected_value["den_value"]}.')
+            else:
+                message = (f'Step {index + 1}: units are correct but the VALUES '
+                           f'are off — recheck your arithmetic for that constant.')
+
+        return JsonResponse({
+            'success': False,
+            'unit_ok': unit_ok,
+            'message': message,
+        })
+
+    complete = (index + 1 == part.node_count)
+    payload = {
+        'success': True,
+        'correct': True,
+        'complete': complete,
+        'message': ('Conversion chain verified — all units cancelled cleanly!'
+                    if complete else f'Step {index + 1} verified.'),
+    }
+    if complete:
+        payload['correct_answer'] = (
+            f"{float(part.correct_answer):.4f} "
+            f"{part.target_unit} {part.target_substance.formula}")
+    return JsonResponse(payload)
 
 
 @login_required

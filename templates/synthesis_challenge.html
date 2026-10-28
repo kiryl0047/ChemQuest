@@ -1,4 +1,5 @@
 {% extends 'base.html' %}
+{% load formula_tags %}
 
 {% block content %}
 <style>
@@ -9,6 +10,193 @@
         border-radius: 4px;
         margin-bottom: 25px;
     }
+
+    /* ── Molar Mass Builder ── */
+    .builder-card {
+        background: var(--bg-dark);
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        padding: 18px;
+        margin-bottom: 22px;
+    }
+    .builder-head {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 10px;
+        flex-wrap: wrap;
+        margin-bottom: 6px;
+    }
+    .builder-title {
+        color: var(--cyber-teal);
+        font-weight: bold;
+        font-size: 12px;
+        letter-spacing: 1.5px;
+    }
+    .builder-help {
+        font-size: 12px;
+        color: var(--text-muted);
+        margin: 0 0 12px 0;
+        line-height: 1.5;
+    }
+    .builder-search {
+        display: flex;
+        gap: 8px;
+        flex-wrap: wrap;
+        margin-bottom: 12px;
+    }
+    .builder-search input {
+        flex: 1 1 260px;
+        background: var(--bg-slate);
+        border: 1px solid var(--border);
+        color: var(--text-light);
+        font-size: 14px;
+        padding: 10px 12px;
+        border-radius: 4px;
+    }
+    .builder-search input:focus {
+        outline: none;
+        border-color: var(--cyber-teal);
+    }
+    .builder-search button,
+    .builder-clear {
+        background: var(--bg-slate);
+        border: 1px solid var(--cyber-teal);
+        color: var(--cyber-teal);
+        font-size: 12px;
+        font-weight: bold;
+        padding: 9px 16px;
+        border-radius: 4px;
+        cursor: pointer;
+        letter-spacing: 0.5px;
+    }
+    .builder-search button:hover,
+    .builder-clear:hover { filter: brightness(1.08); }
+    .builder-clear { border-color: var(--coral-red); color: var(--coral-red); }
+
+    .builder-chips {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        min-height: 34px;
+        margin-bottom: 12px;
+    }
+    .builder-empty {
+        font-size: 12px;
+        color: var(--text-muted);
+        font-style: italic;
+        align-self: center;
+    }
+    .builder-chip {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        background: var(--bg-slate);
+        border: 1px solid var(--border);
+        border-radius: 20px;
+        padding: 5px 10px;
+    }
+    .builder-sym {
+        color: var(--constant-gold);
+        font-weight: bold;
+        font-size: 14px;
+        min-width: 22px;
+        text-align: center;
+    }
+    .chip-count {
+        color: var(--text-light);
+        font-weight: bold;
+        font-size: 13px;
+        min-width: 18px;
+        text-align: center;
+    }
+    .chip-step, .chip-remove {
+        background: transparent;
+        border: 1px solid var(--border);
+        color: var(--text-muted);
+        width: 20px;
+        height: 20px;
+        line-height: 1;
+        border-radius: 50%;
+        cursor: pointer;
+        font-size: 12px;
+        padding: 0;
+    }
+    .chip-step:hover { border-color: var(--cyber-teal); color: var(--cyber-teal); }
+    .chip-remove:hover { border-color: var(--coral-red); color: var(--coral-red); }
+
+    .builder-total {
+        font-size: 16px;
+        color: var(--text-light);
+        padding: 10px 12px;
+        background: var(--bg-slate);
+        border-radius: 4px;
+        border-left: 3px solid var(--constant-gold);
+    }
+    .builder-total strong { color: var(--constant-gold); font-size: 19px; }
+    .builder-breakdown {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px 16px;
+        margin-top: 10px;
+        font-size: 12px;
+        color: var(--text-muted);
+    }
+    .bd-item strong { color: var(--text-light); }
+    .bd-formula {
+        flex-basis: 100%;
+        color: var(--cyber-teal);
+        font-weight: bold;
+        font-size: 13px;
+    }
+    .bd-formula sub { font-size: 9px; }
+
+    .pt-details {
+        margin-top: 14px;
+        border-top: 1px solid var(--border);
+        padding-top: 10px;
+    }
+    .pt-details > summary {
+        cursor: pointer;
+        font-size: 12px;
+        font-weight: bold;
+        letter-spacing: 0.5px;
+        color: var(--constant-gold);
+        padding: 6px 0;
+        user-select: none;
+    }
+    .pt-details .periodic-popover { margin-top: 10px; }
+
+    /* ── Wizard progress ── */
+    .wizard-bar {
+        display: flex;
+        align-items: center;
+        gap: 14px;
+        margin-bottom: 18px;
+        flex-wrap: wrap;
+    }
+    .wizard-bar span {
+        font-size: 12px;
+        font-weight: bold;
+        letter-spacing: 1px;
+        color: var(--cyber-teal);
+        white-space: nowrap;
+    }
+    .progress-track {
+        flex: 1 1 180px;
+        height: 6px;
+        background: var(--bg-slate);
+        border-radius: 99px;
+        overflow: hidden;
+    }
+    .progress-fill {
+        height: 100%;
+        width: 0;
+        background: var(--combo-green);
+        transition: width 0.3s ease;
+    }
+
+    /* ── Module 2-style step-grid chain ── */
     .exam-item {
         background: var(--bg-dark);
         border: 1px solid var(--border);
@@ -16,33 +204,125 @@
         border-radius: 8px;
         margin-bottom: 25px;
     }
-    .exam-item.verified-item { border-color: var(--combo-green) !important; }
-    .exam-item.failed-item   { border-color: var(--coral-red) !important; }
-    .row-layout {
+    .exam-item.completed-item { border-color: var(--combo-green) !important; }
+
+    .item-top {
         display: flex;
-        align-items: center;
+        justify-content: space-between;
+        gap: 8px;
         flex-wrap: wrap;
-        gap: 10px;
-        background: var(--bg-slate);
-        padding: 15px;
-        border-radius: 6px;
+        margin-bottom: 14px;
     }
-    .fraction-block {
+    .item-top strong { color: #3c486a; font-size: 13px; }
+    .item-top span { font-size: 11px; color: var(--text-muted); }
+
+    .chain-canvas {
         display: flex;
         flex-direction: column;
+        align-items: stretch;
+        gap: 18px;
+        padding: 18px;
+        background: var(--surface-sunken);
+        border: 1px dashed var(--text-muted);
+        border-radius: 8px;
+    }
+
+    .chain-row {
+        display: flex;
         align-items: center;
+        gap: 14px;
+        overflow-x: auto;
+        padding-bottom: 4px;
+    }
+
+    .starting-node, .terminal-yield-node {
         background: var(--bg-slate);
+        border: 2px solid var(--text-muted);
+        padding: 14px 16px;
+        border-radius: 6px;
+        text-align: center;
+        min-width: 120px;
+        flex-shrink: 0;
+    }
+    .terminal-yield-node { border-color: var(--constant-gold); display: none; }
+    .start-amount, .yield-value {
+        font-size: 18px;
+        font-weight: bold;
+        display: block;
+    }
+    .yield-value { color: var(--constant-gold); }
+    .start-formula, .yield-formula {
+        color: var(--text-muted);
+        font-size: 12px;
+    }
+    .operator-sign { font-size: 22px; color: var(--text-muted); font-weight: bold; flex-shrink: 0; }
+
+    .fraction-card {
+        background: var(--bg-slate);
+        border: 2px solid var(--text-muted);
+        padding: 14px;
+        border-radius: 6px;
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        box-shadow: 0 2px 8px rgba(42,52,76,0.12);
+        transition: all 0.25s ease;
+        flex-shrink: 0;
+        width: 220px;
+    }
+    .fraction-card.active-link   { border-color: var(--cyber-teal); box-shadow: 0 0 12px rgba(var(--accent-rgb),0.25); }
+    .fraction-card.verified-link { border-color: var(--combo-green); box-shadow: 0 0 14px rgba(var(--success-rgb),0.25); }
+    .fraction-card.error-link    { border-color: var(--coral-red); box-shadow: 0 0 14px rgba(var(--danger-rgb),0.25); }
+
+    .slot-container { display: flex; align-items: center; gap: 6px; }
+    .slot-input {
+        background: var(--bg-dark);
         border: 1px solid var(--border);
+        color: var(--text-light);
+        padding: 6px;
+        text-align: center;
         border-radius: 4px;
-        min-width: 110px;
+        width: 65px;
+        font-size: 13px;
     }
-    .fraction-bar { width: 100%; height: 2px; background: #8A93AB; }
-    .fraction-input-cell {
-        width: 95px; background: transparent; border: none; color: var(--text-light);
-        text-align: center; padding: 6px; font-size: 13px;
+    .slot-input:disabled { color: #8A93AB; background: var(--surface-sunken); }
+
+    .unit-select {
+        background: var(--bg-dark);
+        border: 1px solid var(--border);
+        color: var(--cyber-teal);
+        font-size: 11px;
+        font-weight: bold;
+        padding: 5px;
+        border-radius: 4px;
+        flex-grow: 1;
+        max-width: 135px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
     }
-    .fraction-input-cell:focus { outline: none; background: rgba(var(--accent-rgb),0.06); }
-    .fraction-multiply { font-weight: bold; color: var(--text-muted); font-size: 18px; }
+    .unit-select:disabled { color: var(--text-muted); }
+
+    .fraction-divider { height: 2px; background: var(--text-muted); width: 100%; margin: 2px 0; }
+    .unit-cancelled { text-decoration: line-through; color: var(--coral-red) !important; opacity: 0.6; }
+
+    .verify-row { display: flex; gap: 14px; align-items: center; flex-wrap: wrap; }
+
+    .btn-verify-node {
+        background: transparent;
+        border: 1px solid var(--cyber-teal);
+        color: var(--cyber-teal);
+        font-size: 12px;
+        padding: 8px 16px;
+        cursor: pointer;
+        border-radius: 4px;
+        font-weight: bold;
+        transition: all 0.2s ease;
+    }
+    .btn-verify-node:hover:not(:disabled) { background: var(--cyber-teal); color: #FFFFFF; }
+    .btn-verify-node:disabled { opacity: 0.35; cursor: not-allowed; }
+    .chain-progress { font-size: 12px; color: var(--text-muted); }
+
     .btn-submit-exam {
         background: var(--combo-green);
         border: none;
@@ -53,7 +333,9 @@
         border-radius: 4px;
         cursor: pointer;
     }
-    .btn-submit-exam:hover { filter: brightness(1.1); box-shadow: 0 2px 10px rgba(42,52,76,0.2); }
+    .btn-submit-exam:disabled { opacity: 0.45; cursor: not-allowed; filter: grayscale(0.4); }
+    .btn-submit-exam:hover:not(:disabled) { filter: brightness(1.1); box-shadow: 0 2px 10px rgba(42,52,76,0.2); }
+
     .result-banner {
         display: none;
         border-radius: 8px;
@@ -62,136 +344,766 @@
         font-size: 16px;
         font-weight: bold;
     }
+    .result-summary {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px 20px;
+        margin-top: 12px;
+        font-size: 12px;
+        font-weight: bold;
+    }
+    .result-summary .rs-ok  { color: #166534; }
+    .result-summary .rs-bad { color: #991B1B; }
+
+    .wizard-nav {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 18px;
+        flex-wrap: wrap;
+        margin-top: 10px;
+    }
 
     @media (max-width: 768px) {
         .exam-header { padding: 12px 16px; }
         .exam-item { padding: 16px; }
-        .row-layout { padding: 12px; }
-        .fraction-block { min-width: 95px; }
+        .chain-canvas { padding: 12px; }
+        .starting-node, .terminal-yield-node { min-width: 100px; padding: 12px; }
+        .fraction-card { width: 178px; padding: 12px; }
+        .slot-input { width: 56px; }
+        .unit-select { max-width: 110px; min-width: 0; flex-basis: 0; }
+        .slot-container { flex-wrap: wrap; }
     }
 
     @media (max-width: 480px) {
-        .fraction-input-cell { width: 80px; }
+        .fraction-card { width: 160px; }
+        .starting-node, .terminal-yield-node { min-width: 92px; }
+        .chain-row { gap: 10px; }
+        .builder-search input { flex-basis: 100%; }
     }
+
+    /* ── Canned constants tray (per-problem, pre-supplied) ── */
+    .constants-tray {
+        margin: 14px 0 4px 0;
+        padding: 12px 16px;
+        border: 1px solid var(--border);
+        border-left: 3px solid var(--constant-gold);
+        border-radius: 6px;
+        background: var(--bg-dark);
+    }
+    .ct-head {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        flex-wrap: wrap;
+        margin-bottom: 8px;
+    }
+    .ct-badge {
+        font-size: 10px;
+        font-weight: bold;
+        letter-spacing: 1.5px;
+        color: var(--constant-gold);
+        border: 1px solid var(--constant-gold);
+        border-radius: 3px;
+        padding: 2px 8px;
+    }
+    .ct-sub { font-size: 11px; color: var(--text-muted); }
+    .ct-equation {
+        font-size: 14px;
+        color: var(--text-light);
+        margin-bottom: 8px;
+        display: flex;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 6px;
+    }
+    .ct-eq-term { white-space: nowrap; }
+    .ct-eq-term b { color: var(--constant-gold); }
+    .ct-plus, .ct-arrow { color: var(--text-muted); font-weight: bold; }
+    .ct-masses { display: flex; flex-wrap: wrap; gap: 8px; }
+    .ct-mass-chip {
+        display: inline-flex;
+        align-items: baseline;
+        gap: 6px;
+        padding: 4px 10px;
+        border: 1px solid var(--border);
+        border-radius: 20px;
+        background: var(--bg-slate);
+        font-size: 12px;
+        color: var(--text-light);
+    }
+    .ct-formula { font-weight: bold; }
+    .ct-mass { color: var(--constant-gold); font-weight: bold; }
+    .ct-unit { color: var(--text-muted); font-size: 10px; }
 </style>
 
 <div class="exam-header">
     <span style="color: var(--combo-green); font-weight: bold; font-size: 12px; letter-spacing: 2px;">
-        SYNTHESIS CHALLENGE // UNASSISTED RETENTION REVIEW
+        SYNTHESIS CHALLENGE // ADAPTIVE RETENTION REVIEW
     </span>
     <p style="margin: 8px 0 0 0; color: var(--text-light); font-size: 14px;">
-        {{ items|length }} randomized conversion{{ items|length|pluralize }} from problems you have completed.
-        No hints, no constants tray assistance — score &ge; {{ pass_threshold }}% to earn the retention credential.
+        {{ items|length }} freshly generated conversion{{ items|length|pluralize }} targeted at your weakest skills.
+        Solve each one the same way as the Module 2 Step-Grid: build one fraction at a time,
+        make the denominator cancel the previous numerator, and verify each step.
+        The canned constants for the current problem are supplied in its tray below.
+        Score &ge; {{ pass_threshold }}% to earn the retention credential.
     </p>
 </div>
 
 <div class="result-banner" id="resultBanner"></div>
 
+<!-- ══ Unassisted molar-mass builder (blank on purpose) ══ -->
+<div class="builder-card">
+    <div class="builder-head">
+        <span class="builder-title">MOLAR MASS BUILDER — BUILD OR SEARCH ANY COMPOUND</span>
+        <button class="builder-clear" type="button" onclick="clearBuilder()">Clear</button>
+    </div>
+    <p class="builder-help">
+        Type an element symbol (e.g. <strong>Fe</strong>) to add atoms, or type a full formula
+        (e.g. <strong>Fe2O3</strong>, <strong>Ca(OH)2</strong>) to build it in one shot. The total mass adds up automatically.
+        You can also click any element in the databank below.
+    </p>
+    <div class="builder-search">
+        <input id="formulaSearch" type="text" autocomplete="off" spellcheck="false"
+               placeholder="Search element or formula (e.g. Fe, H2O, Fe2O3)"
+               onkeydown="if (event.key === 'Enter') { event.preventDefault(); applySearch(); }">
+        <button type="button" onclick="applySearch()">Build / Calculate</button>
+    </div>
+    <div class="builder-chips" id="builderChips">
+        <span class="builder-empty">No compound built yet. Use the search box or click elements below.</span>
+    </div>
+    <div class="builder-total" id="builderTotal">Total: — g/mol</div>
+    <div class="builder-breakdown" id="builderBreakdown"></div>
+
+    <details class="pt-details">
+        <summary>Open the Atomic Databank / Periodic Table</summary>
+        {% include '_periodic_table.html' %}
+    </details>
+</div>
+
+<!-- ══ Wizard progress ══ -->
+<div class="wizard-bar">
+    <span id="itemProgress">ITEM 1 OF {{ items|length }}</span>
+    <div class="progress-track"><div class="progress-fill" id="progressFill"></div></div>
+</div>
+
 <div id="examContainer">
     {% for item in items %}
     <div class="exam-item" id="item_{{ forloop.counter0 }}"
-         data-problem="{{ item.problem_id }}" data-part="{{ item.part_label }}">
-        <div style="display:flex; justify-content:space-between; margin-bottom:12px; flex-wrap:wrap; gap:8px;">
-            <strong style="color:#3c486a; font-size:13px;">ITEM {{ forloop.counter }} · {{ item.part_prompt }}</strong>
-            <span style="font-size:11px; color:var(--text-muted);">{{ item.problem_title }}</span>
+         data-problem="{{ item.problem_id }}" data-part="{{ item.part_label }}"
+         style="display:none;">
+        <div class="item-top">
+            <strong>ITEM {{ forloop.counter }} · {{ item.part_prompt }}</strong>
+            <span>{{ item.problem_title }}</span>
         </div>
-        <div class="row-layout">
-            <div class="fraction-block" style="border-color:var(--border);">
-                <span style="font-size:13px; font-weight:bold; color:var(--cyber-teal); padding:6px;">{{ item.given_quantity }}</span>
-                <div class="fraction-bar"></div>
-                <span style="font-size:11px; color:var(--text-muted); padding:6px;">{{ item.given_unit }} {{ item.given_formula|formula_subscript|safe }}</span>
+
+        {% if item.constants %}
+        <div class="constants-tray" id="constants_{{ forloop.counter0 }}">
+            <div class="ct-head">
+                <span class="ct-badge">CANNED CONSTANTS</span>
+                <span class="ct-sub">Already supplied for this problem — molar masses and balanced coefficients</span>
             </div>
-            <span id="nodeCells_{{ forloop.counter0 }}" style="display:contents;"></span>
+            <div class="ct-equation">
+                {% for e in item.constants.reactants %}
+                    <span class="ct-eq-term"><b>{{ e.coeff }}</b> {{ e.formula|formula_subscript|safe }}</span>
+                    {% if not forloop.last %}<span class="ct-plus">+</span>{% endif %}
+                {% endfor %}
+                <span class="ct-arrow">&rarr;</span>
+                {% for e in item.constants.products %}
+                    <span class="ct-eq-term"><b>{{ e.coeff }}</b> {{ e.formula|formula_subscript|safe }}</span>
+                    {% if not forloop.last %}<span class="ct-plus">+</span>{% endif %}
+                {% endfor %}
+            </div>
+            <div class="ct-masses">
+                {% for m in item.constants.masses %}
+                <span class="ct-mass-chip">
+                    <span class="ct-formula">{{ m.formula|formula_subscript|safe }}</span>
+                    <span class="ct-mass">{{ m.molar_mass }}</span>
+                    <span class="ct-unit">g/mol</span>
+                </span>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+
+        <div class="chain-canvas" id="chainCanvas_{{ forloop.counter0 }}">
+            <div class="feedback-box">
+                diagonally, press <strong>✓ Verify Step</strong>, and the next fraction card
+            </div>
+
+            <div class="chain-row">
+                <div class="starting-node">
+                    <span class="start-amount">
+                        {{ item.given_quantity }} <span id="givenUnit_{{ forloop.counter0 }}">{{ item.given_unit }}</span>
+                    </span>
+                    <span class="start-formula">{{ item.given_formula|formula_subscript|safe }} (Given)</span>
+                </div>
+
+                <div id="nodeContainer_{{ forloop.counter0 }}" style="display:contents;"></div>
+
+                <span class="operator-sign" id="op_eq_{{ forloop.counter0 }}" style="display:none;">＝</span>
+                <div class="terminal-yield-node" id="yieldNode_{{ forloop.counter0 }}">
+                    <span class="yield-value" id="yieldValue_{{ forloop.counter0 }}">—</span>
+                    <span class="yield-formula">
+                        {{ item.target_unit }} {{ item.target_formula|formula_subscript|safe }} (Calculated Yield)
+                    </span>
+                </div>
+            </div>
+
+            <div class="verify-row">
+                <button class="btn-verify-node" type="button" id="btnVerifyStep_{{ forloop.counter0 }}"
+                        onclick="verifyStep({{ forloop.counter0 }})" disabled>
+                    ✓ Verify Step 1
+                </button>
+                <span class="chain-progress" id="chainProgressLabel_{{ forloop.counter0 }}">
+                    0 / {{ item.node_count }} steps verified
+                </span>
+            </div>
         </div>
     </div>
     {% endfor %}
 </div>
 
-<div style="text-align:center; margin-top:10px;">
-    <button class="btn-submit-exam" onclick="submitExam()">Submit Full Review</button>
-    <a href="{% url 'problem_lobby' %}" style="color:var(--text-muted); font-size:12px; margin-left:16px;">Abandon (no penalty)</a>
+<div class="wizard-nav">
+    <button class="btn-submit-exam" type="button" id="btnNextItem" onclick="nextItem()" disabled>
+        Next Item →
+    </button>
+    <a href="{% url 'problem_lobby' %}" style="color:var(--text-muted); font-size:12px;">Abandon (no penalty)</a>
 </div>
 
 <script>
 const EXAM_ITEMS = {{ exam_items_json|safe }};
+const TOTAL_ITEMS = EXAM_ITEMS.length;
+const CSRF_TOKEN = '{{ csrf_token }}';
 
-function buildItemInputs() {
-    EXAM_ITEMS.forEach((item, i) => {
-        const holder = document.getElementById(`nodeCells_${i}`);
-        if (!holder) return;
-        let html = '';
-        item.node_units.forEach((u, ni) => {
-            html += `
-                <span class="fraction-multiply">×</span>
-                <div class="fraction-block" data-node="${ni}">
-                    <input type="number" step="0.0001" class="fraction-input-cell"
-                           id="ex_${i}_${ni}_num" placeholder="${u.num_unit}">
-                    <div class="fraction-bar"></div>
-                    <input type="number" step="0.0001" class="fraction-input-cell"
-                           id="ex_${i}_${ni}_den" placeholder="${u.den_unit}">
-                </div>`;
+const itemStates = EXAM_ITEMS.map(() => ({
+    activeIndex: 0,
+    nodes: [],        // verified chain nodes: {num_value, num_unit, den_value, den_unit}
+    complete: false,
+}));
+const wizard = { current: 0 };
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Molar-mass builder
+// ─────────────────────────────────────────────────────────────────────────────
+const PT_MASSES = window.PT_MASSES || {};
+let builderEntries = [];   // [{ sym, count }]
+
+function findBuilderEntry(sym) {
+    return builderEntries.find(e => e.sym === sym);
+}
+
+function addElement(sym, count) {
+    count = count || 1;
+    if (!PT_MASSES[sym]) {
+        showToast('Unknown element: ' + sym, 'err');
+        return;
+    }
+    const existing = findBuilderEntry(sym);
+    if (existing) {
+        existing.count = Math.min(99, existing.count + count);
+    } else {
+        builderEntries.push({ sym, count: Math.min(99, count) });
+    }
+    updateBuilder();
+}
+
+function clearBuilder() {
+    builderEntries = [];
+    updateBuilder();
+    const input = document.getElementById('formulaSearch');
+    if (input) input.value = '';
+}
+
+function updateBuilder() {
+    const chipsEl = document.getElementById('builderChips');
+    const totalEl = document.getElementById('builderTotal');
+    const bdEl = document.getElementById('builderBreakdown');
+    if (!chipsEl) return;
+
+    if (!builderEntries.length) {
+        chipsEl.innerHTML = '<span class="builder-empty">No compound built yet. Use the search box or click elements below.</span>';
+        totalEl.textContent = 'Total: — g/mol';
+        bdEl.innerHTML = '';
+        return;
+    }
+
+    let total = 0;
+    chipsEl.innerHTML = '';
+
+    builderEntries.forEach((entry, idx) => {
+        const mass = PT_MASSES[entry.sym] || 0;
+        total += mass * entry.count;
+
+        const chip = document.createElement('div');
+        chip.className = 'builder-chip';
+        chip.innerHTML = `
+            <span class="builder-sym">${entry.sym}</span>
+            <button type="button" class="chip-step" data-idx="${idx}" data-delta="-1" title="Remove one atom">−</button>
+            <span class="chip-count">${entry.count}</span>
+            <button type="button" class="chip-step" data-idx="${idx}" data-delta="1" title="Add one atom">+</button>
+            <button type="button" class="chip-remove" data-idx="${idx}" title="Remove element">×</button>`;
+        chipsEl.appendChild(chip);
+    });
+
+    chipsEl.querySelectorAll('.chip-step').forEach(btn => {
+        btn.addEventListener('click', () => {
+            const i = Number(btn.dataset.idx);
+            const d = Number(btn.dataset.delta);
+            builderEntries[i].count = Math.max(1, Math.min(99, builderEntries[i].count + d));
+            updateBuilder();
         });
-        holder.outerHTML = html;
+    });
+    chipsEl.querySelectorAll('.chip-remove').forEach(btn => {
+        btn.addEventListener('click', () => {
+            builderEntries.splice(Number(btn.dataset.idx), 1);
+            updateBuilder();
+        });
+    });
+
+    totalEl.innerHTML = `Total: <strong>${total.toFixed(3)}</strong> g/mol`;
+
+    const formulaParts = builderEntries.map(e =>
+        e.count > 1 ? `${e.sym}<sub>${e.count}</sub>` : e.sym
+    );
+    const breakdown = builderEntries.map(e => {
+        const m = PT_MASSES[e.sym] || 0;
+        return `<span class="bd-item">${e.sym}: ${m.toFixed(3)} × ${e.count} = <strong>${(m * e.count).toFixed(3)}</strong></span>`;
+    }).join('');
+    bdEl.innerHTML = breakdown +
+        `<span class="bd-formula">Built formula: ${formulaParts.join('')}</span>`;
+}
+
+function readFormulaNumber(str, pos) {
+    let out = '';
+    while (pos < str.length && /[0-9]/.test(str[pos])) {
+        out += str[pos];
+        pos++;
+    }
+    return { value: out ? parseInt(out, 10) : 0, pos };
+}
+
+function parseFormula(raw) {
+    const str = (raw || '').replace(/\s+/g, '');
+    if (!str) return null;
+    let i = 0;
+
+    function parseSequence(stopAtParen) {
+        const counts = {};
+        while (i < str.length) {
+            const ch = str[i];
+
+            if (ch === '(') {
+                i++;
+                const inner = parseSequence(true);
+                if (!inner) return null;
+                if (str[i] !== ')') return null;
+                i++;
+                const multRead = readFormulaNumber(str, i);
+                i = multRead.pos;
+                const mult = multRead.value || 1;
+                Object.entries(inner).forEach(([sym, n]) => {
+                    counts[sym] = (counts[sym] || 0) + n * mult;
+                });
+            } else if (ch === ')') {
+                if (stopAtParen) return counts;
+                return null;
+            } else if (/[A-Z]/.test(ch)) {
+                let sym = ch;
+                i++;
+                if (i < str.length && /[a-z]/.test(str[i])) {
+                    sym += str[i];
+                    i++;
+                }
+                if (!PT_MASSES[sym]) return null;
+                const numRead = readFormulaNumber(str, i);
+                i = numRead.pos;
+                const n = numRead.value || 1;
+                counts[sym] = (counts[sym] || 0) + n;
+            } else {
+                return null;
+            }
+        }
+        return stopAtParen ? null : counts;
+    }
+
+    const counts = parseSequence(false);
+    if (!counts || i !== str.length) return null;
+    return counts;
+}
+
+function applySearch() {
+    const input = document.getElementById('formulaSearch');
+    if (!input) return;
+    const raw = input.value.trim();
+    if (!raw) {
+        showToast('Type an element symbol or formula first.', 'err');
+        return;
+    }
+
+    if (/^[A-Z][a-z]?$/.test(raw) && PT_MASSES[raw]) {
+        addElement(raw, 1);
+        input.value = '';
+        showToast(`${raw} added — ${PT_MASSES[raw]} g/mol per atom.`, 'ok');
+        return;
+    }
+
+    const counts = parseFormula(raw);
+    if (!counts) {
+        showToast('Could not read that formula. Try Fe2O3, H2O, Ca(OH)2, etc.', 'err');
+        return;
+    }
+
+    builderEntries = Object.entries(counts).map(([sym, count]) => ({ sym, count }));
+    input.value = '';
+    updateBuilder();
+    showToast('Compound built — mass calculated automatically.', 'ok');
+}
+
+window.addEventListener('pt:select', (e) => {
+    if (!e.detail || !e.detail.sym) return;
+    addElement(e.detail.sym, 1);
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Module 2-style progressive chain builder (one item at a time)
+// ─────────────────────────────────────────────────────────────────────────────
+function unitOptionsHtml(item) {
+    const units = new Set();
+    units.add(`${item.given_unit}_${item.given_formula}`);
+    item.node_units.forEach(n => {
+        if (n.num_unit) units.add(n.num_unit);
+        if (n.den_unit) units.add(n.den_unit);
+    });
+    return ['<option value="">-- Select Unit --</option>']
+        .concat([...units].map(u =>
+            `<option value="${u}">${u.replace(/_/g, ' ')}</option>`))
+        .join('');
+}
+
+function spawnCard(itemIdx, nodeIdx) {
+    const item = EXAM_ITEMS[itemIdx];
+    const container = document.getElementById(`nodeContainer_${itemIdx}`);
+    if (!container) return;
+
+    const op = document.createElement('span');
+    op.className = 'operator-sign';
+    op.id = `op_${itemIdx}_${nodeIdx}`;
+    op.textContent = '✖';
+    container.appendChild(op);
+
+    const card = document.createElement('div');
+    card.className = 'fraction-card active-link';
+    card.id = `node_${itemIdx}_${nodeIdx}`;
+    card.innerHTML = `
+        <div class="slot-container">
+            <input type="number" class="slot-input" id="num_val_${itemIdx}_${nodeIdx}"
+                   placeholder="Val" step="any" autocomplete="off">
+            <select class="unit-select" id="num_unit_${itemIdx}_${nodeIdx}">${unitOptionsHtml(item)}</select>
+        </div>
+        <div class="fraction-divider"></div>
+        <div class="slot-container">
+            <input type="number" class="slot-input" id="den_val_${itemIdx}_${nodeIdx}"
+                   placeholder="Val" step="any" autocomplete="off">
+            <select class="unit-select" id="den_unit_${itemIdx}_${nodeIdx}">${unitOptionsHtml(item)}</select>
+        </div>`;
+    container.appendChild(card);
+}
+
+function activeCardFilled(itemIdx) {
+    const st = itemStates[itemIdx];
+    return ['num_val', 'num_unit', 'den_val', 'den_unit'].every(f => {
+        const el = document.getElementById(`${f}_${itemIdx}_${st.activeIndex}`);
+        return el && String(el.value).trim() !== '';
     });
 }
 
-async function submitExam() {
-    const answers = [];
-    let incomplete = false;
-
-    EXAM_ITEMS.forEach((item, i) => {
-        const nodes = [];
-        item.node_units.forEach((u, ni) => {
-            const num = document.getElementById(`ex_${i}_${ni}_num`)?.value.trim();
-            const den = document.getElementById(`ex_${i}_${ni}_den`)?.value.trim();
-            if (!num || !den) incomplete = true;
-            nodes.push({ num_value: num, den_value: den });
-        });
-        answers.push({
-            problem_id: item.problem_id,
-            part_label: item.part_label,
-            nodes,
-        });
+function lockCard(itemIdx, nodeIdx) {
+    ['num_val', 'num_unit', 'den_val', 'den_unit'].forEach(f => {
+        const el = document.getElementById(`${f}_${itemIdx}_${nodeIdx}`);
+        if (el) el.disabled = true;
     });
+    const card = document.getElementById(`node_${itemIdx}_${nodeIdx}`);
+    if (card) {
+        card.classList.remove('active-link', 'error-link');
+        card.classList.add('verified-link');
+    }
+}
 
-    if (incomplete) {
-        showToast('Complete every node in every item before submitting.', 'err');
+function applyCancellationVisual(itemIdx, nodeIdx) {
+    if (nodeIdx === 0) {
+        const given = document.getElementById(`givenUnit_${itemIdx}`);
+        if (given) given.classList.add('unit-cancelled');
+    } else {
+        const prevNum = document.getElementById(`num_unit_${itemIdx}_${nodeIdx - 1}`);
+        if (prevNum) prevNum.classList.add('unit-cancelled');
+    }
+    const currentDen = document.getElementById(`den_unit_${itemIdx}_${nodeIdx}`);
+    if (currentDen) currentDen.classList.add('unit-cancelled');
+}
+
+function updateConsole(itemIdx, html) {
+    const el = document.getElementById(`explain_${itemIdx}`);
+    if (el) el.innerHTML = html;
+}
+
+function updateStepControls(itemIdx) {
+    const st = itemStates[itemIdx];
+    const btn = document.getElementById(`btnVerifyStep_${itemIdx}`);
+    const label = document.getElementById(`chainProgressLabel_${itemIdx}`);
+    if (!btn) return;
+
+    if (st.complete) {
+        btn.style.display = 'none';
+        if (label) label.textContent = 'Conversion verified ✓';
         return;
     }
+
+    btn.style.display = 'inline-block';
+    btn.textContent = `✓ Verify Step ${st.activeIndex + 1}`;
+    btn.disabled = !activeCardFilled(itemIdx);
+    if (label) {
+        label.textContent = `${st.nodes.length} / ${EXAM_ITEMS[itemIdx].node_count} steps verified`;
+    }
+}
+
+function revealYield(itemIdx, answer) {
+    const eq = document.getElementById(`op_eq_${itemIdx}`);
+    if (eq) eq.style.display = 'inline';
+    const yieldNode = document.getElementById(`yieldNode_${itemIdx}`);
+    if (yieldNode) yieldNode.style.display = 'block';
+    const val = document.getElementById(`yieldValue_${itemIdx}`);
+    if (val) val.textContent = answer || '—';
+}
+
+async function verifyStep(itemIdx) {
+    const st = itemStates[itemIdx];
+    if (st.complete || !activeCardFilled(itemIdx)) return;
+
+    const idx = st.activeIndex;
+    const btn = document.getElementById(`btnVerifyStep_${itemIdx}`);
+    if (btn) btn.disabled = true;
+
+    const node = {
+        num_value: parseFloat(document.getElementById(`num_val_${itemIdx}_${idx}`).value),
+        num_unit:  document.getElementById(`num_unit_${itemIdx}_${idx}`).value || '',
+        den_value: parseFloat(document.getElementById(`den_val_${itemIdx}_${idx}`).value),
+        den_unit:  document.getElementById(`den_unit_${itemIdx}_${idx}`).value || '',
+    };
+
+    try {
+        const resp = await fetch('/api/synthesis-verify-node/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': CSRF_TOKEN,
+            },
+            body: JSON.stringify({
+                problem_id: EXAM_ITEMS[itemIdx].problem_id,
+                part_label: EXAM_ITEMS[itemIdx].part_label,
+                prefix: st.nodes,
+                node,
+            }),
+        });
+        handleStepResponse(itemIdx, await resp.json(), node);
+    } catch (err) {
+        console.error('[Synthesis] step verification failed:', err);
+        showToast('Error verifying step. Please try again.', 'err');
+        updateStepControls(itemIdx);
+    }
+}
+
+function handleStepResponse(itemIdx, data, node) {
+    const st = itemStates[itemIdx];
+    const idx = st.activeIndex;
+
+    if (data.success && data.correct) {
+        lockCard(itemIdx, idx);
+        applyCancellationVisual(itemIdx, idx);
+
+        st.nodes.push({
+            num_value: node.num_value,
+            num_unit: node.num_unit,
+            den_value: node.den_value,
+            den_unit: node.den_unit,
+        });
+
+        if (data.complete) {
+            st.complete = true;
+            revealYield(itemIdx, data.correct_answer);
+            updateConsole(itemIdx,
+                `🎉 <strong>Conversion complete!</strong> All intermediate units cancelled out cleanly, ` +
+                `leaving <code>${EXAM_ITEMS[itemIdx].target_unit} ${EXAM_ITEMS[itemIdx].target_formula}</code>.`);
+            showToast(data.message, 'ok');
+            updateStepControls(itemIdx);
+            enableNextIfReady();
+            return;
+        }
+
+        st.activeIndex++;
+        spawnCard(itemIdx, st.activeIndex);
+        updateConsole(itemIdx,
+            `<strong style="color:#15803D;">Step ${idx + 1} verified ✓</strong> — the numerator unit ` +
+            `carried forward is now <code>${node.num_unit.replace(/_/g, ' ')}</code>. ` +
+            `Fill in Step ${st.activeIndex + 1} so its denominator cancels it.`);
+        showToast(data.message, 'ok');
+        updateStepControls(itemIdx);
+        return;
+    }
+
+    const card = document.getElementById(`node_${itemIdx}_${idx}`);
+    if (card) {
+        card.classList.remove('active-link');
+        card.classList.add('error-link');
+        setTimeout(() => {
+            card.classList.remove('error-link');
+            card.classList.add('active-link');
+        }, 1400);
+    }
+
+    updateConsole(itemIdx,
+        `<strong style="color:#B91C1C;">${data.unit_ok === false ? 'Unit mismatch.' : 'Value check failed.'}</strong> ` +
+        `${data.message || ''}`);
+    showToast(
+        data.unit_ok === false
+            ? 'Unit mismatch — check the diagonal cancellation.'
+            : 'Value off — recheck that constant.',
+        'err');
+    updateStepControls(itemIdx);
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Wizard navigation
+// ─────────────────────────────────────────────────────────────────────────────
+function showItem(index) {
+    wizard.current = index;
+    EXAM_ITEMS.forEach((_, i) => {
+        const el = document.getElementById(`item_${i}`);
+        if (el) el.style.display = (i === index) ? 'block' : 'none';
+    });
+
+    const label = document.getElementById('itemProgress');
+    if (label) label.textContent = `ITEM ${index + 1} OF ${TOTAL_ITEMS}`;
+    const fill = document.getElementById('progressFill');
+    if (fill) fill.style.width = `${((index + 1) / Math.max(TOTAL_ITEMS, 1)) * 100}%`;
+
+    enableNextIfReady();
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+function enableNextIfReady() {
+    const btn = document.getElementById('btnNextItem');
+    if (!btn) return;
+    const isLast = wizard.current === TOTAL_ITEMS - 1;
+    btn.disabled = !itemStates[wizard.current].complete;
+    btn.textContent = isLast ? 'Submit Full Review ✓' : 'Next Item →';
+}
+
+function nextItem() {
+    if (!itemStates[wizard.current].complete) {
+        showToast('Finish the conversion chain before moving on.', 'err');
+        return;
+    }
+    if (wizard.current < TOTAL_ITEMS - 1) {
+        showItem(wizard.current + 1);
+    } else {
+        finishReview();
+    }
+}
+
+async function finishReview() {
+    const answers = [];
+
+    for (let i = 0; i < TOTAL_ITEMS; i++) {
+        if (!itemStates[i].complete || itemStates[i].nodes.length !== EXAM_ITEMS[i].node_count) {
+            showToast(`Item ${i + 1} is not finished yet.`, 'err');
+            showItem(i);
+            return;
+        }
+        answers.push({
+            problem_id: EXAM_ITEMS[i].problem_id,
+            part_label: EXAM_ITEMS[i].part_label,
+            nodes: itemStates[i].nodes,
+        });
+    }
+
+    const btn = document.getElementById('btnNextItem');
+    if (btn) { btn.disabled = true; btn.textContent = 'Submitting…'; }
 
     try {
         const res = await fetch('/api/synthesis-submit/', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
-                'X-CSRFToken': '{{ csrf_token }}'
+                'X-CSRFToken': CSRF_TOKEN,
             },
             body: JSON.stringify({ answers }),
         });
         const data = await res.json();
 
-        data.results.forEach((r, i) => {
+        if (!data.success) {
+            showToast(data.message || 'Submission failed.', 'err');
+            if (btn) { btn.disabled = false; btn.textContent = 'Submit Full Review ✓'; }
+            return;
+        }
+
+        (data.results || []).forEach((r, i) => {
             const el = document.getElementById(`item_${i}`);
-            if (!el || r.problem_id !== answers[i].problem_id || r.part_label !== answers[i].part_label) return;
-            el.classList.add(r.correct ? 'verified-item' : 'failed-item');
-            el.querySelectorAll('input').forEach(inp => inp.disabled = true);
+            if (!el) return;
+            el.classList.toggle('completed-item', !!r.correct);
         });
 
+        document.querySelectorAll('#examContainer input, #examContainer select')
+            .forEach(el => { el.disabled = true; });
+        document.querySelectorAll('[id^="btnVerifyStep_"]').forEach(b => { b.style.display = 'none'; });
+
         const banner = document.getElementById('resultBanner');
-        banner.style.display = 'block';
-    banner.style.background = data.passed ? 'rgba(var(--success-rgb),0.12)' : 'rgba(var(--danger-rgb),0.1)';
-    banner.style.border = `1px solid ${data.passed ? 'var(--combo-green)' : 'var(--coral-red)'}`;
-    banner.style.color = data.passed ? '#166534' : '#991B1B';
-        banner.textContent = data.passed
-            ? `✓ PASSED — ${data.score_pct}% retention confirmed! Credential awarded.`
-            : `Score ${data.score_pct}% — below the ${data.threshold}% threshold. Review your weak skills and retry anytime.`;
+        if (banner) {
+            banner.style.display = 'block';
+            banner.style.background = data.passed ? 'rgba(var(--success-rgb),0.12)' : 'rgba(var(--danger-rgb),0.1)';
+            banner.style.border = `1px solid ${data.passed ? 'var(--combo-green)' : 'var(--coral-red)'}`;
+            banner.style.color = data.passed ? '#166534' : '#991B1B';
+            banner.innerHTML =
+                (data.passed
+                    ? `✓ PASSED — ${data.score_pct}% retention confirmed! Credential awarded.`
+                    : `Score ${data.score_pct}% — below the ${data.threshold}% threshold. Review your weak skills and retry anytime.`) +
+                `<div class="result-summary">` +
+                (data.results || []).map((r, i) =>
+                    `<span class="${r.correct ? 'rs-ok' : 'rs-bad'}">Item ${i + 1}: ${r.correct ? '✓ correct' : '✗ incorrect'}</span>`
+                ).join('') +
+                `</div>`;
+        }
+
+        if (btn) btn.style.display = 'none';
         showToast(data.passed ? 'Credential earned!' : 'Not passed this round.', data.passed ? 'ok' : 'err');
+        window.scrollTo({ top: 0, behavior: 'smooth' });
     } catch (err) {
         console.error('[Synthesis] submission failed:', err);
         showToast('Submission failed. Try again.', 'err');
+        if (btn) { btn.disabled = false; btn.textContent = 'Submit Full Review ✓'; }
     }
 }
 
+// Keep the Verify button in sync as the active card is filled.
+function updateFromField(target) {
+    const m = (target.id || '').match(/^(?:num_val|num_unit|den_val|den_unit)_(\d+)_(\d+)$/);
+    if (m) updateStepControls(Number(m[1]));
+}
+
+document.addEventListener('input', e => updateFromField(e.target));
+document.addEventListener('change', e => updateFromField(e.target));
+
+document.addEventListener('keydown', e => {
+    if (e.key !== 'Enter') return;
+    const m = (e.target.id || '').match(/^(?:num_val|num_unit|den_val|den_unit)_(\d+)_(\d+)$/);
+    if (!m) return;
+    e.preventDefault();
+    verifyStep(Number(m[1]));
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Toast
+// ─────────────────────────────────────────────────────────────────────────────
 function showToast(message, type) {
     const existing = document.getElementById('chemquest-toast');
     if (existing) existing.remove();
@@ -200,14 +1112,34 @@ function showToast(message, type) {
     toast.textContent = message;
     toast.style.cssText = `
         position: fixed; bottom: 24px; right: 24px; z-index: 9999;
-        padding: 12px 20px; border-radius: 6px; font-size: 13px; font-weight: bold; color: white;
-    background: ${type === 'ok' ? '#DCFCE7' : '#FEE2E2'};
-    border: 1px solid ${type === 'ok' ? '#15803D' : '#DC2626'};
+        padding: 12px 20px; border-radius: 6px; font-size: 13px; font-weight: bold;
+        background: ${type === 'ok' ? '#DCFCE7' : '#FEE2E2'};
+        color: ${type === 'ok' ? '#166534' : '#991B1B'};
+        border: 1px solid ${type === 'ok' ? '#15803D' : '#DC2626'};
+        box-shadow: 0 4px 14px rgba(0,0,0,0.18);
     `;
     document.body.appendChild(toast);
     setTimeout(() => toast.remove(), 3200);
 }
 
-buildItemInputs();
+// ─────────────────────────────────────────────────────────────────────────────
+// Init
+// ─────────────────────────────────────────────────────────────────────────────
+buildBuilderInit();
+function buildBuilderInit() {
+    updateBuilder();
+}
+
+EXAM_ITEMS.forEach((_, i) => {
+    spawnCard(i, 0);
+    updateStepControls(i);
+});
+
+if (TOTAL_ITEMS > 0) {
+    showItem(0);
+} else {
+    const btn = document.getElementById('btnNextItem');
+    if (btn) btn.style.display = 'none';
+}
 </script>
 {% endblock content %}

@@ -31,6 +31,7 @@ urlpatterns = [
 
     # Synthesis Challenge — randomized unassisted review
     path('synthesis/', views.synthesis_challenge, name='synthesis_challenge'),
+    path('api/synthesis-verify-node/', views.synthesis_verify_node, name='synthesis_verify_node'),
     path('api/synthesis-submit/', views.synthesis_submit, name='synthesis_submit'),
 
     # ── XP award endpoint (legacy client-driven) ──────────

@@ -187,12 +187,10 @@ class Module1GateTests(BaseFixture):
         self.assertRedirects(resp, reverse('preparation_ledger',
                                            args=['P_TST']))
 
-    def test_workspace_blocked_without_exit_gate(self):
+    def test_workspace_accessible_without_removed_checkpoints(self):
+        """1A + 1B alone unlock Module 2; the removed strategy/reasoning
+        checkpoints no longer gate the workspace."""
         client = self.login()
-        client.post(reverse('m1_checkpoint'),
-                    {'problem_id': 'P_TST', 'kind': 'entry',
-                     'choice': ENTRY_ANSWER},
-                    content_type='application/json')
         client.post(reverse('verify_balancing'),
                     {'problem_id': 'P_TST', 'coefficients': [2, 1, 2]},
                     content_type='application/json')
@@ -200,10 +198,8 @@ class Module1GateTests(BaseFixture):
                     {'problem_id': 'P_TST',
                      'molar_masses': {'H2': 2.016, 'O2': 31.998, 'H2O': 18.015}},
                     content_type='application/json')
-        resp = client.get(reverse('step_grid_workspace',
-                                  args=['P_TST', 'a']), follow=True)
-        self.assertRedirects(resp, reverse('preparation_ledger',
-                                           args=['P_TST']))
+        resp = client.get(reverse('step_grid_workspace', args=['P_TST', 'a']))
+        self.assertEqual(resp.status_code, 200)
 
     def test_workspace_accessible_after_full_module1(self):
         client = self.login()
@@ -449,15 +445,9 @@ class ResetTests(BaseFixture):
 
 
 class SynthesisTests(BaseFixture):
-    def test_locked_before_five_completions(self):
-        client = self.login()
-        resp = client.get(reverse('synthesis_challenge'), follow=True)
-        self.assertRedirects(resp, reverse('problem_lobby'))
-
-    def test_submit_grades_items(self):
-        from django.utils import timezone
-        client = self.login()
-        for pid in ['S1', 'S2', 'S3', 'S4', 'S5']:
+    def _seed_completed_problems(self, count=5):
+        for i in range(1, count + 1):
+            pid = f'S{i}'
             problem = StoichiometryProblem.objects.create(
                 problem_id=pid, title=f'T{pid}', prompt='x',
                 reactants_str='2:H2,1:O2', products_str='2:H2O',
@@ -466,30 +456,163 @@ class SynthesisTests(BaseFixture):
                 problem=problem, part_label='a', part_prompt='x',
                 given_substance_id='H2', given_quantity=Decimal('10'),
                 given_unit='g', target_substance_id='H2O', target_unit='g',
-                conversion_type='mol_to_mol',
-                correct_answer=Decimal('10'))
+                conversion_type='g_to_g',
+                correct_answer=Decimal('89.0000'))
             ProblemProgress.objects.create(
                 user=self.user, problem_id=pid,
                 balancing_cleared=True, molar_mass_cleared=True,
                 checkpoint_cleared=True, exit_checkpoint_cleared=True)
+
+    def test_locked_before_five_completions(self):
+        client = self.login()
+        resp = client.get(reverse('synthesis_challenge'), follow=True)
+        self.assertRedirects(resp, reverse('problem_lobby'))
+
+    def test_page_renders_items_builder_and_periodic_table(self):
+        self._seed_completed_problems()
+        client = self.login()
+        resp = client.get(reverse('synthesis_challenge'))
+        self.assertEqual(resp.status_code, 200)
+        self.assertContains(resp, 'MOLAR MASS BUILDER')
+        self.assertContains(resp, 'id="formulaSearch"')
+        self.assertContains(resp, 'id="ptGrid"')
+        self.assertContains(resp, 'id="btnNextItem"')
+        self.assertContains(resp, 'id="chainCanvas_0"')
+        self.assertContains(resp, 'id="nodeContainer_0"')
+        self.assertContains(resp, 'id="btnVerifyStep_0"')
+        self.assertEqual(resp.content.decode().count('class="exam-item"'), 3)
+
+    def test_verify_node_endpoint_progressive(self):
+        self._seed_completed_problems()
+        client = self.login()
+        part = ProblemPart.objects.get(problem__problem_id='S1', part_label='a')
+        expected = part.expected_nodes()
+        self.assertEqual(len(expected), part.node_count)
+
+        # A wrong unit at the first step is rejected with unit_ok=False.
+        wrong_unit = {
+            'problem_id': 'S1', 'part_label': 'a', 'prefix': [],
+            'node': {
+                'num_value': expected[0]['num_value'],
+                'num_unit': 'bogus',
+                'den_value': expected[0]['den_value'],
+                'den_unit': 'bogus',
+            },
+        }
+        resp = client.post(reverse('synthesis_verify_node'), wrong_unit,
+                           content_type='application/json').json()
+        self.assertFalse(resp['success'])
+        self.assertFalse(resp['unit_ok'])
+
+        # Correct units but wrong value is rejected with unit_ok=True.
+        wrong_value = {
+            'problem_id': 'S1', 'part_label': 'a', 'prefix': [],
+            'node': {
+                'num_value': 999,
+                'num_unit': expected[0]['num_unit'],
+                'den_value': expected[0]['den_value'],
+                'den_unit': expected[0]['den_unit'],
+            },
+        }
+        resp = client.post(reverse('synthesis_verify_node'), wrong_value,
+                           content_type='application/json').json()
+        self.assertFalse(resp['success'])
+        self.assertTrue(resp['unit_ok'])
+
+        # Walk the full chain step by step.
+        prefix = []
+        for idx, exp in enumerate(expected):
+            resp = client.post(
+                reverse('synthesis_verify_node'),
+                {'problem_id': 'S1', 'part_label': 'a', 'prefix': prefix,
+                 'node': {
+                     'num_value': exp['num_value'],
+                     'num_unit': exp['num_unit'],
+                     'den_value': exp['den_value'],
+                     'den_unit': exp['den_unit'],
+                 }},
+                content_type='application/json').json()
+            self.assertTrue(resp['success'], msg=f'step {idx} failed: {resp}')
+            self.assertTrue(resp['correct'])
+            if idx < len(expected) - 1:
+                self.assertFalse(resp['complete'])
+                prefix.append(exp)
+            else:
+                self.assertTrue(resp['complete'])
+                self.assertIn('correct_answer', resp)
+
+    def test_submit_grades_items(self):
+        self._seed_completed_problems()
+        client = self.login()
         part_a = ProblemPart.objects.get(problem__problem_id='S1', part_label='a')
-        good_nodes = [{'num_value': str(n['num_value']),
-                       'num_unit': n['num_unit'],
-                       'den_value': str(n['den_value']),
-                       'den_unit': n['den_unit']}
-                      for n in part_a.expected_nodes()]
-        bad_nodes = [dict(good_nodes[0]), ]
-        bad_nodes[0]['num_unit'] = 'g_H2O'
+        good_nodes = part_a.expected_nodes()   # includes units
+        bad_nodes = [
+            {'num_value': 999, 'num_unit': n['num_unit'],
+             'den_value': 1, 'den_unit': n['den_unit']}
+            for n in part_a.expected_nodes()
+        ]
 
         resp = client.post(reverse('synthesis_submit'),
                            {'answers': [
                                {'problem_id': 'S1', 'part_label': 'a',
                                 'nodes': good_nodes},
                                {'problem_id': 'S2', 'part_label': 'a',
-                                'nodes': bad_nodes + good_nodes[:0]},
+                                'nodes': bad_nodes},
                            ]},
                            content_type='application/json').json()
         self.assertTrue(resp['success'])
+        self.assertEqual(resp['score_pct'], 50.0)
+        self.assertFalse(resp['passed'])
+        self.assertTrue(resp['results'][0]['correct'])
+        self.assertFalse(resp['results'][1]['correct'])
+
+    def test_generated_problems_stay_out_of_lobby(self):
+        self._seed_completed_problems()
+        from .problem_generator import generate_synthesis_part
+        part = generate_synthesis_part(conversion_type='g_to_g')
+        self.assertTrue(part.problem.is_generated)
+
+        client = self.login()
+        resp = client.get(reverse('problem_lobby'))
+        self.assertEqual(resp.status_code, 200)
+        self.assertNotContains(resp, part.problem.problem_id)
+        self.assertNotContains(resp, 'Generated Synthesis Problem')
+
+    def test_synthesis_page_supplies_canned_constants(self):
+        self._seed_completed_problems()
+        client = self.login()
+        resp = client.get(reverse('synthesis_challenge'))
+        self.assertEqual(resp.status_code, 200)
+        self.assertContains(resp, 'CANNED CONSTANTS')
+        self.assertContains(resp, 'constants_0')
+        self.assertContains(resp, 'g/mol')
+        self.assertEqual(
+            StoichiometryProblem.objects.filter(is_generated=True).count(), 3)
+
+    def test_synthesis_generates_a_fresh_set_each_visit(self):
+        self._seed_completed_problems()
+        client = self.login()
+        client.get(reverse('synthesis_challenge'))
+        first = set(StoichiometryProblem.objects
+                    .filter(is_generated=True)
+                    .values_list('problem_id', flat=True))
+        client.get(reverse('synthesis_challenge'))
+        second = set(StoichiometryProblem.objects
+                     .filter(is_generated=True)
+                     .values_list('problem_id', flat=True))
+        self.assertEqual(len(first), 3)
+        self.assertEqual(len(second - first), 3)
+
+    def test_generated_problems_build_valid_chains(self):
+        from .problem_generator import generate_synthesis_part
+        from .views import _valid_chains
+
+        for ct in ['mol_to_mol', 'mol_to_g', 'g_to_mol', 'g_to_g']:
+            part = generate_synthesis_part(conversion_type=ct)
+            self.assertEqual(part.conversion_type, ct)
+            self.assertEqual(len(part.expected_nodes()), part.node_count)
+            self.assertTrue(_valid_chains(part))
+            self.assertGreater(float(part.correct_answer), 0)
 
 
 class RegistrationTests(TestCase):

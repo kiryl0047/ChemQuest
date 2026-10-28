@@ -542,19 +542,6 @@
 {% endif %}
 {% endwith %}
 
-<!-- ── Predict-Before-Calculate Checkpoint (blocks coefficient inputs) ── -->
-<div class="ledger-card" id="checkpointCard" style="border-left-color: var(--cyber-teal);">
-    <span style="color: var(--cyber-teal); font-weight: bold; font-size: 11px; letter-spacing: 2px;">
-        PREDICT BEFORE YOU CALCULATE &nbsp;·&nbsp; STRATEGY CHECKPOINT
-    </span>
-    <p id="checkpointQuestion" style="font-size:14px; margin:10px 0 12px 0; color:var(--text-light);"></p>
-    <div id="checkpointOptions" style="display:flex; flex-direction:column; gap:8px;"></div>
-    <div class="tactical-hint-box" id="checkpointHintBox" style="display:none;">
-        <div class="hint-header"><span>💡 Checkpoint Hint</span></div>
-        <div id="checkpointHintText" class="hint-body"></div>
-    </div>
-</div>
-
 <!-- ── Sub-Step 1A: Balance ── -->
 <h3 style="color: var(--cyber-teal); margin-bottom: 12px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
     <span class="type-badge badge-reactant" style="font-size: 11px;">SUB-STEP 1A</span>
@@ -766,14 +753,6 @@
             <div class="hint-header"><span>💡 Reasoning Hint</span></div>
             <div id="exitCheckpointHintText" class="hint-body"></div>
         </div>
-    </div>
-
-    <!-- ── Progression gate chips (server-tracked requirements) ── -->
-    <div style="display:flex; gap:10px; flex-wrap:wrap; margin-top:12px;" id="gateChips">
-        <span class="balance-status" id="chipCheckpoint">CHECKPOINT: PENDING</span>
-        <span class="balance-status" id="chipBalance">1A BALANCE: PENDING</span>
-        <span class="balance-status" id="chipMass">1B CONSTANTS: PENDING</span>
-        <span class="balance-status" id="chipExitCheckpoint">REASONING CHECK: PENDING</span>
     </div>
 
     <!-- Atomic Databank — Full Periodic Table -->
@@ -1095,8 +1074,7 @@ function renderGateChips() {
 }
 
 function module1Unlocked() {
-    return checkpointCleared && balancingCleared && molarMassCleared &&
-           exitCheckpointCleared;
+    return balancingCleared && molarMassCleared;
 }
 
 function updateTransitionButtonState() {
@@ -1803,13 +1781,8 @@ async function verifyMolarMasses() {
 // Workspace Progression Transition
 // ─────────────────────────────────────────────────────────────────────────────
 function proceedToWorkspace() {
-    if (!checkpointCleared) { showToast('Complete the strategy checkpoint first!', 'err'); return; }
     if (!balancingCleared || !molarMassCleared) {
         showToast('Complete Sub-Steps 1A and 1B before proceeding!', 'err');
-        return;
-    }
-    if (!exitCheckpointCleared) {
-        showToast('Complete the reasoning check before proceeding!', 'err');
         return;
     }
 
@@ -1933,7 +1906,7 @@ function setCoeffInputsEnabled(enabled) {
 
 applyServerClearedState();
 restoreDraftState();
-if (!checkpointCleared) setCoeffInputsEnabled(false);
+// Checkpoint cards removed — gate coefficient inputs by balancing status only.
 renderCheckpoint('entry');
 updateAtomInventory();
 maybeRevealExitCheckpoint();
