@@ -274,6 +274,82 @@ def _navigation_context(problem: StoichiometryProblem, current_part: ProblemPart
     }
 
 
+def _build_step_rail(user, problem, progress, current):
+    """Server-authoritative progress rail shared by Modules 1–3.
+
+    Stage states are derived from persisted progress so the rail never lies
+    about what is unlocked:
+      done       prerequisite met and stage finished
+      current    the page the student is on
+      available  prerequisite met, still to do
+      locked     a prerequisite gate is unmet
+    """
+    parts = list(problem.parts.all().order_by('order'))
+    first_label = parts[0].part_label if parts else 'a'
+
+    cleared_labels = set()
+    if user is not None and getattr(user, 'is_authenticated', False):
+        cleared_labels = set(
+            PartProgress.objects.filter(
+                user=user, problem_id=problem.problem_id, lane_cleared=True,
+            ).values_list('part_label', flat=True)
+        )
+
+    part_labels = {p.part_label for p in parts}
+    parts_done = len(cleared_labels & part_labels)
+
+    module1_done = bool(progress and progress.module1_complete())
+    module2_done = bool(parts) and parts_done == len(parts)
+    module3_done = bool(progress and progress.deduction_cleared)
+
+    def stage_state(key, done, prereq_ok):
+        if current == key:
+            return 'current'
+        if done:
+            return 'done'
+        return 'available' if prereq_ok else 'locked'
+
+    stages = [
+        {
+            'key':    'm1',
+            'label':  'Preparation Ledger',
+            'detail': 'Balance equation · verify molar masses',
+            'url':    reverse('preparation_ledger', args=[problem.problem_id]),
+            'state':  stage_state('m1', module1_done, True),
+            'done':   module1_done,
+        },
+        {
+            'key':    'm2',
+            'label':  'Step-Grid Workspace',
+            'detail': f'{parts_done} of {len(parts)} parts verified',
+            'url':    reverse('step_grid_workspace',
+                              args=[problem.problem_id, first_label]),
+            'state':  stage_state('m2', module2_done, module1_done),
+            'done':   module2_done,
+        },
+    ]
+
+    if problem.is_limiting_problem:
+        stages.append({
+            'key':    'm3',
+            'label':  'Limiting Analysis',
+            'detail': 'Compare yields · identify the limiting reagent',
+            'url':    reverse('limiting_workspace', args=[problem.problem_id]),
+            'state':  stage_state('m3', module3_done, module2_done),
+            'done':   module3_done,
+        })
+
+    complete = module2_done and (module3_done or not problem.is_limiting_problem)
+
+    return {
+        'problem_id': problem.problem_id,
+        'stages':     stages,
+        'current':    current,
+        'complete':   complete,
+        'lobby_url':  reverse('problem_lobby'),
+    }
+
+
 def _completed_problems_count(user):
     problems = {p.problem_id: p for p in _all_problems()}
     completed = 0
@@ -553,6 +629,13 @@ def problem_lobby(request):
         pp.problem_id: pp
         for pp in ProblemProgress.objects.filter(user=request.user)
     }
+    lane_map = {}
+    for pp in PartProgress.objects.filter(user=request.user):
+        lane_map.setdefault(pp.problem_id, {})[pp.part_label] = pp
+
+    def _lane_cleared(problem_id, label):
+        pp = lane_map.get(problem_id, {}).get(label)
+        return bool(pp and pp.lane_cleared)
 
     in_progress_count = 0
     for problem in problems:
@@ -561,6 +644,64 @@ def problem_lobby(request):
         problem.completed = bool(prog and prog.is_completed(problem))
         if problem.has_telemetry and not problem.completed:
             in_progress_count += 1
+
+        # Flow metadata: the lobby must name the single next action, not just
+        # "begin", so returning students can resume mid-pipeline.
+        parts = list(problem.parts.all())
+        parts_total = len(parts)
+        parts_done = sum(
+            1 for p in parts if _lane_cleared(problem.problem_id, p.part_label))
+        lanes_done = parts_total > 0 and parts_done == parts_total
+        module1_done = bool(prog and prog.module1_complete())
+        deduction_done = bool(prog and prog.deduction_cleared)
+
+        problem.parts_total = parts_total
+        problem.parts_done = parts_done
+        problem.strict_complete = (
+            module1_done and lanes_done and
+            (deduction_done or not problem.is_limiting_problem)
+        )
+        problem.ledger_only_complete = problem.completed and not problem.strict_complete
+
+        if problem.strict_complete:
+            problem.next_stage = 'done'
+            problem.flow_label = 'All stages complete'
+            problem.resume_url = reverse(
+                'preparation_ledger', args=[problem.problem_id])
+            problem.resume_label = 'Review Preparation Ledger'
+        elif not module1_done:
+            problem.next_stage = 'm1'
+            problem.flow_label = 'Next: Preparation Ledger'
+            problem.resume_url = reverse(
+                'preparation_ledger', args=[problem.problem_id])
+            problem.resume_label = (
+                'Resume Preparation Ledger' if problem.has_telemetry
+                else 'Begin Preparation Ledger')
+        elif not lanes_done:
+            first_pending = next(
+                p for p in parts
+                if not _lane_cleared(problem.problem_id, p.part_label))
+            problem.next_stage = 'm2'
+            problem.flow_label = (
+                f'Next: Step-Grid · Part {first_pending.part_label.upper()} '
+                f'({parts_done}/{parts_total} verified)')
+            problem.resume_url = reverse(
+                'step_grid_workspace',
+                args=[problem.problem_id, first_pending.part_label])
+            problem.resume_label = (
+                f'Resume Step-Grid · Part {first_pending.part_label.upper()}')
+        elif problem.is_limiting_problem and not deduction_done:
+            problem.next_stage = 'm3'
+            problem.flow_label = 'Next: Limiting Analysis'
+            problem.resume_url = reverse(
+                'limiting_workspace', args=[problem.problem_id])
+            problem.resume_label = 'Resume Limiting Analysis'
+        else:
+            problem.next_stage = 'done'
+            problem.flow_label = 'All stages complete'
+            problem.resume_url = reverse(
+                'preparation_ledger', args=[problem.problem_id])
+            problem.resume_label = 'Review Preparation Ledger'
 
     completed_count = _completed_problems_count(request.user)
     latest_synthesis = SynthesisAttempt.objects.filter(
@@ -646,6 +787,7 @@ def preparation_ledger(request, prob_id=None):
         'next_url':             f"/workspace/{problem.problem_id}/{first_label}/",
         'is_limiting_problem':  problem.is_limiting_problem,
         'all_problems':         list(_all_problems()),
+        'cq_rail':              _build_step_rail(request.user, problem, progress, 'm1'),
         'progress_json': json.dumps({
             'balancingCleared':      progress.balancing_cleared if progress else False,
             'molarMassCleared':      progress.molar_mass_cleared if progress else False,
@@ -703,6 +845,7 @@ def step_grid_workspace(request, prob_id, part_label='a'):
         'verified_prefix_json': json.dumps(part_progress.verified_prefix_json or []),
         'lane_cleared': part_progress.lane_cleared,
         'verified_answer': verified_answer,
+        'cq_rail': _build_step_rail(request.user, problem, progress, 'm2'),
     }
     return render(request, 'module2_workspace.html', context)
 
@@ -992,6 +1135,7 @@ def limiting_workspace(request, prob_id):
         'deduction_limiting':   progress.limiting_reagent,
         'deduction_yield':      progress.theoretical_yield,
         'deduction_excess':     progress.excess_remaining_json or '{}',
+        'cq_rail':              _build_step_rail(request.user, problem, progress, 'm3'),
     }
     return render(request, 'module3_limiting.html', context)
 

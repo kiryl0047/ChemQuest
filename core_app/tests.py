@@ -884,6 +884,123 @@ class ScaffoldingUiTests(BaseFixture):
         self.assertNotContains(resp, 'cyberConfirmModal')
 
 
+class StepRailTests(BaseFixture):
+    """The progress rail must reflect persisted state, not optimistic guesses."""
+
+    def _clear_limiting_lanes(self, client):
+        for label in ('a', 'b'):
+            part = ProblemPart.objects.get(
+                problem__problem_id='P_LIM', part_label=label)
+            resp = client.post(
+                reverse('limiting_workspace', args=['P_LIM']),
+                {'action': 'verify_lane', 'part_label': label,
+                 'nodes': _nodes_payload(part)},
+                content_type='application/json')
+            self.assertTrue(resp.json()['success'])
+
+    def test_ledger_shows_rail_with_module2_locked(self):
+        client = self.login()
+        resp = client.get(reverse('preparation_ledger', args=['P_TST']))
+        self.assertEqual(resp.status_code, 200)
+        self.assertContains(resp, 'class="cq-rail"')
+        self.assertContains(resp, 'aria-current="step"')
+        self.assertContains(resp, 'cq-rail-locked')
+        self.assertContains(resp, 'CQ.railStage')
+
+    def test_step_grid_marks_ledger_done_and_itself_current(self):
+        client = self.login()
+        complete_module1(client)
+        resp = client.get(reverse('step_grid_workspace', args=['P_TST', 'a']))
+        self.assertEqual(resp.status_code, 200)
+        self.assertContains(resp, 'cq-rail-done')
+        self.assertContains(resp, 'cq-rail-current')
+        self.assertContains(resp, '0 of 1 parts verified')
+
+    def test_limiting_stage_appears_only_for_capstones(self):
+        client = self.login()
+        complete_module1(client)
+        plain = client.get(reverse('step_grid_workspace', args=['P_TST', 'a']))
+        self.assertNotContains(plain, 'Limiting Analysis')
+
+        client = self.login()
+        complete_module1(client, prob_id='P_LIM')
+        self._clear_limiting_lanes(client)
+        capstone = client.get(reverse('limiting_workspace', args=['P_LIM']))
+        self.assertEqual(capstone.status_code, 200)
+        self.assertContains(capstone, 'Limiting Analysis')
+        self.assertContains(capstone, '2 of 2 parts verified')
+        self.assertContains(capstone, 'cq-rail-done')
+        self.assertContains(capstone, 'cq-rail-current')
+
+    def test_ledger_proceeds_to_step_grid_for_limiting_problems(self):
+        # Module 3 redirects here anyway; routing through Module 2 avoids the
+        # bounce and matches the rail's stage order.
+        client = self.login()
+        resp = client.get(reverse('preparation_ledger', args=['P_LIM']))
+        self.assertContains(resp, 'Proceed to Module 2 Workspace')
+        self.assertNotContains(resp, 'Proceed to Limiting Workspace')
+
+    def test_limiting_workspace_redirects_to_first_uncleared_lane(self):
+        client = self.login()
+        complete_module1(client, prob_id='P_LIM')
+        resp = client.get(reverse('limiting_workspace', args=['P_LIM']))
+        self.assertRedirects(
+            resp, reverse('step_grid_workspace', args=['P_LIM', 'a']))
+
+
+class LobbyFlowTests(BaseFixture):
+    """Cards must name the real next action, not always 'Begin'."""
+
+    def test_new_problem_offers_begin(self):
+        client = self.login()
+        resp = client.get(reverse('problem_lobby'))
+        self.assertEqual(resp.status_code, 200)
+        self.assertContains(resp, 'Begin Preparation Ledger')
+        self.assertContains(resp, 'Next: Preparation Ledger')
+
+    def test_completed_ledger_points_at_step_grid(self):
+        client = self.login()
+        complete_module1(client)
+        resp = client.get(reverse('problem_lobby'))
+        self.assertContains(resp, 'LEDGER COMPLETE')
+        self.assertContains(resp, 'Resume Step-Grid · Part A')
+        self.assertContains(resp, '0/1 verified')
+
+    def test_cleared_lanes_mark_problem_complete(self):
+        client = self.login()
+        complete_module1(client)
+        part = ProblemPart.objects.get(
+            problem__problem_id='P_TST', part_label='a')
+        resp = client.post(
+            reverse('audit_chain'),
+            {'problem_id': 'P_TST', 'part_label': 'a',
+             'nodes': _nodes_payload(part)},
+            content_type='application/json').json()
+        self.assertTrue(resp['success'])
+
+        resp = client.get(reverse('problem_lobby'))
+        self.assertContains(resp, '✓ COMPLETE')
+        self.assertContains(resp, 'Review Preparation Ledger')
+        self.assertContains(resp, 'All stages complete')
+
+    def test_limiting_problem_points_at_limiting_stage_after_lanes(self):
+        client = self.login()
+        complete_module1(client, prob_id='P_LIM')
+        for label in ('a', 'b'):
+            part = ProblemPart.objects.get(
+                problem__problem_id='P_LIM', part_label=label)
+            resp = client.post(
+                reverse('audit_chain'),
+                {'problem_id': 'P_LIM', 'part_label': label,
+                 'nodes': _nodes_payload(part)},
+                content_type='application/json').json()
+            self.assertTrue(resp['success'])
+
+        resp = client.get(reverse('problem_lobby'))
+        self.assertContains(resp, 'Resume Limiting Analysis')
+        self.assertContains(resp, 'Next: Limiting Analysis')
+
+
 class RegistrationTests(TestCase):
 
     def test_register_page_loads(self):

@@ -515,6 +515,8 @@
     }
 </style>
 
+{% include '_cq_step_rail.html' %}
+
 <!-- ── Ledger Header ── -->
 <div class="ledger-card">
     <span style="color: var(--constant-gold); font-weight: bold; font-size: 11px; letter-spacing: 2px;">
@@ -752,7 +754,7 @@
                 id="btn-next-module"
                 disabled
                 onclick="proceedToWorkspace()">
-            {% if is_limiting_problem %}Proceed to Limiting Workspace ──>{% else %}Proceed to Module 2 Workspace ──>{% endif %}
+            Proceed to Module 2 Workspace ──>
         </button>
     </div>
 
@@ -1097,6 +1099,13 @@ function updateTransitionButtonState() {
     const nextBtn = document.getElementById('btn-next-module');
     renderGateChips();
     if (typeof maybeRevealExitCheckpoint === 'function') maybeRevealExitCheckpoint();
+
+    // Keep the shared progress rail in sync without a reload: clearing both
+    // Module 1 gates unlocks the Step-Grid stage immediately.
+    if (window.CQ && CQ.railStage && module1Unlocked()) {
+        CQ.railStage('m2', 'available', 'Ready to start');
+    }
+
     if (!nextBtn) return;
     if (module1Unlocked()) {
         nextBtn.disabled = false;
@@ -1975,14 +1984,11 @@ function proceedToWorkspace() {
         return;
     }
 
-    const isLimiting = "{{ is_limiting_problem }}".toLowerCase() === "true";
-    let targetUrl = NEXT_URL;
-    let destName = 'Step-Grid Workspace';
-
-    if (isLimiting) {
-        destName = 'Limiting Reagent Workspace';
-        targetUrl = "{% url 'limiting_workspace' prob_id=problem_id %}";
-    }
+    // Every problem — including limiting-reagent capstones — must clear the
+    // Step-Grid lanes before the Limiting Analysis stage; Module 3 redirects
+    // there anyway, so route through Module 2 directly.
+    const targetUrl = NEXT_URL;
+    const destName = 'Step-Grid Workspace';
 
     showToast(`Launching ${destName}…`, 'ok');
     setTimeout(() => {

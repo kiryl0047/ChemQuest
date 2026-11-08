@@ -128,7 +128,7 @@
         display: flex;
         gap: 8px;
         flex-wrap: wrap;
-        margin-bottom: 18px;
+        margin-bottom: 10px;
     }
 
     .part-chip {
@@ -146,6 +146,18 @@
     .part-chip.mol-to-g   { border-color: var(--combo-green); color: var(--combo-green); }
     .part-chip.g-to-mol   { border-color: var(--constant-gold); color: var(--constant-gold); }
     .part-chip.g-to-g     { border-color: var(--cyber-teal); color: var(--cyber-teal); }
+
+    .problem-flow-label {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        margin: 0 0 12px 0;
+        font-size: 12px;
+        font-weight: 700;
+        color: var(--text-muted);
+    }
+
+    .problem-flow-label span { color: var(--cyber-teal); }
 
     .btn-start {
         background: transparent;
@@ -268,7 +280,7 @@
 <div class="lobby-header">
     <span style="color: var(--cyber-teal); font-weight: bold; font-size: 12px; letter-spacing: 2px;">CHEMQUEST // PROBLEM SELECTION LOBBY</span>
     <p style="margin: 6px 0 0 0; color: var(--text-light); font-size: 14px;">
-        <span style="font-weight:bold; color:var(--cyber-teal);">Getting started:</span> Click "<strong>Begin Preparation Ledger</strong>" on any problem card to start. Use the filter ribbon below to narrow problems by conversion type (mol→mol, mol→g, g→mol, g→g).
+        <span style="font-weight:bold; color:var(--cyber-teal);">Getting started:</span> each problem card shows its next step — <strong>Begin</strong> a new ledger or <strong>Resume</strong> exactly where you left off. Use the filter ribbon below to narrow problems by conversion type (mol→mol, mol→g, g→mol, g→g).
     </p>
     {% if in_progress_count > 0 %}
     <p style="margin: 10px 0 0 0; color: var(--combo-green); font-size: 12px;">
@@ -354,11 +366,21 @@
                                  color:var(--coral-red); margin-left:8px; vertical-align:middle;
                                  letter-spacing:1px;">LIMITING</span>
                     {% endif %}
-                    {% if problem.completed %}
+                    {% if problem.strict_complete %}
                     <span style="font-size:11px; font-weight:bold; padding:3px 8px;
                                  border-radius:3px; border:1px solid var(--combo-green);
                                  color:var(--combo-green); margin-left:8px; vertical-align:middle;
                                  letter-spacing:1px;">✓ COMPLETE</span>
+                    {% elif problem.ledger_only_complete %}
+                    <span style="font-size:11px; font-weight:bold; padding:3px 8px;
+                                 border-radius:3px; border:1px solid var(--constant-gold);
+                                 color:var(--constant-gold); margin-left:8px; vertical-align:middle;
+                                 letter-spacing:1px;">LEDGER COMPLETE</span>
+                    {% elif problem.has_telemetry %}
+                    <span style="font-size:11px; font-weight:bold; padding:3px 8px;
+                                 border-radius:3px; border:1px solid var(--cyber-teal);
+                                 color:var(--cyber-teal); margin-left:8px; vertical-align:middle;
+                                 letter-spacing:1px;">IN PROGRESS</span>
                     {% endif %}
                 </p>
                 <p class="problem-prompt-preview">{{ problem.prompt }}</p>
@@ -379,8 +401,13 @@
             {% endfor %}
         </div>
 
-        <a class="btn-start" href="{% url 'preparation_ledger' problem.problem_id %}">
-            Begin Preparation Ledger ──>
+        <p class="problem-flow-label">
+            <span aria-hidden="true">▸</span>
+            {{ problem.flow_label }}
+        </p>
+
+        <a class="btn-start" href="{{ problem.resume_url }}">
+            {{ problem.resume_label }} ──>
         </a>
         
         {% if problem.has_telemetry %}

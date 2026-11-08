@@ -1,0 +1,52 @@
+{% comment %}
+Shared problem-progress rail (Track 1 — flow & rail).
+
+Rendered from a `cq_rail` context dict built by core_app.views._build_step_rail.
+Each stage is server-rendered with its true persisted state so the rail is
+identical on every page; window.CQ.railStage(key, state, detail) lets a page
+advance a stage without a reload (e.g. Module 1 unlocking Module 2).
+{% endcomment %}
+{% if cq_rail %}
+<nav class="cq-rail" aria-label="Problem progress">
+    <div class="cq-rail-head">
+        <span class="cq-rail-title">Problem progress</span>
+        <span class="cq-rail-problem">{{ cq_rail.problem_id }}</span>
+    </div>
+
+    <ol class="cq-rail-list">
+        {% for stage in cq_rail.stages %}
+        <li class="cq-rail-item cq-rail-{{ stage.state }}"
+            data-stage="{{ stage.key }}"
+            data-index="{{ forloop.counter }}"
+            data-done="{{ stage.done|yesno:'true,false' }}">
+            <a class="cq-rail-link"
+               href="{{ stage.url }}"
+               {% if stage.state == 'locked' %}aria-disabled="true" tabindex="-1"{% endif %}
+               {% if stage.state == 'current' %}aria-current="step"{% endif %}>
+                <span class="cq-rail-dot" aria-hidden="true">
+                    {% if stage.done %}✓{% else %}{{ forloop.counter }}{% endif %}
+                </span>
+                <span class="cq-rail-text">
+                    <span class="cq-rail-label">{{ stage.label }}</span>
+                    <span class="cq-rail-detail">{{ stage.detail }}</span>
+                </span>
+                <span class="cq-sr-only cq-rail-status">
+                    {% if stage.state == 'done' %}Completed
+                    {% elif stage.state == 'current' %}{% if stage.done %}Current step, completed{% else %}Current step{% endif %}
+                    {% elif stage.state == 'locked' %}Locked
+                    {% else %}Available{% endif %}
+                </span>
+            </a>
+        </li>
+        {% endfor %}
+    </ol>
+
+    {% if cq_rail.complete %}
+    <p class="cq-rail-complete">
+        <span aria-hidden="true">✓</span>
+        <span>All stages complete.</span>
+        <a href="{{ cq_rail.lobby_url }}">Return to the Problem Lobby</a>
+    </p>
+    {% endif %}
+</nav>
+{% endif %}
