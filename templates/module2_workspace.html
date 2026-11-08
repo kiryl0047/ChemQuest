@@ -328,8 +328,13 @@
         <button class="btn-verify-node" id="btnVerifyStep" onclick="verifyCurrentNode()" disabled>
             ✓ Verify Step 1
         </button>
+        <button type="button" class="cq-hint-btn" id="btnHint" onclick="requestHint(false)">
+            💡 Need a hint?
+        </button>
         <span style="font-size:12px; color:var(--text-muted);" id="chainProgressLabel"></span>
     </div>
+
+    <div id="hintPanel" style="display:none;"></div>
 </div>
 
 <div class="module-actions-bar" id="actionsBar">
@@ -372,6 +377,13 @@ let laneCleared  = {{ lane_cleared|yesno:'true,false' }};
 
 const STORE_KEY = `cq_m2_${PROBLEM_ID}_${PART_LABEL}`;
 let activeNodeIndex = 0;
+
+// Hint ladder state (server-generated; see api_hint in views.py)
+let hintLevel = 0;
+let hintBusy = false;
+const failedSteps = {};
+const MAX_HINT_LEVEL = 3;
+const HINT_URL = "{% url 'api_hint' %}";
 function extractUniqueUnits() {
     const unitsSet = new Set();
     if (GIVEN_UNIT && GIVEN_FORMULA) unitsSet.add(`${GIVEN_UNIT}_${GIVEN_FORMULA}`);
@@ -473,13 +485,15 @@ function spawnCard(idx) {
 
     card.innerHTML = `
         <div class="slot-container">
-            <input type="number" class="slot-input" id="num_val_${idx}" placeholder="Val" step="any">
-            <select class="unit-select" id="num_unit_${idx}">${UNIT_OPTIONS_HTML}</select>
+            <input type="number" class="slot-input" id="num_val_${idx}" placeholder="Val" step="any"
+                   aria-label="Step ${idx + 1} numerator value">
+            <select class="unit-select" id="num_unit_${idx}" aria-label="Step ${idx + 1} numerator unit">${UNIT_OPTIONS_HTML}</select>
         </div>
         <div class="fraction-divider"></div>
         <div class="slot-container">
-            <input type="number" class="slot-input" id="den_val_${idx}" placeholder="Val" step="any">
-            <select class="unit-select" id="den_unit_${idx}">${UNIT_OPTIONS_HTML}</select>
+            <input type="number" class="slot-input" id="den_val_${idx}" placeholder="Val" step="any"
+                   aria-label="Step ${idx + 1} denominator value">
+            <select class="unit-select" id="den_unit_${idx}" aria-label="Step ${idx + 1} denominator unit">${UNIT_OPTIONS_HTML}</select>
         </div>
     `;
     container.appendChild(card);
@@ -522,16 +536,34 @@ async function verifyCurrentNode() {
     if (laneCleared || !activeCardFilled()) return;
 
     const btn = document.getElementById('btnVerifyStep');
+    const idx = activeNodeIndex;
+    const numValEl = document.getElementById(`num_val_${idx}`);
+    const denValEl = document.getElementById(`den_val_${idx}`);
+    const numVal = parseFloat(numValEl?.value);
+    const denVal = parseFloat(denValEl?.value);
+
+    // Client-side pre-check: catch non-numeric entries before a round-trip.
+    CQ.clearFieldErrors(document.getElementById(`node_${idx}`));
+    if (!Number.isFinite(numVal)) {
+        CQ.setFieldError(numValEl, 'Enter a number in the numerator.');
+        numValEl?.focus();
+        return;
+    }
+    if (!Number.isFinite(denVal)) {
+        CQ.setFieldError(denValEl, 'Enter a number in the denominator.');
+        denValEl?.focus();
+        return;
+    }
+
     if (btn) btn.disabled = true;
 
-    const idx = activeNodeIndex;
     const payload = {
         problem_id: PROBLEM_ID,
         part_label: PART_LABEL,
         node: {
-            num_value: parseFloat(document.getElementById(`num_val_${idx}`)?.value),
+            num_value: numVal,
             num_unit:  document.getElementById(`num_unit_${idx}`)?.value || '',
-            den_value: parseFloat(document.getElementById(`den_val_${idx}`)?.value),
+            den_value: denVal,
             den_unit:  document.getElementById(`den_unit_${idx}`)?.value || '',
         },
     };
@@ -565,6 +597,8 @@ function handleNodeResponse(data) {
 
     if (data.success && data.correct) {
         try { localStorage.removeItem(STORE_KEY); } catch(e) {}
+        CQ.clearFieldErrors(document.getElementById(`node_${idx}`));
+        resetHints();
         lockCard(idx);
         applyUnitCancellationVisual(idx);
 
@@ -596,9 +630,158 @@ function handleNodeResponse(data) {
         }, 1400);
     }
 
+    applyServerFieldErrors(idx, data);
+
     let consoleMsg = `<strong style="color:#B91C1C;">${data.unit_ok === false ? 'Unit mismatch.' : 'Value check failed.'}</strong> ${data.message || ''}`;
     updateConsole(consoleMsg);
     updateControls();
+
+    // Scaffolding: surface the first hint automatically after the first miss
+    // on this step, so a student never stalls on a blank console.
+    const misses = (failedSteps[idx] || 0) + 1;
+    failedSteps[idx] = misses;
+    if (misses === 1 && hintLevel === 0) {
+        requestHint(false, { silent: true });
+    }
+}
+
+// Map a server field name to the DOM field prefix used in this template.
+function fieldInputId(field, idx) {
+    const map = {
+        num_value: `num_val_${idx}`,
+        den_value: `den_val_${idx}`,
+        num_unit:  `num_unit_${idx}`,
+        den_unit:  `den_unit_${idx}`,
+    };
+    return map[field] || null;
+}
+
+function fieldErrorMessage(field) {
+    if (field === 'den_unit') return 'Must cancel the unit from the previous step.';
+    if (field === 'num_unit') return 'Unit must lead to the next conversion.';
+    if (field === 'num_value') return 'Value does not match this constant.';
+    if (field === 'den_value') return 'Value does not match this constant.';
+    return '';
+}
+
+function applyServerFieldErrors(idx, data) {
+    const card = document.getElementById(`node_${idx}`);
+    if (!card) return;
+    CQ.clearFieldErrors(card);
+    const fields = Array.isArray(data.fields) && data.fields.length
+        ? data.fields
+        : (data.field ? [data.field] : []);
+    fields.forEach((field) => {
+        const el = document.getElementById(fieldInputId(field, idx));
+        if (el) CQ.setFieldError(el, fieldErrorMessage(field));
+    });
+    const first = card.querySelector('.cq-input-invalid');
+    if (first) first.focus();
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// On-demand hint ladder (server-authoritative content)
+// ─────────────────────────────────────────────────────────────────────────────
+function resetHints() {
+    hintLevel = 0;
+    const panel = document.getElementById('hintPanel');
+    if (panel) {
+        panel.style.display = 'none';
+        panel.innerHTML = '';
+    }
+    const btn = document.getElementById('btnHint');
+    if (btn) {
+        btn.disabled = false;
+        btn.textContent = '💡 Need a hint?';
+    }
+}
+
+function refreshHintButton() {
+    const btn = document.getElementById('btnHint');
+    if (!btn) return;
+    btn.disabled = hintBusy;
+    btn.textContent = hintLevel > 0
+        ? `💡 Hint ${hintLevel} of ${MAX_HINT_LEVEL}`
+        : '💡 Need a hint?';
+}
+
+async function requestHint(advance, options) {
+    if (hintBusy || laneCleared) return;
+    const opts = options || {};
+    const nextLevel = advance === true
+        ? Math.min(hintLevel + 1, MAX_HINT_LEVEL)
+        : Math.max(hintLevel || 1, 1);
+
+    hintBusy = true;
+    const btn = document.getElementById('btnHint');
+    if (btn) {
+        btn.disabled = true;
+        btn.textContent = 'Loading hint…';
+    }
+
+    try {
+        const resp = await fetch(HINT_URL, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': '{{ csrf_token }}'
+            },
+            body: JSON.stringify({
+                stage: 'chain',
+                problem_id: PROBLEM_ID,
+                part_label: PART_LABEL,
+                level: nextLevel,
+                step: activeNodeIndex,
+            }),
+        });
+        const data = await resp.json();
+        if (!resp.ok || !data.success) {
+            if (!opts.silent) showToast(data.message || 'Hint unavailable right now.', 'warn');
+            return;
+        }
+        hintLevel = data.level;
+        renderHintPanel(data);
+    } catch (err) {
+        console.error('[Hint] error:', err);
+        if (!opts.silent) showToast('Could not load a hint right now.', 'err');
+    } finally {
+        hintBusy = false;
+        refreshHintButton();
+    }
+}
+
+function renderHintPanel(data) {
+    const panel = document.getElementById('hintPanel');
+    if (!panel) return;
+    panel.style.display = 'block';
+    CQ.hint(panel, data);
+
+    const box = panel.querySelector('.cq-hint');
+    if (!box) return;
+
+    const actions = document.createElement('div');
+    actions.className = 'cq-hint-actions';
+
+    if (data.can_advance) {
+        const more = document.createElement('button');
+        more.type = 'button';
+        more.className = 'cq-hint-btn';
+        more.textContent = `Show hint ${data.level + 1} of ${data.max_level} →`;
+        more.addEventListener('click', () => requestHint(true));
+        actions.appendChild(more);
+    }
+
+    const dismiss = document.createElement('button');
+    dismiss.type = 'button';
+    dismiss.className = 'cq-hint-btn';
+    dismiss.textContent = data.can_advance ? 'Dismiss' : 'Got it';
+    dismiss.addEventListener('click', () => {
+        panel.style.display = 'none';
+        panel.innerHTML = '';
+    });
+    actions.appendChild(dismiss);
+
+    box.appendChild(actions);
 }
 
 function updateControls() {
@@ -703,27 +886,9 @@ if (laneCleared) {
 }
 updateControls();
 
-let _toastTimeout;
 function showToast(msg, type = 'info') {
-    let toast = document.getElementById('_cq_toast');
-    if (!toast) {
-        toast = document.createElement('div');
-        toast.id = '_cq_toast';
-        toast.style.cssText = `
-            position:fixed; bottom:28px; left:50%; transform:translateX(-50%);
-            padding:10px 22px; border-radius:5px; font-size:14px; font-weight:bold;
-            z-index:9999; transition:opacity 0.3s; pointer-events:none;
-            box-shadow:0 4px 16px rgba(42,52,76,0.18); max-width:520px; text-align:center;
-        `;
-        document.body.appendChild(toast);
-    }
-    toast.textContent = msg;
-    toast.style.opacity = '1';
-    toast.style.background = type === 'ok' ? '#DCFCE7' : type === 'err' ? '#FEE2E2' : '#FFFFFF';
-    toast.style.color = type === 'ok' ? '#166534' : type === 'err' ? '#991B1B' : '#2a344c';
-    toast.style.border = `1px solid ${type === 'ok' ? 'var(--combo-green)' : type === 'err' ? 'var(--coral-red)' : 'var(--border)'}`;
-    clearTimeout(_toastTimeout);
-    _toastTimeout = setTimeout(() => { toast.style.opacity = '0'; }, 3200);
+    if (window.CQ && CQ.toast) { CQ.toast(msg, type); return; }
+    console.log(`[${type}] ${msg}`);
 }
 </script>
 {% endblock content %}

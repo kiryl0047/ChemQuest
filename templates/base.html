@@ -372,8 +372,14 @@
             .xp-bar { width: 44px; }
         }
     </style>
+
+    {% include '_cq_ui_head.html' %}
+    {% block head %}{% endblock %}
+
 </head>
 <body>
+
+<a class="cq-skip-link" href="#main-content">Skip to main content</a>
 
 <header>
     <h1>
@@ -415,7 +421,7 @@
     </div>
 </header>
 
-<main>
+<main id="main-content" tabindex="-1">
     <div class="workspace-container">
         {% block content %}
         <p style="color: var(--text-muted);">Workspace loading...</p>
@@ -570,6 +576,8 @@
     }
 })();
 </script>
+
+{% block scripts %}{% endblock %}
 
 </body>
 </html>

@@ -40,6 +40,7 @@ urlpatterns = [
     # API endpoints
     path('api/verify-balancing/',    views.verify_balancing_backend,  name='verify_balancing'),
     path('api/verify-molar-mass/',   views.verify_molar_mass_backend, name='verify_molar_mass'),
+    path('api/hint/',                views.api_hint,                  name='api_hint'),
     path('api/m1-checkpoint/',       views.m1_checkpoint,             name='m1_checkpoint'),
 path('api/audit-chain/',         views.audit_chain,                name='audit_chain'),
 path('api/verify-node/',         views.verify_node,                name='verify_node'),

@@ -15,6 +15,7 @@ from django.contrib.auth import login, logout
 from django.contrib.auth.decorators import login_required
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
+from django.utils.html import escape
 
 from .models import (
     StoichiometryProblem, ProblemPart, StudentTelemetryLog,
@@ -31,6 +32,7 @@ M1_ACCURACY_THRESHOLD       = 80.0   # documented Module 1 accuracy gate (%)
 SYNTHESIS_ELIGIBILITY_COUNT = 5      # completed problems to unlock review
 SYNTHESIS_PASS_PCT          = 60.0
 SYNTHESIS_ITEM_COUNT        = 3
+SYNTHESIS_MISTAKES_KEY      = 'synthesis_mistakes'
 NODE_TOLERANCE              = 0.01
 LANE_TOLERANCE              = 0.05
 YIELD_TOLERANCE             = 0.2
@@ -1031,6 +1033,160 @@ def _deduction_hint(attempts, limiting_match, yield_match, excess_ok,
 
 
 # ===========================================================================
+# On-demand hint engine (3-rung ladder: nudge -> concept -> worked micro-step)
+#
+# Hints are generated server-side so the client never holds answer keys.
+# Level 1 names the *kind* of mistake, level 2 states the rule, and level 3
+# walks a single concrete micro-step. Only level 3 may expose numeric values,
+# mirroring the existing reactive hints (_lane_hint / _balance_hint below).
+# ===========================================================================
+
+HINT_MAX_LEVEL = 3
+
+
+def _clamp_level(raw):
+    try:
+        level = int(raw)
+    except (TypeError, ValueError):
+        return 1
+    return max(1, min(level, HINT_MAX_LEVEL))
+
+
+def _chain_hint(part, index, level=1, prefix=None):
+    """Hint for one Module 2 / Synthesis conversion-chain step."""
+    prefix = prefix or []
+    candidates = [c for c in _valid_chains(part) if _prefix_matches(c, prefix)]
+    if not candidates or not candidates[0]:
+        return ('Your verified steps no longer line up with this conversion. '
+                'Restart the item to rebuild the chain from the given quantity.')
+
+    index = max(0, min(index, len(candidates[0]) - 1))
+    node = candidates[0][index]
+    prev_unit = (f"{part.given_unit}_{part.given_substance.formula}"
+                 if index == 0 else prefix[-1]['num_unit'])
+    prev_disp = str(prev_unit).replace('_', ' ')
+    num_disp = str(node['num_unit']).replace('_', ' ')
+    den_disp = str(node['den_unit']).replace('_', ' ')
+
+    if level <= 1:
+        return (f'You are converting out of <code>{escape(prev_disp)}</code>. '
+                f'Look for the constant whose denominator cancels that unit — '
+                f'you do not need the exact numbers yet.')
+    if level == 2:
+        return (f'A conversion factor is a fraction whose units cancel diagonally. '
+                f'Your previous step ended in <code>{escape(prev_disp)}</code>, so '
+                f'put <code>{escape(prev_disp)}</code> on the <strong>bottom</strong> '
+                f'and the next unit (<code>{escape(num_disp)}</code>) on the '
+                f'<strong>top</strong>.')
+
+    note = (' (One valid arrangement is shown.)' if len(candidates) > 1 else '')
+    return (f'Worked micro-step{note}: enter numerator '
+            f'<code>{escape(str(node["num_value"]))}</code> with unit '
+            f'<code>{escape(num_disp)}</code>, and denominator '
+            f'<code>{escape(str(node["den_value"]))}</code> with unit '
+            f'<code>{escape(den_disp)}</code>.')
+
+
+def _balance_hint(problem, submitted_ints=None, level=1):
+    """Hint for Sub-Step 1A balancing. Never reveals the target coefficients."""
+    reactants = problem.reactants
+    products = problem.products
+    total = len(reactants) + len(products)
+    submitted_ints = submitted_ints or []
+
+    if len(submitted_ints) != total or any(v <= 0 for v in submitted_ints):
+        return ('Every reactant and product needs a positive whole-number '
+                'coefficient. Start by putting 1 in each empty box, then adjust.')
+
+    left_atoms, right_atoms = {}, {}
+    for i, r in enumerate(reactants):
+        for el, cnt in _parse_substance_atoms(r['formula']).items():
+            left_atoms[el] = left_atoms.get(el, 0) + submitted_ints[i] * cnt
+    for j, p in enumerate(products):
+        for el, cnt in _parse_substance_atoms(p['formula']).items():
+            right_atoms[el] = right_atoms.get(el, 0) + submitted_ints[len(reactants) + j] * cnt
+
+    mismatches = []
+    for el in sorted(set(left_atoms) | set(right_atoms)):
+        l_count, r_count = left_atoms.get(el, 0), right_atoms.get(el, 0)
+        if l_count != r_count:
+            mismatches.append((el, l_count, r_count))
+
+    if not mismatches:
+        return ('Atoms already balance — now check that the coefficients are in '
+                'the simplest whole-number ratio (no common divisor above 1).')
+
+    first_el, l_count, r_count = mismatches[0]
+    if level <= 1:
+        return ('Atoms are not conserved yet. Re-count one element at a time on '
+                'both sides before changing any coefficient.')
+    if level == 2:
+        direction = 'right (products)' if l_count < r_count else 'left (reactants)'
+        return (f'Element <code>{escape(first_el)}</code> does not balance: '
+                f'left has {l_count}, right has {r_count}. You need more '
+                f'<code>{escape(first_el)}</code> on the {direction} side.')
+    rows = ''.join(
+        f'<li><code>{escape(el)}</code>: left {l_count}, right {r_count}</li>'
+        for el, l_count, r_count in mismatches[:4]
+    )
+    return (f'Worked micro-step: adjust coefficients until each count matches. '
+            f'Current mismatch{"" if len(mismatches) == 1 else "es"}:'
+            f'<ul style="margin:6px 0 6px 18px;">{rows}</ul>'
+            f'If an element appears as an odd subscript in a product but as a '
+            f'diatomic reactant (like O<sub>2</sub>), try doubling that product.')
+
+
+def _molar_mass_hint(problem, level=1):
+    """Hint for Sub-Step 1B molar masses. Level 3 shows the atomic breakdown,
+    not the final total — the student still performs the addition."""
+    formulas = _unique_formulas(problem)
+    if level <= 1:
+        return ('Molar mass is the mass of <strong>one mole of the formula as '
+                'written</strong> — not one mole of the balanced reaction. Read '
+                'each formula from the equation and ignore the coefficient in '
+                'front of it.')
+    if level == 2:
+        names = ', '.join(f'<code>{escape(f)}</code>' for f in formulas)
+        return (f'For each compound ({names}), multiply the number of atoms of '
+                f"each element by that element's atomic mass from the databank, "
+                f'then add the pieces. The balancing coefficient does '
+                f'<strong>not</strong> belong in a molar mass.')
+
+    lines = _molar_mass_breakdown_hints(formulas, problem=problem)
+    if not lines:
+        return ('Open the Atomic Databank and sum the atomic masses for each '
+                'formula as written in the equation.')
+    items = ''.join(f'<li>{escape(line)}</li>' for line in lines)
+    return (f'Worked micro-step — add these pieces for each compound:'
+            f'<ul style="margin:6px 0 6px 18px;">{items}</ul>')
+
+
+def _build_hint(stage, problem, level, part=None, index=0, prefix=None,
+                submitted_ints=None):
+    if stage == 'chain':
+        title = f'Step {index + 1} hint'
+        body = _chain_hint(part, index, level, prefix)
+    elif stage == 'balance':
+        title = 'Balancing hint'
+        body = _balance_hint(problem, submitted_ints, level)
+    elif stage == 'molar_mass':
+        title = 'Molar mass hint'
+        body = _molar_mass_hint(problem, level)
+    else:
+        return None
+    return {
+        'success': True,
+        'stage': stage,
+        'level': level,
+        'max_level': HINT_MAX_LEVEL,
+        'can_advance': level < HINT_MAX_LEVEL,
+        'title': title,
+        'body': body,
+    }
+
+
+
+# ===========================================================================
 # Module 4: Student-Facing Telemetry Analytics & Performance Dashboard
 # ===========================================================================
 
@@ -1609,6 +1765,15 @@ def synthesis_verify_node(request):
             message = (f'Step {index + 1}: this factor must cancel "{need}" '
                        f'(the unit the previous step ended in), but you wrote '
                        f'"{entered_num} over {entered_den}".')
+            code = 'unit_cancel'
+            fields = []
+            if str(current['den_unit']) != str(prev_unit):
+                fields.append('den_unit')
+            allowed_nums = {c[index]['num_unit'] for c in candidates}
+            if str(current['num_unit']) not in allowed_nums:
+                fields.append('num_unit')
+            if not fields:
+                fields = ['den_unit', 'num_unit']
         else:
             expected_value = None
             for c in candidates:
@@ -1624,11 +1789,26 @@ def synthesis_verify_node(request):
             else:
                 message = (f'Step {index + 1}: units are correct but the VALUES '
                            f'are off — recheck your arithmetic for that constant.')
+            code = 'value_mismatch'
+            fields = ['num_value', 'den_value']
+
+        # A rejected step is a real mistake: record it against this item so the
+        # final review score reflects the error (not just the corrected chain).
+        key = f'{prob_id}:{part_label}'
+        mistakes = request.session.get(SYNTHESIS_MISTAKES_KEY) or {}
+        mistakes[key] = mistakes.get(key, 0) + 1
+        request.session[SYNTHESIS_MISTAKES_KEY] = mistakes
+        _log_attempt(request, prob_id, part_label, 'synthesis', 5, False)
 
         return JsonResponse({
             'success': False,
             'unit_ok': unit_ok,
+            'code': code,
+            'field': fields[0],
+            'fields': fields,
             'message': message,
+            'hint': _chain_hint(part, index, 1, prefix),
+            'attempts': mistakes[key],
         })
 
     complete = (index + 1 == part.node_count)
@@ -1663,20 +1843,28 @@ def synthesis_submit(request):
 
     results = []
     correct_items = 0
+    mistakes_map = request.session.get(SYNTHESIS_MISTAKES_KEY) or {}
+
     for ans in answers:
         prob_id = ans.get('problem_id')
         part_label = ans.get('part_label')
         submitted = ans.get('nodes', [])
+        mistake_key = f'{prob_id}:{part_label}'
+        mistakes = int(mistakes_map.get(mistake_key, 0) or 0)
+
         try:
             part = ProblemPart.objects.get(
                 problem__problem_id=prob_id, part_label=part_label)
         except ProblemPart.DoesNotExist:
             results.append({'problem_id': prob_id, 'part_label': part_label,
-                            'correct': False})
+                            'correct': False, 'mistakes': mistakes})
             continue
 
         grade = _grade_chain(part, submitted)
-        item_correct = grade['count_ok'] and grade['matched'] and grade['all_ok']
+        chain_ok = grade['count_ok'] and grade['matched'] and grade['all_ok']
+        # First-try accuracy: an item is only correct when the chain is right
+        # AND no step was rejected on the way there.
+        item_correct = chain_ok and mistakes == 0
         correct_items += 1 if item_correct else 0
 
         _log_attempt(request, prob_id, part_label, 'synthesis', 5, item_correct)
@@ -1684,8 +1872,14 @@ def synthesis_submit(request):
             'problem_id': prob_id,
             'part_label': part_label,
             'correct':    item_correct,
-            'reports':    grade['reports'] if not item_correct else [],
+            'mistakes':   mistakes,
+            'reports':    grade['reports'] if not chain_ok else [],
         })
+
+    # Consumed: clear the mistake counters for the items just submitted.
+    for ans in answers:
+        mistakes_map.pop(f"{ans.get('problem_id')}:{ans.get('part_label')}", None)
+    request.session[SYNTHESIS_MISTAKES_KEY] = mistakes_map
 
     total = max(len(answers), 1)
     score_pct = round(correct_items / total * 100, 1)
@@ -1801,10 +1995,13 @@ def verify_balancing_backend(request):
             _award_xp(request, XP_PER_BALANCE)
 
         hint = ""
+        code = 'correct'
+        mismatches_out = []
         if is_correct:
             message = 'Chamber Stabilized! Reaction is perfectly balanced in the simplest whole-number ratio.'
         elif is_multiple_ratio:
             message = f'Atom balance achieved, but stoichiometry requires the SIMPLEST whole-number integer ratio!'
+            code = 'simplest_ratio'
             hint = (f"All your coefficients ({', '.join(map(str, submitted_ints))}) share a common "
                     f"divisor of {scale_factor}. Divide each coefficient by {scale_factor} to find "
                     f"the simplest whole-number ratio.")
@@ -1835,6 +2032,11 @@ def verify_balancing_backend(request):
                 if mismatches:
                     err_summaries = [f"{el}: Left has {l}, Right has {r}" for el, l, r in mismatches]
                     message = f"Reaction Imbalance! {'; '.join(err_summaries[:2])}."
+                    code = 'atom_imbalance'
+                    mismatches_out = [
+                        {'element': el, 'left': l, 'right': r}
+                        for el, l, r in mismatches
+                    ]
 
                     first_el, l_c, r_c = mismatches[0]
                     if log.attempts_count == 1:
@@ -1850,13 +2052,18 @@ def verify_balancing_backend(request):
                                 "compound's coefficient to make it even.")
                 else:
                     message = 'Reaction Imbalance Detected! Enter positive integers for all reactants and products.'
+                    code = 'invalid_coefficients'
                     hint = 'Fill in all coefficient boxes with positive whole numbers (1, 2, 3...).'
             else:
                 message = 'Please provide coefficients for all reactants and products.'
+                code = 'incomplete'
                 hint = 'Enter an integer coefficient in every box.'
 
         return JsonResponse({
             'success':   is_correct,
+            'code':      code,
+            'field':     'coefficients',
+            'mismatches': mismatches_out,
             'attempts':  log.attempts_count,
             'xp_reward': XP_PER_BALANCE if first_clear else 0,
             'message':   message,
@@ -1940,8 +2147,13 @@ def verify_molar_mass_backend(request):
 
     hint = " ".join(molar_mass_hints) if molar_mass_hints else ""
 
+    wrong_formulas = [f for f, res in results.items() if not res['correct']]
+
     return JsonResponse({
         'success':   all_ok,
+        'code':      'correct' if all_ok else 'molar_mass_mismatch',
+        'field':     wrong_formulas[0] if wrong_formulas else '',
+        'fields':    wrong_formulas,
         'results':   results,
         'xp_reward': XP_PER_BALANCE if first_clear else 0,
         'message': (
@@ -2215,6 +2427,15 @@ def verify_node(request):
             message = (f'Step {index + 1}: this factor must cancel "{need}" '
                        f'(the unit the previous step ended in), but you wrote '
                        f'"{entered_num} over {entered_den}".')
+            code = 'unit_cancel'
+            fields = []
+            if str(current['den_unit']) != str(prev_unit):
+                fields.append('den_unit')
+            allowed_nums = {c[index]['num_unit'] for c in candidates}
+            if str(current['num_unit']) not in allowed_nums:
+                fields.append('num_unit')
+            if not fields:
+                fields = ['den_unit', 'num_unit']
         else:
             expected_value = None
             for c in candidates:
@@ -2230,11 +2451,17 @@ def verify_node(request):
             else:
                 message = (f'Step {index + 1}: units are correct but the VALUES '
                            f'are off — recheck your arithmetic for that constant.')
+            code = 'value_mismatch'
+            fields = ['num_value', 'den_value']
 
         return JsonResponse({
             'success': False,
             'unit_ok': unit_ok,
+            'code': code,
+            'field': fields[0],
+            'fields': fields,
             'message': message,
+            'hint': _chain_hint(part, index, 1, prefix),
         })
 
     verified_entry = {
@@ -2304,3 +2531,87 @@ def api_locked_constants(request, prob_id):
         'molarMasses': masses,
         'coefficients': coefficients,
     })
+
+
+# ===========================================================================
+# API: On-demand hints (server-generated; never leaks full answer keys)
+# ===========================================================================
+
+@login_required
+@csrf_exempt
+def api_hint(request):
+    if request.method != 'POST':
+        return JsonResponse({'success': False, 'message': 'Invalid method.'},
+                            status=405)
+
+    try:
+        data = json.loads(request.body or '{}')
+    except json.JSONDecodeError:
+        return JsonResponse({'success': False, 'message': 'Invalid JSON.'},
+                            status=400)
+
+    stage = str(data.get('stage') or '').strip()
+    level = _clamp_level(data.get('level', 1))
+    prob_id = data.get('problem_id')
+    part_label = str(data.get('part_label') or 'a').strip()
+
+    if stage not in ('chain', 'balance', 'molar_mass'):
+        return JsonResponse({'success': False, 'message': 'Unknown hint stage.'},
+                            status=400)
+
+    try:
+        problem = StoichiometryProblem.objects.get(problem_id=prob_id)
+    except StoichiometryProblem.DoesNotExist:
+        return JsonResponse({'success': False, 'message': 'Problem not found.'},
+                            status=404)
+
+    if stage == 'chain':
+        part = ProblemPart.objects.filter(
+            problem=problem, part_label=part_label).first()
+        if not part:
+            return JsonResponse({'success': False, 'message': 'Item not found.'},
+                                status=404)
+
+        # Level 3 hints reveal conversion constants, so they must not be
+        # reachable before Module 1 has unlocked the canned-constants tray.
+        progress = ProblemProgress.objects.filter(
+            user=request.user, problem_id=problem.problem_id).first()
+        if not progress or not progress.module1_complete():
+            return JsonResponse({'success': False,
+                                 'message': 'Module 1 gate not satisfied.'},
+                                status=403)
+
+        prefix = data.get('prefix')
+        if not isinstance(prefix, list):
+            prefix = []
+            if request.user.is_authenticated:
+                prog = PartProgress.objects.filter(
+                    user=request.user, problem_id=problem.problem_id,
+                    part_label=part_label).first()
+                prefix = (prog.verified_prefix_json or []) if prog else []
+
+        raw_step = data.get('step')
+        try:
+            index = int(raw_step)
+        except (TypeError, ValueError):
+            index = len(prefix)
+        index = max(0, min(index, max(part.node_count - 1, 0)))
+
+        progress = _build_hint('chain', problem, level, part=part,
+                               index=index, prefix=prefix)
+        if not progress:
+            return JsonResponse({'success': False, 'message': 'Hint unavailable.'},
+                                status=400)
+        return JsonResponse(progress)
+
+    if stage == 'balance':
+        raw = data.get('coefficients') or []
+        try:
+            submitted_ints = [int(str(v).strip()) for v in raw]
+        except (TypeError, ValueError):
+            submitted_ints = []
+        return JsonResponse(
+            _build_hint('balance', problem, level,
+                        submitted_ints=submitted_ints))
+
+    return JsonResponse(_build_hint('molar_mass', problem, level))

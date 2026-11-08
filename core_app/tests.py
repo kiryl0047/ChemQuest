@@ -566,6 +566,65 @@ class SynthesisTests(BaseFixture):
         self.assertTrue(resp['results'][0]['correct'])
         self.assertFalse(resp['results'][1]['correct'])
 
+    def test_clean_chain_scores_full_marks(self):
+        self._seed_completed_problems()
+        client = self.login()
+        part = ProblemPart.objects.get(problem__problem_id='S1', part_label='a')
+        expected = part.expected_nodes()
+
+        prefix = []
+        for exp in expected:
+            client.post(
+                reverse('synthesis_verify_node'),
+                {'problem_id': 'S1', 'part_label': 'a', 'prefix': prefix,
+                 'node': exp},
+                content_type='application/json')
+            prefix.append(exp)
+
+        resp = client.post(reverse('synthesis_submit'),
+                           {'answers': [{'problem_id': 'S1', 'part_label': 'a',
+                                         'nodes': expected}]},
+                           content_type='application/json').json()
+        self.assertEqual(resp['score_pct'], 100.0)
+        self.assertTrue(resp['results'][0]['correct'])
+        self.assertEqual(resp['results'][0]['mistakes'], 0)
+
+    def test_rejected_steps_reduce_review_score(self):
+        self._seed_completed_problems()
+        client = self.login()
+        part = ProblemPart.objects.get(problem__problem_id='S1', part_label='a')
+        expected = part.expected_nodes()
+
+        # Deliberate mistake at step 1 (correct units, wrong value).
+        client.post(
+            reverse('synthesis_verify_node'),
+            {'problem_id': 'S1', 'part_label': 'a', 'prefix': [],
+             'node': {
+                 'num_value': 999,
+                 'num_unit': expected[0]['num_unit'],
+                 'den_value': expected[0]['den_value'],
+                 'den_unit': expected[0]['den_unit'],
+             }},
+            content_type='application/json')
+
+        # Then finish the chain correctly.
+        prefix = []
+        for exp in expected:
+            client.post(
+                reverse('synthesis_verify_node'),
+                {'problem_id': 'S1', 'part_label': 'a', 'prefix': prefix,
+                 'node': exp},
+                content_type='application/json')
+            prefix.append(exp)
+
+        resp = client.post(reverse('synthesis_submit'),
+                           {'answers': [{'problem_id': 'S1', 'part_label': 'a',
+                                         'nodes': expected}]},
+                           content_type='application/json').json()
+        self.assertEqual(resp['score_pct'], 0.0)
+        self.assertFalse(resp['results'][0]['correct'])
+        self.assertEqual(resp['results'][0]['mistakes'], 1)
+
     def test_generated_problems_stay_out_of_lobby(self):
         self._seed_completed_problems()
         from .problem_generator import generate_synthesis_part
@@ -613,6 +672,216 @@ class SynthesisTests(BaseFixture):
             self.assertEqual(len(part.expected_nodes()), part.node_count)
             self.assertTrue(_valid_chains(part))
             self.assertGreater(float(part.correct_answer), 0)
+
+
+class ValidationContractTests(BaseFixture):
+    """Every rejected step must say WHICH field failed and WHY."""
+
+    def test_balancing_failure_exposes_field_code_and_mismatches(self):
+        client = self.login()
+        resp = client.post(
+            reverse('verify_balancing'),
+            {'problem_id': 'P_TST', 'coefficients': [1, 1, 1]},
+            content_type='application/json',
+        ).json()
+        self.assertFalse(resp['success'])
+        self.assertEqual(resp['code'], 'atom_imbalance')
+        self.assertEqual(resp['field'], 'coefficients')
+        self.assertTrue(resp['mismatches'])
+        self.assertTrue(resp['hint'])
+
+    def test_molar_mass_failure_names_offending_formulas(self):
+        client = self.login()
+        resp = client.post(
+            reverse('verify_molar_mass'),
+            {'problem_id': 'P_TST',
+             'molar_masses': {'H2': 2.016, 'O2': 31.998, 'H2O': 55.0}},
+            content_type='application/json',
+        ).json()
+        self.assertFalse(resp['success'])
+        self.assertEqual(resp['code'], 'molar_mass_mismatch')
+        self.assertIn('H2O', resp['fields'])
+        self.assertTrue(resp['hint'])
+
+    def test_verify_node_unit_failure_contract(self):
+        client = self.login()
+        complete_module1(client)
+        resp = client.post(
+            reverse('verify_node'),
+            {'problem_id': 'P_TST', 'part_label': 'a',
+             'node': {'num_value': 1, 'num_unit': 'bogus',
+                      'den_value': 1, 'den_unit': 'bogus'}},
+            content_type='application/json',
+        ).json()
+        self.assertFalse(resp['success'])
+        self.assertEqual(resp['code'], 'unit_cancel')
+        self.assertTrue(resp['fields'])
+        self.assertTrue(resp['hint'])
+
+    def test_verify_node_value_failure_contract(self):
+        client = self.login()
+        complete_module1(client)
+        part = ProblemPart.objects.get(problem=self.plain, part_label='a')
+        expected = part.expected_nodes()[0]
+        resp = client.post(
+            reverse('verify_node'),
+            {'problem_id': 'P_TST', 'part_label': 'a',
+             'node': {'num_value': 999,
+                      'num_unit': expected['num_unit'],
+                      'den_value': 999,
+                      'den_unit': expected['den_unit']}},
+            content_type='application/json',
+        ).json()
+        self.assertFalse(resp['success'])
+        self.assertEqual(resp['code'], 'value_mismatch')
+        self.assertEqual(resp['field'], 'num_value')
+        self.assertEqual(resp['fields'], ['num_value', 'den_value'])
+        self.assertTrue(resp['hint'])
+
+    def test_synthesis_failure_contract(self):
+        client = self.login()
+        part = ProblemPart.objects.get(problem=self.plain, part_label='a')
+        expected = part.expected_nodes()[0]
+        resp = client.post(
+            reverse('synthesis_verify_node'),
+            {'problem_id': 'P_TST', 'part_label': 'a', 'prefix': [],
+             'node': {'num_value': 999,
+                      'num_unit': expected['num_unit'],
+                      'den_value': expected['den_value'],
+                      'den_unit': expected['den_unit']}},
+            content_type='application/json',
+        ).json()
+        self.assertFalse(resp['success'])
+        self.assertEqual(resp['code'], 'value_mismatch')
+        self.assertTrue(resp['fields'])
+        self.assertTrue(resp['hint'])
+
+
+class HintApiTests(BaseFixture):
+    def _hint(self, client, **payload):
+        payload.setdefault('problem_id', 'P_TST')
+        return client.post(reverse('api_hint'), payload,
+                           content_type='application/json')
+
+    def test_hints_require_login(self):
+        resp = self.client.post(reverse('api_hint'), {}, content_type='application/json')
+        self.assertEqual(resp.status_code, 302)
+
+    def test_chain_hint_ladder_advances(self):
+        client = self.login()
+        complete_module1(client)
+        seen = []
+        for level in (1, 2, 3):
+            resp = self._hint(client, stage='chain', part_label='a', level=level)
+            self.assertEqual(resp.status_code, 200)
+            data = resp.json()
+            self.assertTrue(data['success'])
+            self.assertEqual(data['level'], level)
+            self.assertEqual(data['max_level'], 3)
+            self.assertEqual(data['can_advance'], level < 3)
+            self.assertTrue(data['body'])
+            seen.append(data['body'])
+
+        self.assertIn('Worked micro-step', seen[2])
+        self.assertNotEqual(seen[0], seen[1])
+        self.assertNotEqual(seen[1], seen[2])
+
+    def test_chain_hint_step_zero_targets_the_starting_unit(self):
+        client = self.login()
+        complete_module1(client)
+        resp = self._hint(client, stage='chain', part_label='a', level=1, step=0)
+        body = resp.json()['body']
+        self.assertIn('g H2', body)
+
+    def test_balance_hint_names_the_first_mismatch(self):
+        client = self.login()
+        resp = self._hint(client, stage='balance', level=2,
+                         coefficients=['1', '1', '1'])
+        data = resp.json()
+        self.assertTrue(data['success'])
+        self.assertIn('does not balance', data['body'])
+        self.assertIn('left has', data['body'])
+
+    def test_balance_hint_handles_incomplete_coefficients(self):
+        client = self.login()
+        resp = self._hint(client, stage='balance', level=1,
+                         coefficients=['2', '', '2'])
+        self.assertIn('positive whole-number', resp.json()['body'])
+
+    def test_molar_mass_hint_never_returns_the_final_total(self):
+        client = self.login()
+        resp = self._hint(client, stage='molar_mass', level=3)
+        data = resp.json()
+        self.assertTrue(data['success'])
+        self.assertIn('Worked micro-step', data['body'])
+        self.assertIn('1.008', data['body'])   # atomic breakdown, not the sum
+        self.assertNotIn('18.015', data['body'])
+
+    def test_chain_hint_blocked_before_module1_gate(self):
+        client = self.login()
+        resp = self._hint(client, stage='chain', part_label='a', level=3)
+        self.assertEqual(resp.status_code, 403)
+
+    def test_unknown_stage_is_rejected(self):
+        client = self.login()
+        resp = self._hint(client, stage='nonsense', level=1)
+        self.assertEqual(resp.status_code, 400)
+        self.assertFalse(resp.json()['success'])
+
+    def test_unknown_problem_returns_404(self):
+        client = self.login()
+        resp = self._hint(client, stage='balance', problem_id='NOPE', level=1)
+        self.assertEqual(resp.status_code, 404)
+
+    def test_level_is_clamped_to_ladder_range(self):
+        client = self.login()
+        complete_module1(client)
+        high = self._hint(client, stage='chain', part_label='a', level=99).json()
+        low = self._hint(client, stage='chain', part_label='a', level=-4).json()
+        self.assertEqual(high['level'], 3)
+        self.assertEqual(low['level'], 1)
+
+    def test_hint_payload_has_no_answer_key_fields(self):
+        client = self.login()
+        complete_module1(client)
+        data = self._hint(client, stage='chain', part_label='a', level=1).json()
+        self.assertEqual(
+            set(data),
+            {'success', 'stage', 'level', 'max_level', 'can_advance',
+             'title', 'body'},
+        )
+
+
+class ScaffoldingUiTests(BaseFixture):
+    """The shared kit and hint controls must actually reach the rendered pages."""
+
+    def test_module1_renders_hint_controls(self):
+        client = self.login()
+        resp = client.get(reverse('preparation_ledger', args=['P_TST']))
+        self.assertEqual(resp.status_code, 200)
+        self.assertContains(resp, 'id="btnBalanceHint"')
+        self.assertContains(resp, 'id="btnMassHint"')
+        self.assertContains(resp, 'id="balanceHintPanel"')
+        self.assertContains(resp, 'id="massHintPanel"')
+
+    def test_module2_renders_hint_panel_and_shared_kit(self):
+        client = self.login()
+        complete_module1(client)
+        resp = client.get(reverse('step_grid_workspace', args=['P_TST', 'a']))
+        self.assertEqual(resp.status_code, 200)
+        self.assertContains(resp, 'id="btnHint"')
+        self.assertContains(resp, 'id="hintPanel"')
+        self.assertContains(resp, '/api/hint/')
+        self.assertContains(resp, 'window.CQ')
+
+    def test_lobby_includes_accessibility_baseline(self):
+        client = self.login()
+        resp = client.get(reverse('problem_lobby'))
+        self.assertEqual(resp.status_code, 200)
+        self.assertContains(resp, 'cq-skip-link')
+        self.assertContains(resp, 'id="main-content"')
+        # The legacy custom modal is replaced by the shared accessible one.
+        self.assertNotContains(resp, 'cyberConfirmModal')
 
 
 class RegistrationTests(TestCase):

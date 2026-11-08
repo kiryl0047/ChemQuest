@@ -446,6 +446,7 @@
         Solve each one the same way as the Module 2 Step-Grid: build one fraction at a time,
         make the denominator cancel the previous numerator, and verify each step.
         The canned constants for the current problem are supplied in its tray below.
+        Every rejected step attempt is recorded, so first-try accuracy determines your score.
         Score &ge; {{ pass_threshold }}% to earn the retention credential.
     </p>
 </div>
@@ -798,14 +799,18 @@ function spawnCard(itemIdx, nodeIdx) {
     card.innerHTML = `
         <div class="slot-container">
             <input type="number" class="slot-input" id="num_val_${itemIdx}_${nodeIdx}"
-                   placeholder="Val" step="any" autocomplete="off">
-            <select class="unit-select" id="num_unit_${itemIdx}_${nodeIdx}">${unitOptionsHtml(item)}</select>
+                   placeholder="Val" step="any" autocomplete="off"
+                   aria-label="Item ${itemIdx + 1} step ${nodeIdx + 1} numerator value">
+            <select class="unit-select" id="num_unit_${itemIdx}_${nodeIdx}"
+                    aria-label="Item ${itemIdx + 1} step ${nodeIdx + 1} numerator unit">${unitOptionsHtml(item)}</select>
         </div>
         <div class="fraction-divider"></div>
         <div class="slot-container">
             <input type="number" class="slot-input" id="den_val_${itemIdx}_${nodeIdx}"
-                   placeholder="Val" step="any" autocomplete="off">
-            <select class="unit-select" id="den_unit_${itemIdx}_${nodeIdx}">${unitOptionsHtml(item)}</select>
+                   placeholder="Val" step="any" autocomplete="off"
+                   aria-label="Item ${itemIdx + 1} step ${nodeIdx + 1} denominator value">
+            <select class="unit-select" id="den_unit_${itemIdx}_${nodeIdx}"
+                    aria-label="Item ${itemIdx + 1} step ${nodeIdx + 1} denominator unit">${unitOptionsHtml(item)}</select>
         </div>`;
     container.appendChild(card);
 }
@@ -882,12 +887,29 @@ async function verifyStep(itemIdx) {
 
     const idx = st.activeIndex;
     const btn = document.getElementById(`btnVerifyStep_${itemIdx}`);
+    const numValEl = document.getElementById(`num_val_${itemIdx}_${idx}`);
+    const denValEl = document.getElementById(`den_val_${itemIdx}_${idx}`);
+    const numVal = parseFloat(numValEl?.value);
+    const denVal = parseFloat(denValEl?.value);
+
+    CQ.clearFieldErrors(document.getElementById(`node_${itemIdx}_${idx}`));
+    if (!Number.isFinite(numVal)) {
+        CQ.setFieldError(numValEl, 'Enter a number in the numerator.');
+        numValEl?.focus();
+        return;
+    }
+    if (!Number.isFinite(denVal)) {
+        CQ.setFieldError(denValEl, 'Enter a number in the denominator.');
+        denValEl?.focus();
+        return;
+    }
+
     if (btn) btn.disabled = true;
 
     const node = {
-        num_value: parseFloat(document.getElementById(`num_val_${itemIdx}_${idx}`).value),
+        num_value: numVal,
         num_unit:  document.getElementById(`num_unit_${itemIdx}_${idx}`).value || '',
-        den_value: parseFloat(document.getElementById(`den_val_${itemIdx}_${idx}`).value),
+        den_value: denVal,
         den_unit:  document.getElementById(`den_unit_${itemIdx}_${idx}`).value || '',
     };
 
@@ -918,6 +940,7 @@ function handleStepResponse(itemIdx, data, node) {
     const idx = st.activeIndex;
 
     if (data.success && data.correct) {
+        CQ.clearFieldErrors(document.getElementById(`node_${itemIdx}_${idx}`));
         lockCard(itemIdx, idx);
         applyCancellationVisual(itemIdx, idx);
 
@@ -964,12 +987,44 @@ function handleStepResponse(itemIdx, data, node) {
     updateConsole(itemIdx,
         `<strong style="color:#B91C1C;">${data.unit_ok === false ? 'Unit mismatch.' : 'Value check failed.'}</strong> ` +
         `${data.message || ''}`);
+    applyItemFieldErrors(itemIdx, idx, data);
     showToast(
         data.unit_ok === false
             ? 'Unit mismatch — check the diagonal cancellation.'
             : 'Value off — recheck that constant.',
         'err');
     updateStepControls(itemIdx);
+}
+
+function applyItemFieldErrors(itemIdx, nodeIdx, data) {
+    const card = document.getElementById(`node_${itemIdx}_${nodeIdx}`);
+    if (!card) return;
+    CQ.clearFieldErrors(card);
+
+    const idFor = (field) => {
+        const map = {
+            num_value: `num_val_${itemIdx}_${nodeIdx}`,
+            den_value: `den_val_${itemIdx}_${nodeIdx}`,
+            num_unit:  `num_unit_${itemIdx}_${nodeIdx}`,
+            den_unit:  `den_unit_${itemIdx}_${nodeIdx}`,
+        };
+        return map[field] || null;
+    };
+    const messageFor = (field) => {
+        if (field === 'den_unit') return 'Must cancel the unit from the previous step.';
+        if (field === 'num_unit') return 'Unit must lead to the next conversion.';
+        return 'Value does not match this constant.';
+    };
+
+    const fields = Array.isArray(data.fields) && data.fields.length
+        ? data.fields
+        : (data.field ? [data.field] : []);
+    fields.forEach((field) => {
+        const el = document.getElementById(idFor(field));
+        if (el) CQ.setFieldError(el, messageFor(field));
+    });
+    const first = card.querySelector('.cq-input-invalid');
+    if (first) first.focus();
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -1069,7 +1124,13 @@ async function finishReview() {
                     : `Score ${data.score_pct}% — below the ${data.threshold}% threshold. Review your weak skills and retry anytime.`) +
                 `<div class="result-summary">` +
                 (data.results || []).map((r, i) =>
-                    `<span class="${r.correct ? 'rs-ok' : 'rs-bad'}">Item ${i + 1}: ${r.correct ? '✓ correct' : '✗ incorrect'}</span>`
+                    `<span class="${r.correct ? 'rs-ok' : 'rs-bad'}">Item ${i + 1}: ${
+                        r.correct
+                            ? '✓ correct'
+                            : (r.mistakes
+                                ? `✗ incorrect — ${r.mistakes} rejected step attempt${r.mistakes === 1 ? '' : 's'}`
+                                : '✗ incorrect')
+                    }</span>`
                 ).join('') +
                 `</div>`;
         }
@@ -1105,21 +1166,8 @@ document.addEventListener('keydown', e => {
 // Toast
 // ─────────────────────────────────────────────────────────────────────────────
 function showToast(message, type) {
-    const existing = document.getElementById('chemquest-toast');
-    if (existing) existing.remove();
-    const toast = document.createElement('div');
-    toast.id = 'chemquest-toast';
-    toast.textContent = message;
-    toast.style.cssText = `
-        position: fixed; bottom: 24px; right: 24px; z-index: 9999;
-        padding: 12px 20px; border-radius: 6px; font-size: 13px; font-weight: bold;
-        background: ${type === 'ok' ? '#DCFCE7' : '#FEE2E2'};
-        color: ${type === 'ok' ? '#166534' : '#991B1B'};
-        border: 1px solid ${type === 'ok' ? '#15803D' : '#DC2626'};
-        box-shadow: 0 4px 14px rgba(0,0,0,0.18);
-    `;
-    document.body.appendChild(toast);
-    setTimeout(() => toast.remove(), 3200);
+    if (window.CQ && CQ.toast) { CQ.toast(message, type || 'info'); return; }
+    console.log(`[${type || 'info'}] ${message}`);
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

@@ -404,23 +404,6 @@
     <div id="noResultsNotice" style="display: none; text-align: center; padding: 40px; background: var(--bg-slate); border: 1px dashed var(--border); border-radius: 8px;">
         <p style="color: var(--text-muted); margin: 0; font-size: 15px;">No problems available under this conversion category.</p>
     </div>
-
-    <!-- System Wipe Confirmation Modal -->
-    <div id="cyberConfirmModal" class="modal-overlay" style="display: none;">
-        <div class="modal-box">
-            <div class="modal-header">
-                <span class="warning-icon">⚠</span>
-                <h3 style="margin: 0; font-size: 18px; letter-spacing: 1px;">SYSTEM ALERT: RESET SEQUENCE</h3>
-            </div>
-            <div class="modal-body">
-                <p id="cyberConfirmMessage" style="margin: 0; line-height: 1.6; color: var(--text-light); font-size: 14px;"></p>
-            </div>
-            <div class="modal-actions">
-                <button id="cyberConfirmCancel" class="btn-modal btn-cancel">ABORT SEQUENCE</button>
-                <button id="cyberConfirmProceed" class="btn-modal btn-proceed">CONFIRM ERASE</button>
-            </div>
-        </div>
-    </div>
 </div>
 
 <script>
@@ -478,9 +461,19 @@ function updateCategoryCounters() {
 }
 
 async function performSystemWipe(problemId) {
-    const msg = "Are you sure you want to reset Problem " + problemId + "? This will delete all telemetry records, progress flags, and locked constants for this problem.";
+    const message = "Are you sure you want to reset Problem " + problemId +
+        "? This will delete all telemetry records, progress flags, and locked constants for this problem.";
 
-    const confirmed = await showCyberConfirm(msg);
+    const confirmed = window.CQ
+        ? await CQ.modal({
+            title: 'System Alert: Reset Sequence',
+            body: '<p style="margin:0; line-height:1.6; color:var(--text-light); font-size:14px;">' +
+                  CQ.escapeHtml(message) + '</p>',
+            confirmLabel: 'Confirm Erase',
+            cancelLabel: 'Abort Sequence',
+            danger: true,
+        })
+        : window.confirm(message);
     if (!confirmed) return;
 
     const prefixes = [`cq_m2_${problemId}_`, `cq_m1_${problemId}`];
@@ -489,31 +482,6 @@ async function performSystemWipe(problemId) {
         .forEach(key => localStorage.removeItem(key));
 
     window.location.href = "/problem/reset/" + problemId + "/";
-}
-
-function showCyberConfirm(message) {
-    return new Promise((resolve) => {
-        const modal = document.getElementById('cyberConfirmModal');
-        const msgEl = document.getElementById('cyberConfirmMessage');
-        const btnCancel = document.getElementById('cyberConfirmCancel');
-        const btnProceed = document.getElementById('cyberConfirmProceed');
-
-        msgEl.textContent = message;
-        modal.style.display = 'flex';
-
-        function handleChoice(confirmed) {
-            modal.style.display = 'none';
-            btnCancel.removeEventListener('click', onCancel);
-            btnProceed.removeEventListener('click', onProceed);
-            resolve(confirmed);
-        }
-
-        function onCancel()  { handleChoice(false); }
-        function onProceed() { handleChoice(true); }
-
-        btnCancel.addEventListener('click', onCancel);
-        btnProceed.addEventListener('click', onProceed);
-    });
 }
 
 // Execute counts initialization

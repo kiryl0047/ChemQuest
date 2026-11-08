@@ -593,7 +593,8 @@
         <span class="type-badge badge-reactant">Reactants</span>
         {% for r in reactants %}
             {% if not forloop.first %}<span class="eq-plus">+</span>{% endif %}
-            <input type="number" class="coeff-input" id="coeff_r{{ forloop.counter0 }}" data-formula="{{ r.formula }}" min="1" max="20" placeholder="?">
+            <input type="number" class="coeff-input" id="coeff_r{{ forloop.counter0 }}" data-formula="{{ r.formula }}" min="1" max="20" placeholder="?"
+                   aria-label="Coefficient for reactant {{ r.formula }}">
             <span>{{ r.formula|formula_subscript|safe }}</span>
         {% endfor %}
     </div>
@@ -604,7 +605,8 @@
         <span class="type-badge badge-product">Products</span>
         {% for p in products %}
             {% if not forloop.first %}<span class="eq-plus">+</span>{% endif %}
-            <input type="number" class="coeff-input" id="coeff_p{{ forloop.counter0 }}" data-formula="{{ p.formula }}" min="1" max="20" placeholder="?">
+            <input type="number" class="coeff-input" id="coeff_p{{ forloop.counter0 }}" data-formula="{{ p.formula }}" min="1" max="20" placeholder="?"
+                   aria-label="Coefficient for product {{ p.formula }}">
             <span>{{ p.formula|formula_subscript|safe }}</span>
         {% endfor %}
     </div>
@@ -612,7 +614,12 @@
     <button class="btn-action" style="margin-left: auto;" id="btnBalance" onclick="checkBalancing()">
         Verify Chamber
     </button>
+    <button type="button" class="cq-hint-btn" id="btnBalanceHint" onclick="requestBalanceHint(false)">
+        💡 Need a hint?
+    </button>
 </div>
+
+<div id="balanceHintPanel" style="display:none; margin-top:12px;"></div>
 
 <!-- ── Live Atom Conservation HUD ── -->
 <div class="atom-hud-container" id="atomInventoryHud">
@@ -702,6 +709,7 @@
                    id="mass_{{ formula }}"
                    data-formula="{{ formula }}"
                    placeholder="0.000"
+                   aria-label="Molar mass for {{ formula }} in grams per mole"
                    disabled
                    onfocus="onMassFocus('{{ formula }}')"
                    onblur="onMassBlur('{{ formula }}')">
@@ -725,12 +733,18 @@
         <div id="massHintText" class="hint-body"></div>
     </div>
 
+    <div id="massHintPanel" style="display:none; margin-top:12px;"></div>
+
     <div style="display: flex; align-items: center; gap: 15px; margin-top: 12px; flex-wrap: wrap;">
         <button class="btn-action"
                 style="border-color: var(--constant-gold); color: var(--constant-gold);"
                 id="btnLockConstants"
                 onclick="verifyMolarMasses()">
             Verify Molar Masses
+        </button>
+
+        <button type="button" class="cq-hint-btn" id="btnMassHint" onclick="requestMassHint(false)">
+            💡 Need a hint?
         </button>
 
         <button class="btn-action"
@@ -816,6 +830,8 @@ async function awardXP(xpAmount, reason) {
 // ─────────────────────────────────────────────────────────────────────────────
 const PROBLEM_ID       = "{{ problem_id }}";
 const NEXT_URL         = "{{ next_url }}";
+const HINT_URL         = "{% url 'api_hint' %}";
+const HINT_MAX_LEVEL   = 3;
 
 const REACTANT_FORMULAS = [{% for r in reactants %}"{{ r.formula }}"{% if not forloop.last %},{% endif %}{% endfor %}];
 const PRODUCT_FORMULAS  = [{% for p in products %}"{{ p.formula }}"{% if not forloop.last %},{% endif %}{% endfor %}];
@@ -1553,16 +1569,186 @@ function diagnoseMassError(formula, entered) {
 })();
 
 // ─────────────────────────────────────────────────────────────────────────────
+// On-demand hint ladder (balance + molar mass)
+// ─────────────────────────────────────────────────────────────────────────────
+const HINT_STATE = {
+    balance:    { level: 0, busy: false },
+    molar_mass: { level: 0, busy: false },
+};
+
+function collectCoefficients() {
+    const values = [];
+    REACTANT_FORMULAS.forEach((_, i) => {
+        values.push(document.getElementById(`coeff_r${i}`)?.value?.trim() || '');
+    });
+    PRODUCT_FORMULAS.forEach((_, i) => {
+        values.push(document.getElementById(`coeff_p${i}`)?.value?.trim() || '');
+    });
+    return values;
+}
+
+function hintPanelId(stage) {
+    return stage === 'balance' ? 'balanceHintPanel' : 'massHintPanel';
+}
+
+function hintButtonId(stage) {
+    return stage === 'balance' ? 'btnBalanceHint' : 'btnMassHint';
+}
+
+function syncHintButton(stage) {
+    const st = HINT_STATE[stage];
+    const btn = document.getElementById(hintButtonId(stage));
+    if (!st || !btn) return;
+    btn.disabled = st.busy;
+    btn.textContent = st.level > 0
+        ? `💡 Hint ${st.level} of ${HINT_MAX_LEVEL}`
+        : '💡 Need a hint?';
+}
+
+function resetStageHint(stage) {
+    const st = HINT_STATE[stage];
+    if (st) st.level = 0;
+    const panel = document.getElementById(hintPanelId(stage));
+    if (panel) {
+        panel.style.display = 'none';
+        panel.innerHTML = '';
+    }
+    syncHintButton(stage);
+}
+
+async function requestStageHint(stage, advance, options) {
+    const st = HINT_STATE[stage];
+    if (!st || st.busy) return;
+    const opts = options || {};
+    const nextLevel = advance === true
+        ? Math.min(st.level + 1, HINT_MAX_LEVEL)
+        : Math.max(st.level || 1, 1);
+
+    st.busy = true;
+    const btn = document.getElementById(hintButtonId(stage));
+    if (btn) {
+        btn.disabled = true;
+        btn.textContent = 'Loading hint…';
+    }
+
+    try {
+        const payload = { stage, problem_id: PROBLEM_ID, level: nextLevel };
+        if (stage === 'balance') payload.coefficients = collectCoefficients();
+
+        const resp = await fetch(HINT_URL, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': '{{ csrf_token }}'
+            },
+            body: JSON.stringify(payload),
+        });
+        const data = await resp.json();
+        if (!resp.ok || !data.success) {
+            if (!opts.silent) showToast(data.message || 'Hint unavailable right now.', 'warn');
+            return;
+        }
+        st.level = data.level;
+        renderStageHint(stage, data);
+    } catch (err) {
+        console.error('[Hint] error:', err);
+        if (!opts.silent) showToast('Could not load a hint right now.', 'err');
+    } finally {
+        st.busy = false;
+        syncHintButton(stage);
+    }
+}
+
+function renderStageHint(stage, data) {
+    const panel = document.getElementById(hintPanelId(stage));
+    if (!panel) return;
+    panel.style.display = 'block';
+    CQ.hint(panel, data);
+
+    const box = panel.querySelector('.cq-hint');
+    if (!box) return;
+
+    const actions = document.createElement('div');
+    actions.className = 'cq-hint-actions';
+
+    if (data.can_advance) {
+        const more = document.createElement('button');
+        more.type = 'button';
+        more.className = 'cq-hint-btn';
+        more.textContent = `Show hint ${data.level + 1} of ${data.max_level} →`;
+        more.addEventListener('click', () => requestStageHint(stage, true));
+        actions.appendChild(more);
+    }
+
+    const dismiss = document.createElement('button');
+    dismiss.type = 'button';
+    dismiss.className = 'cq-hint-btn';
+    dismiss.textContent = data.can_advance ? 'Dismiss' : 'Got it';
+    dismiss.addEventListener('click', () => {
+        panel.style.display = 'none';
+        panel.innerHTML = '';
+    });
+    actions.appendChild(dismiss);
+
+    box.appendChild(actions);
+}
+
+function requestBalanceHint(advance) { return requestStageHint('balance', advance); }
+function requestMassHint(advance)    { return requestStageHint('molar_mass', advance); }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Client-side pre-validation (mirrors server rules; server stays authoritative)
+// ─────────────────────────────────────────────────────────────────────────────
+function validateCoefficients() {
+    const inputs = Array.from(document.querySelectorAll('.coeff-input'));
+    const scope = document.getElementById('equationBuilder') || document;
+    CQ.clearFieldErrors(scope);
+    const invalid = [];
+    inputs.forEach((el) => {
+        const raw = String(el.value || '').trim();
+        const value = Number(raw);
+        if (!raw) {
+            CQ.setFieldError(el, 'Enter a whole number.');
+            invalid.push(el);
+        } else if (!Number.isInteger(value) || value < 1) {
+            CQ.setFieldError(el, 'Use a positive whole number (1, 2, 3…).');
+            invalid.push(el);
+        }
+    });
+    return invalid;
+}
+
+function validateMasses() {
+    const inputs = Array.from(document.querySelectorAll('.mass-input'));
+    const scope = document.getElementById('massSection') || document;
+    CQ.clearFieldErrors(scope);
+    const invalid = [];
+    inputs.forEach((el) => {
+        const raw = String(el.value || '').trim();
+        const value = Number(raw);
+        if (!raw) {
+            CQ.setFieldError(el, 'Enter a molar mass in g/mol.');
+            invalid.push(el);
+        } else if (!Number.isFinite(value) || value <= 0) {
+            CQ.setFieldError(el, 'Enter a positive number.');
+            invalid.push(el);
+        }
+    });
+    return invalid;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // Sub-Step 1A: Verify Balancing
 // ─────────────────────────────────────────────────────────────────────────────
 async function checkBalancing() {
-    const submitted = [];
-    REACTANT_FORMULAS.forEach((_, i) => {
-        submitted.push(document.getElementById(`coeff_r${i}`)?.value?.trim() || '');
-    });
-    PRODUCT_FORMULAS.forEach((_, i) => {
-        submitted.push(document.getElementById(`coeff_p${i}`)?.value?.trim() || '');
-    });
+    const invalid = validateCoefficients();
+    if (invalid.length) {
+        showToast('Fix the highlighted coefficient boxes first.', 'err');
+        invalid[0].focus();
+        return;
+    }
+
+    const submitted = collectCoefficients();
 
     try {
         const resp = await fetch('/api/verify-balancing/', {
@@ -1616,6 +1802,8 @@ async function checkBalancing() {
             // Hide hint on success
             const hintBox = document.getElementById('balanceHintBox');
             if (hintBox) hintBox.style.display = 'none';
+            resetStageHint('balance');
+            CQ.clearFieldErrors(document.getElementById('equationBuilder'));
 
             renderConservationBlueprint();
             updateAtomInventory();
@@ -1659,21 +1847,18 @@ async function verifyMolarMasses() {
     }
 
     const formulas = [{% for formula in target_substances %}"{{ formula }}"{% if not forloop.last %}, {% endif %}{% endfor %}];
-    const molarMasses = {};
-    let hasEmpty = false;
-
-    formulas.forEach(formula => {
-        const input = document.getElementById(`mass_${formula}`);
-        const val = input ? input.value.trim() : '';
-        if (!val) hasEmpty = true;
-        molarMasses[formula] = val;
-    });
-
-    if (hasEmpty) {
-        showToast('Please enter molar masses for all substances.', 'err');
-        flashError('massSection');
+    const invalid = validateMasses();
+    if (invalid.length) {
+        showToast('Fix the highlighted molar-mass boxes first.', 'err');
+        invalid[0].focus();
         return;
     }
+
+    const molarMasses = {};
+    formulas.forEach(formula => {
+        const input = document.getElementById(`mass_${formula}`);
+        molarMasses[formula] = input ? input.value.trim() : '';
+    });
 
     try {
         const resp = await fetch('/api/verify-molar-mass/', {
@@ -1696,12 +1881,14 @@ async function verifyMolarMasses() {
                 if (res.correct) {
                     input.className = 'mass-input correct';
                     input.disabled = true;
+                    CQ.clearFieldError(input);
                     statusEl.textContent = `✓ ${res.expected !== null ? res.expected.toFixed(3) : ''}`;
                     statusEl.className = 'balance-status ok';
                     const diagEl = document.getElementById(`massDiag_${formula}`);
                     if (diagEl) diagEl.style.display = 'none';
                 } else {
                     input.className = 'mass-input incorrect';
+                    CQ.setFieldError(input, 'Molar mass does not match — recompute from the databank.');
                     statusEl.textContent = '✗ Mismatch';
                     statusEl.className = 'balance-status err';
                 }
@@ -1722,6 +1909,8 @@ async function verifyMolarMasses() {
 
             const massHintBox = document.getElementById('massHintBox');
             if (massHintBox) massHintBox.style.display = 'none';
+            resetStageHint('molar_mass');
+            CQ.clearFieldErrors(document.getElementById('massSection'));
 
             if (data.xp_reward) {
                 await awardXP(data.xp_reward, 'constants_locked');
@@ -1912,30 +2101,9 @@ updateAtomInventory();
 maybeRevealExitCheckpoint();
 updateTransitionButtonState();
 
-let _toastTimeout;
 function showToast(msg, type = 'info') {
-    let toast = document.getElementById('_cq_toast');
-    if (!toast) {
-        toast = document.createElement('div');
-        toast.id = '_cq_toast';
-        toast.style.cssText = `
-            position:fixed; bottom:28px; left:50%; transform:translateX(-50%);
-            padding:10px 22px; border-radius:5px; font-size:14px; font-weight:bold;
-            z-index:9999; transition:opacity 0.3s; pointer-events:none;
-            box-shadow: 0 4px 16px rgba(42,52,76,0.18);
-        `;
-        document.body.appendChild(toast);
-    }
-    toast.textContent = msg;
-    toast.style.opacity = '1';
-    toast.style.background = type === 'ok'  ? '#DCFCE7' :
-                              type === 'err' ? '#FEE2E2' : '#FFFFFF';
-    toast.style.color      = type === 'ok'  ? '#166534' :
-                              type === 'err' ? '#991B1B' : '#2a344c';
-    toast.style.border     = `1px solid ${type === 'ok' ? 'var(--combo-green)' : type === 'err' ? 'var(--coral-red)' : 'var(--border)'}`;
-
-    clearTimeout(_toastTimeout);
-    _toastTimeout = setTimeout(() => { toast.style.opacity = '0'; }, 3000);
+    if (window.CQ && CQ.toast) { CQ.toast(msg, type); return; }
+    console.log(`[${type}] ${msg}`);
 }
 </script>
 {% endblock content %}
