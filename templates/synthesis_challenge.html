@@ -438,9 +438,9 @@
 </style>
 
 <div class="exam-header">
-    <span style="color: var(--combo-green); font-weight: bold; font-size: 12px; letter-spacing: 2px;">
+    <h2 style="margin:0; color: var(--combo-green); font-weight: bold; font-size: 12px; letter-spacing: 2px;">
         SYNTHESIS CHALLENGE // ADAPTIVE RETENTION REVIEW
-    </span>
+    </h2>
     <p style="margin: 8px 0 0 0; color: var(--text-light); font-size: 14px;">
         {{ items|length }} freshly generated conversion{{ items|length|pluralize }} targeted at your weakest skills.
         Solve each one the same way as the Module 2 Step-Grid: build one fraction at a time,
@@ -456,7 +456,7 @@
 <!-- ══ Unassisted molar-mass builder (blank on purpose) ══ -->
 <div class="builder-card">
     <div class="builder-head">
-        <span class="builder-title">MOLAR MASS BUILDER — BUILD OR SEARCH ANY COMPOUND</span>
+        <h3 class="builder-title" style="margin:0;">MOLAR MASS BUILDER — BUILD OR SEARCH ANY COMPOUND</h3>
         <button class="builder-clear" type="button" onclick="clearBuilder()">Clear</button>
     </div>
     <p class="builder-help">
@@ -466,6 +466,7 @@
     </p>
     <div class="builder-search">
         <input id="formulaSearch" type="text" autocomplete="off" spellcheck="false"
+               aria-label="Search for an element or chemical formula to build"
                placeholder="Search element or formula (e.g. Fe, H2O, Fe2O3)"
                onkeydown="if (event.key === 'Enter') { event.preventDefault(); applySearch(); }">
         <button type="button" onclick="applySearch()">Build / Calculate</button>
@@ -494,7 +495,7 @@
          data-problem="{{ item.problem_id }}" data-part="{{ item.part_label }}"
          style="display:none;">
         <div class="item-top">
-            <strong>ITEM {{ forloop.counter }} · {{ item.part_prompt }}</strong>
+            <h3 style="margin:0; color:#3c486a; font-size:13px;">ITEM {{ forloop.counter }} · {{ item.part_prompt }}</h3>
             <span>{{ item.problem_title }}</span>
         </div>
 
@@ -528,8 +529,8 @@
         {% endif %}
 
         <div class="chain-canvas" id="chainCanvas_{{ forloop.counter0 }}">
-            <div class="feedback-box">
-                diagonally, press <strong>✓ Verify Step</strong>, and the next fraction card
+            <div class="feedback-box" id="explain_{{ forloop.counter0 }}" role="status" aria-live="polite" aria-atomic="true">
+                Build the chain one fraction at a time. Fill in the numerator and denominator units, press <strong>✓ Verify Step</strong>, and the next fraction card appears when the step is correct.
             </div>
 
             <div class="chain-row">

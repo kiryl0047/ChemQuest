@@ -9,12 +9,15 @@
             /* ── Teal & Navy Laboratory Palette ── */
             --bg-dark:       #eef0f6;
             --bg-slate:      #FFFFFF;
-            --cyber-teal:    #179aaf;
-            --combo-green:   #15803D;
-            --coral-red:     #DC2626;
-            --constant-gold: #B45309;
+            /* Text-safe tints: each meets WCAG AA on white and --bg-dark. */
+            --cyber-teal:    #0F7080;
+            --combo-green:   #166534;
+            --coral-red:     #B91C1C;
+            --constant-gold: #92400E;
             --text-light:    #2a344c;
-            --text-muted:    #707A94;
+            --text-muted:    #5F6880;
+            /* Decorative-only accent (never used for body text). */
+            --teal-bright:   #179aaf;
 
             /* Brand navy family */
             --navy-deep:     #2a344c;
@@ -240,6 +243,9 @@
             gap: 8px;
             transition: background 0.2s, box-shadow 0.2s;
             user-select: none;
+            font: inherit;
+            color: inherit;
+            text-align: left;
         }
 
         #cq-tray-tab:hover {
@@ -389,7 +395,7 @@
             <a href="{% url 'student_login' %}" style="text-decoration:none; color:inherit;">CHEMQUEST //</a>
         {% endif %}
     </h1>
-    <div class="user-status">
+    <nav class="user-status" aria-label="Account and progress">
         {% if request.user.is_authenticated %}
             <span>
                 <a href="{% url 'student_dashboard' %}" style="color:var(--on-navy-muted); font-size:13px; text-decoration: none;">{{ request.user.username }}</a>
@@ -405,6 +411,11 @@
 
             <!-- XP progress bar -->
             <div class="xp-bar"
+                 role="progressbar"
+                 aria-label="Progress toward the next level"
+                 aria-valuemin="0"
+                 aria-valuemax="500"
+                 aria-valuenow="{{ user_xp_into_level }}"
                  title="{{ user_xp_into_level }} / 500 XP into level {{ user_level }}">
                 <div id="xp-bar-fill"
                      style="width:{{ user_level_progress_pct }}%; height:100%;
@@ -418,7 +429,7 @@
                 Logout
             </a>
         {% endif %}
-    </div>
+    </nav>
 </header>
 
 <main id="main-content" tabindex="-1">
@@ -434,9 +445,9 @@
 </footer>
 
 <!-- ── Canned Constants Tray ── -->
-<div id="cq-tray" aria-label="Canned Constants reference tray">
+<div id="cq-tray" role="complementary" aria-label="Canned Constants reference tray">
 
-    <div id="cq-tray-panel" role="region" aria-label="Locked molar mass and stoichiometric constants">
+    <div id="cq-tray-panel" role="region" aria-label="Locked molar mass and stoichiometric constants" aria-hidden="true">
         <div id="cq-tray-panel-header">
             <span>CANNED CONSTANTS</span>
             <small id="cq-tray-prob-id">—</small>
@@ -446,13 +457,12 @@
         </div>
     </div>
 
-    <div id="cq-tray-tab" onclick="cqTrayToggle()" role="button" tabindex="0"
-         aria-expanded="false" aria-controls="cq-tray-panel"
-         onkeydown="if(event.key==='Enter'||event.key===' ')cqTrayToggle()">
+    <button type="button" id="cq-tray-tab" onclick="cqTrayToggle()"
+            aria-expanded="false" aria-controls="cq-tray-panel">
         <span id="cq-tray-tab-label">CONSTANTS</span>
         <span id="cq-tray-tab-count">0</span>
-        <span id="cq-tray-tab-chevron">▲</span>
-    </div>
+        <span id="cq-tray-tab-chevron" aria-hidden="true">▲</span>
+    </button>
 
 </div>
 
@@ -543,6 +553,7 @@
         const tab     = document.getElementById('cq-tray-tab');
         if (!panel) return;
         panel.classList.toggle('open', trayOpen);
+        panel.setAttribute('aria-hidden', String(!trayOpen));
         chevron.classList.toggle('rotated', trayOpen);
         tab.setAttribute('aria-expanded', String(trayOpen));
     };

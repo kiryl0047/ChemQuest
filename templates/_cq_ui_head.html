@@ -31,9 +31,11 @@ without ordering concerns. Everything is namespaced under CQ.*
     .cq-skip-link:focus { top: 0; }
 
     :where(a, button, input, select, textarea, summary, [tabindex]):focus-visible {
-        outline: 3px solid rgba(var(--accent-rgb, 48, 180, 201), 0.65);
+        outline: 3px solid var(--cyber-teal, #0F7080);
         outline-offset: 2px;
         border-radius: 3px;
+        /* White halo keeps the ring visible on the navy header/footer too. */
+        box-shadow: 0 0 0 6px #FFFFFF;
     }
 
     .cq-sr-only {
@@ -376,6 +378,134 @@ without ordering concerns. Everything is namespaced under CQ.*
 
     .cq-rail-complete a { color: inherit; text-decoration: underline; }
 
+    /* ── First-run onboarding card ──────────────────────────────────────── */
+    .cq-onboarding {
+        border: 1px solid var(--border, #DADEE9);
+        border-left: 4px solid var(--cyber-teal, #0F7080);
+        border-radius: 8px;
+        background: var(--surface-header, #F5F6FA);
+        padding: 18px 20px;
+        margin-bottom: 22px;
+    }
+
+    .cq-onboarding[hidden] { display: none; }
+
+    .cq-onboarding-head {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        gap: 12px;
+        flex-wrap: wrap;
+    }
+
+    .cq-onboarding-title {
+        margin: 0;
+        font-size: 15px;
+        color: var(--text-light, #2a344c);
+        letter-spacing: 0.2px;
+    }
+
+    .cq-onboarding-sub {
+        margin: 4px 0 0 0;
+        font-size: 13px;
+        line-height: 1.55;
+        color: var(--text-muted, #5F6880);
+    }
+
+    .cq-onboarding-dismiss {
+        background: transparent;
+        border: 1px solid var(--border, #DADEE9);
+        border-radius: 4px;
+        color: var(--text-muted, #5F6880);
+        font-size: 12px;
+        font-weight: 700;
+        padding: 6px 12px;
+        cursor: pointer;
+        white-space: nowrap;
+    }
+
+    .cq-onboarding-dismiss:hover {
+        border-color: var(--cyber-teal, #0F7080);
+        color: var(--cyber-teal, #0F7080);
+    }
+
+    .cq-onboarding-steps {
+        list-style: none;
+        margin: 14px 0 0 0;
+        padding: 0;
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+        gap: 10px;
+    }
+
+    .cq-onboarding-step {
+        background: var(--bg-slate, #FFFFFF);
+        border: 1px solid var(--border, #DADEE9);
+        border-radius: 6px;
+        padding: 12px 14px;
+    }
+
+    .cq-onboarding-step b {
+        display: block;
+        font-size: 12.5px;
+        color: var(--cyber-teal, #0F7080);
+        letter-spacing: 0.3px;
+    }
+
+    .cq-onboarding-step p {
+        margin: 5px 0 0 0;
+        font-size: 12px;
+        line-height: 1.5;
+        color: var(--text-muted, #5F6880);
+    }
+
+    .cq-onboarding-foot {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        flex-wrap: wrap;
+        margin-top: 14px;
+        font-size: 12px;
+        color: var(--text-muted, #5F6880);
+    }
+
+    .cq-onboarding-start {
+        color: var(--cyber-teal, #0F7080);
+        font-weight: 700;
+        text-decoration: underline;
+    }
+
+    /* ── Stage help disclosure ──────────────────────────────────────────── */
+    .cq-stage-help {
+        border: 1px solid var(--border, #DADEE9);
+        border-radius: 6px;
+        background: var(--surface-header, #F5F6FA);
+        margin-bottom: 16px;
+    }
+
+    .cq-stage-help > summary {
+        cursor: pointer;
+        padding: 10px 14px;
+        font-size: 12px;
+        font-weight: 700;
+        color: var(--text-light, #2a344c);
+        list-style-position: inside;
+    }
+
+    .cq-stage-help[open] > summary {
+        border-bottom: 1px solid var(--border, #DADEE9);
+    }
+
+    .cq-stage-help-body {
+        padding: 12px 14px;
+        font-size: 13px;
+        line-height: 1.6;
+        color: var(--text-light, #2a344c);
+    }
+
+    .cq-stage-help-body p { margin: 0 0 8px 0; }
+    .cq-stage-help-body p:last-child { margin-bottom: 0; }
+
     @media (max-width: 640px) {
         .cq-rail-item { flex: 1 1 100%; }
     }
@@ -385,6 +515,8 @@ without ordering concerns. Everything is namespaced under CQ.*
         .cq-modal-actions { flex-direction: column-reverse; }
         .cq-modal-btn { width: 100%; }
         .cq-toast-host { bottom: 14px; }
+        .cq-onboarding { padding: 14px; }
+        .cq-onboarding-dismiss { width: 100%; }
     }
 
     @media (prefers-reduced-motion: reduce) {
@@ -394,6 +526,13 @@ without ordering concerns. Everything is namespaced under CQ.*
         .cq-skip-link { transition: none !important; }
         .cq-toast { transform: none; }
         .cq-modal { transform: none; }
+        .cq-rail-link,
+        #xp-bar-fill,
+        #cq-tray-panel,
+        #cq-tray-tab-chevron,
+        .pt-el { transition: none !important; }
+        .pt-el:hover,
+        .pt-el:focus-visible { transform: none; }
     }
 </style>
 <script>
@@ -710,6 +849,18 @@ window.CQ = (function () {
         try { window.localStorage.removeItem(key); } catch (e) { /* ignore */ }
     }
 
+    /* ── Dismissible guidance ──────────────────────────────────────────── */
+    function dismiss(key, selector) {
+        var el = selector ? doc.querySelector(selector) : null;
+        if (el) el.hidden = true;
+        storeSet('cq.dismissed.' + key, true);
+        return !!el;
+    }
+
+    function dismissed(key) {
+        return storeGet('cq.dismissed.' + key, false) === true;
+    }
+
     /* ── Problem progress rail ─────────────────────────────────────────── */
     function railStage(key, state, detail) {
         var item = doc.querySelector(
@@ -776,6 +927,8 @@ window.CQ = (function () {
         hint: hint,
         escapeHtml: escapeHtml,
         railStage: railStage,
+        dismiss: dismiss,
+        dismissed: dismissed,
         store: { get: storeGet, set: storeSet, remove: storeRemove }
     };
 })();

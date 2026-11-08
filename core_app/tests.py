@@ -1,8 +1,10 @@
 from decimal import Decimal
+from datetime import timedelta
 
 from django.contrib.auth.models import User
 from django.test import TestCase, Client
 from django.urls import reverse
+from django.utils import timezone
 
 from .models import (
     Substance, StoichiometryProblem, ProblemPart,
@@ -999,6 +1001,136 @@ class LobbyFlowTests(BaseFixture):
         resp = client.get(reverse('problem_lobby'))
         self.assertContains(resp, 'Resume Limiting Analysis')
         self.assertContains(resp, 'Next: Limiting Analysis')
+
+
+class AccessibilityAndOnboardingTests(BaseFixture):
+    """Static accessibility guarantees: structure, labels, and live regions."""
+
+    def test_lobby_first_run_onboarding_and_filter_state(self):
+        client = self.login()
+        resp = client.get(reverse('problem_lobby'))
+        self.assertEqual(resp.status_code, 200)
+
+        # First-run users get a dismissible orientation card.
+        self.assertContains(resp, 'id="cqOnboarding"')
+        self.assertContains(resp, 'data-dismiss-key="lobby-intro"')
+        self.assertContains(resp, "CQ.dismiss('lobby-intro'")
+
+        # Filter pill state is exposed, not just coloured.
+        self.assertContains(resp, 'role="group" aria-label="Filter problems by conversion type"')
+        self.assertContains(resp, 'data-type="all" aria-pressed="true"')
+        self.assertContains(resp, 'data-type="g_to_g" aria-pressed="false"')
+
+        # Cards are labelled articles with real headings.
+        self.assertContains(resp, 'aria-labelledby="problem-title-P_TST"')
+        self.assertContains(resp, 'id="problem-title-P_TST"')
+        self.assertContains(resp, '<h2')
+
+    def test_onboarding_disappears_once_a_problem_is_complete(self):
+        client = self.login()
+        part = ProblemPart.objects.get(
+            problem__problem_id='P_TST', part_label='a')
+        complete_module1(client)
+        resp = client.post(
+            reverse('audit_chain'),
+            {'problem_id': 'P_TST', 'part_label': 'a',
+             'nodes': _nodes_payload(part)},
+            content_type='application/json').json()
+        self.assertTrue(resp['success'])
+
+        lobby = client.get(reverse('problem_lobby'))
+        self.assertNotContains(lobby, 'id="cqOnboarding"')
+
+    def test_ledger_and_workspace_expose_headings_and_live_regions(self):
+        client = self.login()
+        ledger = client.get(reverse('preparation_ledger', args=['P_TST']))
+        self.assertContains(ledger, 'THE PREPARATION LEDGER')
+        self.assertContains(ledger, 'cq-stage-help')
+        self.assertContains(ledger, 'id="balanceStatus" role="status" aria-live="polite"')
+
+        complete_module1(client)
+        workspace = client.get(reverse('step_grid_workspace', args=['P_TST', 'a']))
+        self.assertContains(workspace, 'ACTIVE STEP-GRID BUILDER')
+        self.assertContains(workspace, 'cq-stage-help')
+        self.assertContains(workspace, 'id="explanationText" role="status" aria-live="polite"')
+        self.assertContains(workspace, 'id="hintPanel"')
+
+    def test_module3_lanes_have_headings_labels_and_status_regions(self):
+        client = self.login()
+        complete_module1(client, prob_id='P_LIM')
+        for label in ('a', 'b'):
+            part = ProblemPart.objects.get(
+                problem__problem_id='P_LIM', part_label=label)
+            resp = client.post(
+                reverse('limiting_workspace', args=['P_LIM']),
+                {'action': 'verify_lane', 'part_label': label,
+                 'nodes': _nodes_payload(part)},
+                content_type='application/json')
+            self.assertTrue(resp.json()['success'])
+
+        page = client.get(reverse('limiting_workspace', args=['P_LIM']))
+        self.assertEqual(page.status_code, 200)
+        self.assertContains(page, 'YIELD ANALYSIS: SIDE-BY-SIDE COMPARISON')
+        self.assertContains(page, 'id="comparisonStatus" role="status" aria-live="polite"')
+        self.assertContains(page, 'aria-label="Part A step 1 numerator')
+        self.assertContains(page, 'for="selectLimiting"')
+        self.assertContains(page, 'for="inputYield"')
+
+    def test_synthesis_periodic_table_is_keyboard_accessible(self):
+        for i in range(1, 6):
+            pid = f'A{i}'
+            problem = StoichiometryProblem.objects.create(
+                problem_id=pid, title=f'T{pid}', prompt='x',
+                reactants_str='2:H2,1:O2', products_str='2:H2O',
+                correct_coefficients='2,1,2')
+            ProblemPart.objects.create(
+                problem=problem, part_label='a', part_prompt='x',
+                given_substance_id='H2', given_quantity=Decimal('10'),
+                given_unit='g', target_substance_id='H2O', target_unit='g',
+                conversion_type='g_to_g',
+                correct_answer=Decimal('89.0000'))
+            ProblemProgress.objects.create(
+                user=self.user, problem_id=pid,
+                balancing_cleared=True, molar_mass_cleared=True,
+                checkpoint_cleared=True, exit_checkpoint_cleared=True)
+
+        client = self.login()
+        resp = client.get(reverse('synthesis_challenge'))
+        self.assertEqual(resp.status_code, 200)
+        self.assertContains(resp, 'aria-label="Periodic table of elements"')
+        self.assertContains(resp, 'id="ptToastMsg" role="status" aria-live="polite"')
+        self.assertContains(resp, "createElement('button')")
+        self.assertContains(resp, "btn.setAttribute('aria-label'")
+        self.assertContains(resp, 'id="explain_0" role="status" aria-live="polite"')
+
+    def test_auth_pages_expose_labels_and_help(self):
+        login = self.client.get(reverse('student_login'))
+        self.assertContains(login, '<h2')
+        self.assertContains(login, 'aria-required="true"')
+        self.assertContains(login, 'aria-labelledby="loginTitle"')
+
+        register = self.client.get(reverse('register'))
+        self.assertContains(register, '<h2')
+        self.assertContains(register, 'aria-describedby="usernameHelp"')
+        self.assertContains(register, 'aria-labelledby="registerTitle"')
+
+    def test_dashboard_has_heading_progressbars_and_chart_labels(self):
+        older = StudentTelemetryLog.objects.create(
+            user=self.user, problem_id='P_TST', part_label='a',
+            module_phase=2, is_correct=True, attempts_count=1)
+        StudentTelemetryLog.objects.create(
+            user=self.user, problem_id='P_TST', part_label='a',
+            module_phase=2, is_correct=True, attempts_count=1)
+        StudentTelemetryLog.objects.filter(pk=older.pk).update(
+            created_at=timezone.now() - timedelta(days=2))
+        client = self.login()
+        resp = client.get(reverse('student_dashboard'))
+        self.assertEqual(resp.status_code, 200)
+        self.assertContains(resp, 'STUDENT PERFORMANCE DASHBOARD')
+        self.assertContains(resp, 'role="progressbar"')
+        self.assertContains(resp, 'aria-valuemax="100"')
+        self.assertContains(resp, 'role="img"')
+        self.assertContains(resp, 'accuracy trend from')
 
 
 class RegistrationTests(TestCase):

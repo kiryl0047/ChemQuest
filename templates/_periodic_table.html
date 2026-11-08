@@ -63,8 +63,14 @@ Consumers can listen like:
         transition: border-color 0.15s, transform 0.12s;
         user-select: none;
         overflow: visible;
+        font: inherit;
+        color: inherit;
+        text-align: center;
+        -webkit-appearance: none;
+        appearance: none;
     }
     .pt-el:hover    { transform: scale(1.25); z-index: 50; border-color: #2a344c !important; }
+    .pt-el:focus-visible { transform: scale(1.25); z-index: 50; border-color: #2a344c !important; }
     .pt-el:active   { transform: scale(1.05); }
     .pt-el.pt-empty { background: transparent; border-color: transparent; pointer-events: none; }
     .pt-el.pt-label { cursor: default; pointer-events: none; display: flex; align-items: center;
@@ -93,7 +99,8 @@ Consumers can listen like:
         text-align: center;
         box-shadow: 0 2px 8px rgba(42,52,76, 0.15);
     }
-    .pt-el:hover .pt-tip { opacity: 1; }
+    .pt-el:hover .pt-tip,
+    .pt-el:focus-visible .pt-tip { opacity: 1; }
     .pt-tip-name  { color: var(--cyber-teal); font-weight: bold; display: block; margin-bottom: 2px; }
     .pt-tip-mass  { color: var(--constant-gold); }
     .pt-tip-cat   { color: var(--text-muted); font-size: 10px; display: block; margin-top: 2px; }
@@ -104,20 +111,20 @@ Consumers can listen like:
     .pt-legend-dot  { width:8px; height:8px; border-radius:2px; flex-shrink:0; opacity:0.85; }
 </style>
 
-<div class="periodic-popover" id="periodicTableContainer">
+<div class="periodic-popover" id="periodicTableContainer" role="region" aria-labelledby="ptPanelTitle">
     <div class="pt-panel-head">
-        <span class="pt-panel-title">ATOMIC DATABANK REFERENCE — CLICK ANY ELEMENT TO ADD IT TO YOUR BUILDER</span>
-        <span id="ptToastMsg">&nbsp;</span>
+        <h3 class="pt-panel-title" id="ptPanelTitle" style="margin:0;">ATOMIC DATABANK REFERENCE — SELECT ANY ELEMENT TO ADD IT TO YOUR BUILDER</h3>
+        <span id="ptToastMsg" role="status" aria-live="polite">&nbsp;</span>
     </div>
 
-    <div id="ptLegend" class="pt-legend"></div>
+    <div id="ptLegend" class="pt-legend" aria-label="Element category legend"></div>
 
     <div class="pt-scroll">
-        <div id="ptGrid" class="pt-grid"></div>
+        <div id="ptGrid" class="pt-grid" role="group" aria-label="Periodic table of elements"></div>
     </div>
 
     <div class="pt-scroll">
-        <div id="ptFootnote" class="pt-grid"></div>
+        <div id="ptFootnote" class="pt-grid" role="group" aria-label="Lanthanide and actinide series"></div>
     </div>
 </div>
 
@@ -275,32 +282,40 @@ Consumers can listen like:
     window.ptToast = ptToast;
 
     function makeEl(data) {
-        const div = document.createElement('div');
-        if (!data) { div.className = 'pt-el pt-empty'; return div; }
+        if (!data) {
+            const empty = document.createElement('div');
+            empty.className = 'pt-el pt-empty';
+            empty.setAttribute('aria-hidden', 'true');
+            return empty;
+        }
         const [num, sym, name, mass, cat] = data;
         const color = CATS[cat]?.color || '#64748B';
-        div.className = 'pt-el';
-        div.style.cssText = `border-color:${color}40; background:${color}12;`;
-        div.innerHTML = `
-            <span class="pt-num">${num}</span>
-            <span class="pt-sym" style="color:${color}">${sym}</span>
-            <span class="pt-mass">${mass.toFixed(2)}</span>
-            <div class="pt-tip">
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'pt-el';
+        btn.style.cssText = `border-color:${color}40; background:${color}12;`;
+        btn.setAttribute('aria-label',
+            `${name}, element ${sym}, atomic number ${num}, molar mass ${mass} grams per mole. Activate to add to the builder.`);
+        btn.innerHTML = `
+            <span class="pt-num" aria-hidden="true">${num}</span>
+            <span class="pt-sym" aria-hidden="true" style="color:${color}">${sym}</span>
+            <span class="pt-mass" aria-hidden="true">${mass.toFixed(2)}</span>
+            <span class="pt-tip" aria-hidden="true">
                 <span class="pt-tip-name">${sym} — ${name}</span>
                 <span class="pt-tip-mass">${mass} g/mol</span>
                 <span class="pt-tip-cat">${CATS[cat]?.label || cat}</span>
-            </div>`;
-        div.addEventListener('mousedown', e => e.preventDefault());
-        div.addEventListener('click', () => {
+            </span>`;
+        btn.addEventListener('mousedown', e => e.preventDefault());
+        btn.addEventListener('click', () => {
             navigator.clipboard?.writeText(String(mass)).catch(() => {});
             ptToast(`${sym}: ${mass} g/mol added to builder`);
-            div.classList.add('pt-hl');
-            setTimeout(() => div.classList.remove('pt-hl'), 800);
+            btn.classList.add('pt-hl');
+            setTimeout(() => btn.classList.remove('pt-hl'), 800);
             window.dispatchEvent(new CustomEvent('pt:select', {
                 detail: { sym, mass, name, cat },
             }));
         });
-        return div;
+        return btn;
     }
 
     const legendEl = document.getElementById('ptLegend');
@@ -324,6 +339,7 @@ Consumers can listen like:
                 if (rIdx === 5 && cIdx === 2) {
                     const d = document.createElement('div');
                     d.className = 'pt-el pt-label';
+                    d.setAttribute('aria-hidden', 'true');
                     d.style.cssText = `background:${CATS.lanthanide.color}18; border-color:${CATS.lanthanide.color}50; color:${CATS.lanthanide.color};`;
                     d.innerHTML = '57–71<br>↓';
                     ptGrid.appendChild(d); return;
@@ -331,6 +347,7 @@ Consumers can listen like:
                 if (rIdx === 6 && cIdx === 2) {
                     const d = document.createElement('div');
                     d.className = 'pt-el pt-label';
+                    d.setAttribute('aria-hidden', 'true');
                     d.style.cssText = `background:${CATS.actinide.color}18; border-color:${CATS.actinide.color}50; color:${CATS.actinide.color};`;
                     d.innerHTML = '89–103<br>↓';
                     ptGrid.appendChild(d); return;
@@ -347,10 +364,12 @@ Consumers can listen like:
         for (let i = 0; i < 3; i++) {
             const sp = document.createElement('div');
             sp.className = 'pt-el pt-empty';
+            sp.setAttribute('aria-hidden', 'true');
             ftGrid.appendChild(sp);
         }
         const lbl = document.createElement('div');
         lbl.className = 'pt-el pt-label';
+        lbl.setAttribute('aria-hidden', 'true');
         lbl.style.cssText = `background:${color}18; border-color:${color}50; color:${color}; font-size:8px;`;
         lbl.textContent = label;
         ftGrid.appendChild(lbl);
@@ -359,6 +378,7 @@ Consumers can listen like:
         for (let i = filled; i < 18; i++) {
             const sp = document.createElement('div');
             sp.className = 'pt-el pt-empty';
+            sp.setAttribute('aria-hidden', 'true');
             ftGrid.appendChild(sp);
         }
     }

@@ -228,10 +228,10 @@
 <!-- ── Header ── -->
 <div class="grid-info-header">
     <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;">
-        <span style="color:var(--cyber-teal); font-weight:bold; letter-spacing:1px;">
+        <h2 style="margin:0; color:var(--cyber-teal); font-weight:bold; letter-spacing:1px; font-size:14px;">
             ACTIVE STEP-GRID BUILDER &nbsp;·&nbsp; {{ problem_id }} &nbsp;·&nbsp; PART {{ part_label|upper }}
             {% if goes_to_module3 %}&nbsp;<span style="color:var(--coral-red);">→ LIMITING STAGE NEXT</span>{% endif %}
-        </span>
+        </h2>
         <a href="{% url 'preparation_ledger' problem_id %}" style="color:var(--text-muted); font-size:12px; text-decoration:none;">
             ← Back to Ledger
         </a>
@@ -241,10 +241,20 @@
     </p>
 </div>
 
+<details class="cq-stage-help">
+    <summary>How the Step-Grid works</summary>
+    <div class="cq-stage-help-body">
+        <p>Each card is one fraction. The <strong>numerator</strong> goes on top and the <strong>denominator</strong> goes on the bottom.</p>
+        <p>Build the chain one step at a time: the denominator unit must cancel the numerator unit carried from the previous step, until only the target unit remains.</p>
+        <p>Verify each step with <strong>Verify Step</strong>. Hints are always available and never lower your score.</p>
+    </div>
+</details>
+
 <div class="part-strip">
     <span style="font-size:11px; color:var(--text-muted); font-weight:bold; letter-spacing:1px;">PARTS:</span>
     {% for p in all_parts %}
-    <span class="part-pill {% if p.part_label == part_label %}active-pill{% endif %}">
+    <span class="part-pill {% if p.part_label == part_label %}active-pill{% endif %}"
+          {% if p.part_label == part_label %}aria-current="step"{% endif %}>
         {{ p.part_label|upper }}
         &nbsp;·&nbsp;
         {% if p.conversion_type == 'mol_to_mol' %}mol→mol
@@ -298,7 +308,7 @@
 <div class="bridge-builder-chasm" id="chainCanvas">
     <div class="feedback-box" id="explanationConsole">
         <strong style="color:var(--cyber-teal);">TUTOR CONSOLE:</strong>
-        <span id="explanationText">
+        <span id="explanationText" role="status" aria-live="polite" aria-atomic="true">
             Work through this conversion one step at a time. Fill in step factor
             (<span id="requiredNodeCount">{{ node_count }}</span> total) so its denominator cancels
             the previous unit diagonally, press <strong>&#10003; Verify Step</strong>, and the next
@@ -333,10 +343,10 @@
         <button type="button" class="cq-hint-btn" id="btnHint" onclick="requestHint(false)">
             💡 Need a hint?
         </button>
-        <span style="font-size:12px; color:var(--text-muted);" id="chainProgressLabel"></span>
+        <span style="font-size:12px; color:var(--text-muted);" id="chainProgressLabel" role="status" aria-live="polite"></span>
     </div>
 
-    <div id="hintPanel" style="display:none;"></div>
+    <div id="hintPanel" style="display:none;" role="region" aria-label="Hint" aria-live="polite"></div>
 </div>
 
 <div class="module-actions-bar" id="actionsBar">

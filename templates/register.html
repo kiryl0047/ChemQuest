@@ -120,16 +120,16 @@
 </style>
 
 <div class="login-card">
-    <p class="login-title">CHEMQUEST // REGISTER</p>
+    <h2 class="login-title" id="registerTitle">CHEMQUEST // REGISTER</h2>
     <p class="login-subtitle">Create an account to access the Stoichiometric Engine.</p>
 
     {% if form.non_field_errors %}
-    <div class="non-field-errors">
+    <div class="non-field-errors" role="alert">
         {% for error in form.non_field_errors %}{{ error }}{% endfor %}
     </div>
     {% endif %}
 
-    <form method="post" novalidate>
+    <form method="post" novalidate aria-labelledby="registerTitle">
         {% csrf_token %}
 
         <div class="field-group">
@@ -140,11 +140,14 @@
                    name="{{ form.username.html_name }}"
                    value="{{ form.username.value|default:'' }}"
                    autocomplete="username"
+                   aria-required="true"
+                   aria-describedby="{% if form.username.errors %}usernameError{% else %}usernameHelp{% endif %}"
+                   {% if form.username.errors %}aria-invalid="true"{% endif %}
                    autofocus>
             {% if form.username.errors %}
-            <div class="field-errors">{{ form.username.errors|join:", " }}</div>
+            <div class="field-errors" id="usernameError">{{ form.username.errors|join:", " }}</div>
             {% else %}
-            <div class="field-help">Required. 150 characters or fewer. Letters, digits and @/./+/-/_ only.</div>
+            <div class="field-help" id="usernameHelp">Required. 150 characters or fewer. Letters, digits and @/./+/-/_ only.</div>
             {% endif %}
         </div>
 
@@ -154,11 +157,14 @@
                    type="password"
                    id="{{ form.password1.id_for_label }}"
                    name="{{ form.password1.html_name }}"
-                   autocomplete="new-password">
+                   autocomplete="new-password"
+                   aria-required="true"
+                   aria-describedby="{% if form.password1.errors %}password1Error{% else %}password1Help{% endif %}"
+                   {% if form.password1.errors %}aria-invalid="true"{% endif %}>
             {% if form.password1.errors %}
-            <div class="field-errors">{{ form.password1.errors|join:", " }}</div>
+            <div class="field-errors" id="password1Error">{{ form.password1.errors|join:", " }}</div>
             {% else %}
-            <div class="field-help">Your password can't be too similar to your other personal information, must contain at least 8 characters, and can't be entirely numeric.</div>
+            <div class="field-help" id="password1Help">Your password can't be too similar to your other personal information, must contain at least 8 characters, and can't be entirely numeric.</div>
             {% endif %}
         </div>
 
@@ -168,9 +174,11 @@
                    type="password"
                    id="{{ form.password2.id_for_label }}"
                    name="{{ form.password2.html_name }}"
-                   autocomplete="new-password">
+                   autocomplete="new-password"
+                   aria-required="true"
+                   {% if form.password2.errors %}aria-invalid="true" aria-describedby="password2Error"{% endif %}>
             {% if form.password2.errors %}
-            <div class="field-errors">{{ form.password2.errors|join:", " }}</div>
+            <div class="field-errors" id="password2Error">{{ form.password2.errors|join:", " }}</div>
             {% endif %}
         </div>
 

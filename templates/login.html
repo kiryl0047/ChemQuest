@@ -114,16 +114,16 @@
 </style>
 
 <div class="login-card">
-    <p class="login-title">CHEMQUEST // LOGIN</p>
+    <h2 class="login-title" id="loginTitle">CHEMQUEST // LOGIN</h2>
     <p class="login-subtitle">Enter your credentials to access the Stoichiometric Engine.</p>
 
     {% if form.non_field_errors %}
-    <div class="non-field-errors">
+    <div class="non-field-errors" role="alert">
         {% for error in form.non_field_errors %}{{ error }}{% endfor %}
     </div>
     {% endif %}
 
-    <form method="post" novalidate>
+    <form method="post" novalidate aria-labelledby="loginTitle">
         {% csrf_token %}
 
         <div class="field-group">
@@ -133,9 +133,12 @@
                    id="{{ form.username.id_for_label }}"
                    name="{{ form.username.html_name }}"
                    value="{{ form.username.value|default:'' }}"
+                   autocomplete="username"
+                   aria-required="true"
+                   {% if form.username.errors %}aria-invalid="true" aria-describedby="usernameError"{% endif %}
                    autofocus>
             {% if form.username.errors %}
-            <div class="field-errors">{{ form.username.errors|join:", " }}</div>
+            <div class="field-errors" id="usernameError">{{ form.username.errors|join:", " }}</div>
             {% endif %}
         </div>
 
@@ -145,9 +148,11 @@
                    type="password"
                    id="{{ form.password.id_for_label }}"
                    name="{{ form.password.html_name }}"
-                   autocomplete="current-password">
+                   autocomplete="current-password"
+                   aria-required="true"
+                   {% if form.password.errors %}aria-invalid="true" aria-describedby="passwordError"{% endif %}>
             {% if form.password.errors %}
-            <div class="field-errors">{{ form.password.errors|join:", " }}</div>
+            <div class="field-errors" id="passwordError">{{ form.password.errors|join:", " }}</div>
             {% endif %}
         </div>
 

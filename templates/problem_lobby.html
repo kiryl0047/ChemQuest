@@ -115,6 +115,7 @@
         font-weight: bold;
         color: var(--cyber-teal);
         margin: 0 0 6px 0;
+        line-height: 1.3;
     }
 
     .problem-prompt-preview {
@@ -278,24 +279,69 @@
 </style>
 
 <div class="lobby-header">
-    <span style="color: var(--cyber-teal); font-weight: bold; font-size: 12px; letter-spacing: 2px;">CHEMQUEST // PROBLEM SELECTION LOBBY</span>
+    <h2 style="margin:0; color: var(--cyber-teal); font-weight: bold; font-size: 15px; letter-spacing: 2px;">CHEMQUEST // PROBLEM SELECTION LOBBY</h2>
     <p style="margin: 6px 0 0 0; color: var(--text-light); font-size: 14px;">
-        <span style="font-weight:bold; color:var(--cyber-teal);">Getting started:</span> each problem card shows its next step — <strong>Begin</strong> a new ledger or <strong>Resume</strong> exactly where you left off. Use the filter ribbon below to narrow problems by conversion type (mol→mol, mol→g, g→mol, g→g).
+        <span style="font-weight:bold; color:var(--cyber-teal);">Getting started:</span> each problem card names its real next step. Open the <strong>progress rail</strong> at the top of any problem to see the full pipeline and jump between stages.
     </p>
     {% if in_progress_count > 0 %}
     <p style="margin: 10px 0 0 0; color: var(--combo-green); font-size: 12px;">
-        <span style="color: var(--combo-green);">🔄</span> You have <strong>{{ in_progress_count }}</strong> problem{{ in_progress_count|pluralize }} in progress. Use the <strong>Retry</strong> button (🔄) to reset any problem's telemetry.
+        <span aria-hidden="true">🔄</span> You have <strong>{{ in_progress_count }}</strong> problem{{ in_progress_count|pluralize }} in progress. Use the <strong>Retry</strong> button to reset a problem and start it again.
     </p>
     {% endif %}
 </div>
 
+{% if completed_count == 0 %}
+<section class="cq-onboarding" id="cqOnboarding" data-dismiss-key="lobby-intro" aria-labelledby="cqOnboardingTitle">
+    <div class="cq-onboarding-head">
+        <div>
+            <h3 class="cq-onboarding-title" id="cqOnboardingTitle">Welcome to ChemQuest — the whole pipeline in one place</h3>
+            <p class="cq-onboarding-sub">Every problem runs through the same stages. The progress rail inside a problem always shows where you are, what is unlocked, and what comes next.</p>
+        </div>
+        <button type="button" class="cq-onboarding-dismiss" data-onboarding-dismiss>Got it</button>
+    </div>
+    <ol class="cq-onboarding-steps">
+        <li class="cq-onboarding-step">
+            <b>1 · Preparation Ledger</b>
+            <p>Balance the equation and verify molar masses. Clearing both gates locks the constants you will use later.</p>
+        </li>
+        <li class="cq-onboarding-step">
+            <b>2 · Step-Grid Workspace</b>
+            <p>Build one conversion fraction at a time. Each denominator must cancel the numerator before it.</p>
+        </li>
+        <li class="cq-onboarding-step">
+            <b>3 · Limiting Analysis</b>
+            <p>Capstones only: compare each reactant's yield, identify the limiting reagent, and commit the deduction.</p>
+        </li>
+    </ol>
+    <div class="cq-onboarding-foot">
+        <a class="cq-onboarding-start" href="#problemGrid">Pick a problem below →</a>
+        <span>Hints are always available and never lower your score.</span>
+    </div>
+</section>
+<script>
+(function initLobbyOnboarding() {
+    var card = document.getElementById('cqOnboarding');
+    if (!card) return;
+    if (window.CQ && CQ.dismissed('lobby-intro')) { card.hidden = true; return; }
+    var btn = card.querySelector('[data-onboarding-dismiss]');
+    if (!btn) return;
+    btn.addEventListener('click', function () {
+        if (window.CQ) CQ.dismiss('lobby-intro', '#cqOnboarding');
+        else card.hidden = true;
+        var firstStart = document.querySelector('#problemGrid .btn-start');
+        if (firstStart) firstStart.focus();
+    });
+})();
+</script>
+{% endif %}
+
 <!-- ── Synthesis Challenge banner ── -->
-<div class="filter-ribbon" style="justify-content:space-between; align-items:center;
+<div class="filter-ribbon" role="region" aria-labelledby="synthesisHeading" style="justify-content:space-between; align-items:center;
      {% if synthesis_unlocked %}border-color: rgba(var(--success-rgb),0.4);{% endif %}">
     <div>
-        <span style="font-size:11px; font-weight:bold; letter-spacing:1.5px; color:{% if synthesis_passed %}var(--combo-green){% elif synthesis_unlocked %}var(--constant-gold){% else %}var(--text-muted){% endif %};">
+        <h3 id="synthesisHeading" style="margin:0; font-size:11px; font-weight:bold; letter-spacing:1.5px; color:{% if synthesis_passed %}var(--combo-green){% elif synthesis_unlocked %}var(--constant-gold){% else %}var(--text-muted){% endif %};">
             ⚗ SYNTHESIS CHALLENGE
-        </span>
+        </h3>
         <span style="font-size:12px; color:var(--text-light); margin-left:10px;">
             {% if synthesis_passed %}
                 Credential earned{% if synthesis_best_pct is not None %} · best {{ synthesis_best_pct }}%{% endif %}
@@ -316,27 +362,27 @@
 </div>
 
 <!-- Category Filtering Tabs Ribbon -->
-<div class="filter-ribbon">
-    <button class="filter-btn active" onclick="filterCategory('all', this)" data-type="all">
+<div class="filter-ribbon" role="group" aria-label="Filter problems by conversion type">
+    <button type="button" class="filter-btn active" onclick="filterCategory('all', this)" data-type="all" aria-pressed="true">
         ALL TYPES <span class="filter-count" id="count-all">0</span>
     </button>
-    <button class="filter-btn" onclick="filterCategory('mol_to_mol', this)" data-type="mol_to_mol">
-        <span style="display:inline-block; width:8px; height:8px; border-radius:50%; background:#3c486a;"></span>
+    <button type="button" class="filter-btn" onclick="filterCategory('mol_to_mol', this)" data-type="mol_to_mol" aria-pressed="false">
+        <span aria-hidden="true" style="display:inline-block; width:8px; height:8px; border-radius:50%; background:#3c486a;"></span>
         mol → mol <span class="filter-count" id="count-mol_to_mol">0</span>
         <span style="font-size:10px; margin-left:8px; color:var(--text-muted);">(1 node)</span>
     </button>
-    <button class="filter-btn" onclick="filterCategory('mol_to_g', this)" data-type="mol_to_g">
-        <span style="display:inline-block; width:8px; height:8px; border-radius:50%; background:var(--combo-green);"></span>
+    <button type="button" class="filter-btn" onclick="filterCategory('mol_to_g', this)" data-type="mol_to_g" aria-pressed="false">
+        <span aria-hidden="true" style="display:inline-block; width:8px; height:8px; border-radius:50%; background:var(--combo-green);"></span>
         mol → g <span class="filter-count" id="count-mol_to_g">0</span>
         <span style="font-size:10px; margin-left:8px; color:var(--text-muted);">(2 nodes)</span>
     </button>
-    <button class="filter-btn" onclick="filterCategory('g_to_mol', this)" data-type="g_to_mol">
-        <span style="display:inline-block; width:8px; height:8px; border-radius:50%; background:var(--constant-gold);"></span>
+    <button type="button" class="filter-btn" onclick="filterCategory('g_to_mol', this)" data-type="g_to_mol" aria-pressed="false">
+        <span aria-hidden="true" style="display:inline-block; width:8px; height:8px; border-radius:50%; background:var(--constant-gold);"></span>
         g → mol <span class="filter-count" id="count-g_to_mol">0</span>
         <span style="font-size:10px; margin-left:8px; color:var(--text-muted);">(2 nodes)</span>
     </button>
-    <button class="filter-btn" onclick="filterCategory('g_to_g', this)" data-type="g_to_g">
-        <span style="display:inline-block; width:8px; height:8px; border-radius:50%; background:var(--cyber-teal);"></span>
+    <button type="button" class="filter-btn" onclick="filterCategory('g_to_g', this)" data-type="g_to_g" aria-pressed="false">
+        <span aria-hidden="true" style="display:inline-block; width:8px; height:8px; border-radius:50%; background:var(--cyber-teal);"></span>
         g → g <span class="filter-count" id="count-g_to_g">0</span>
         <span style="font-size:10px; margin-left:8px; color:var(--text-muted);">(3 nodes)</span>
     </button>
@@ -355,10 +401,10 @@
 <div class="problem-grid" id="problemGrid">
     {% for problem in problems %}
     <!-- Serializing all contained conversion types into data-conversions attribute -->
-    <div class="problem-card" data-conversions="{% for part in problem.parts.all %}{{ part.conversion_type }} {% endfor %}">
+    <article class="problem-card" aria-labelledby="problem-title-{{ problem.problem_id }}" data-conversions="{% for part in problem.parts.all %}{{ part.conversion_type }} {% endfor %}">
         <div class="problem-card-header">
             <div>
-                <p class="problem-title">
+                <h3 class="problem-title" id="problem-title-{{ problem.problem_id }}">
                     {{ problem.title }}
                     {% if problem.is_limiting_problem %}
                     <span style="font-size:11px; font-weight:bold; padding:3px 8px;
@@ -382,7 +428,7 @@
                                  color:var(--cyber-teal); margin-left:8px; vertical-align:middle;
                                  letter-spacing:1px;">IN PROGRESS</span>
                     {% endif %}
-                </p>
+                </h3>
                 <p class="problem-prompt-preview">{{ problem.prompt }}</p>
             </div>
             <span class="problem-id-badge">{{ problem.problem_id }}</span>
@@ -411,16 +457,18 @@
         </a>
         
         {% if problem.has_telemetry %}
-            <button title="Retry" onclick="return performSystemWipe('{{ problem.problem_id }}');"
+            <button type="button" title="Reset progress for {{ problem.title }}"
+                    aria-label="Reset progress for {{ problem.title }}"
+                    onclick="return performSystemWipe('{{ problem.problem_id }}');"
             style="text-decoration: none; padding: 6px 10px; border: 1px dashed var(--coral-red); color: var(--coral-red); font-size: 15px; border-radius: 4px; font-weight: bold; display: inline-flex; align-items: center; background-color: transparent; cursor: pointer;">
-                🔄
+                <span aria-hidden="true">🔄</span>
             </button>
         {% else %}
-            <span title="Locked (Untouched)" style="color: var(--text-muted); font-size: 15px; border: 1px solid var(--border); padding: 6px 10px; border-radius: 4px; pointer-events: none; opacity: 0.5; display: inline-flex; align-items: center;">
-                🔒
+            <span title="Locked (Untouched)" role="img" aria-label="Locked: no attempts yet" style="color: var(--text-muted); font-size: 15px; border: 1px solid var(--border); padding: 6px 10px; border-radius: 4px; pointer-events: none; opacity: 0.5; display: inline-flex; align-items: center;">
+                <span aria-hidden="true">🔒</span>
             </span>
         {% endif %}
-    </div>
+    </article>
     {% empty %}
     <p style="color: var(--text-muted); font-size: 15px;">
         No problems found. Run <code>python manage.py seed_problems</code> to populate the database.
@@ -437,8 +485,12 @@
 // Dynamic Category Filtering logic
 function filterCategory(targetType, btnElement) {
     // 1. Manage Active State on Tab Buttons
-    document.querySelectorAll('.filter-btn').forEach(btn => btn.classList.remove('active'));
+    document.querySelectorAll('.filter-btn').forEach(btn => {
+        btn.classList.remove('active');
+        btn.setAttribute('aria-pressed', 'false');
+    });
     btnElement.classList.add('active');
+    btnElement.setAttribute('aria-pressed', 'true');
 
     // 2. Hide/Show Cards
     const cards = document.querySelectorAll('.problem-card');
@@ -459,6 +511,11 @@ function filterCategory(targetType, btnElement) {
     const noResults = document.getElementById('noResultsNotice');
     if (noResults) {
         noResults.style.display = visibleCount === 0 ? 'block' : 'none';
+    }
+
+    // 4. Announce the result for screen-reader users.
+    if (window.CQ && CQ.announce) {
+        CQ.announce(`${visibleCount} problem${visibleCount === 1 ? '' : 's'} shown.`);
     }
 }
 

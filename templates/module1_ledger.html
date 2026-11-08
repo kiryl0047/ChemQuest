@@ -519,11 +519,20 @@
 
 <!-- ── Ledger Header ── -->
 <div class="ledger-card">
-    <span style="color: var(--constant-gold); font-weight: bold; font-size: 11px; letter-spacing: 2px;">
+    <h2 style="margin:0; color: var(--constant-gold); font-weight: bold; font-size: 11px; letter-spacing: 2px;">
         THE PREPARATION LEDGER &nbsp;·&nbsp; {{ problem_id }}
-    </span>
+    </h2>
     <p class="problem-prompt" style="margin-top: 10px;">{{ prompt }}</p>
 </div>
+
+<details class="cq-stage-help">
+    <summary>What this stage asks for</summary>
+    <div class="cq-stage-help-body">
+        <p><strong>Sub-Step 1A — Balance the equation.</strong> Enter whole-number coefficients so every element has the same atom count on both sides of the arrow.</p>
+        <p><strong>Sub-Step 1B — Verify molar masses.</strong> Calculate each formula's molar mass to three decimals. Clearing both gates unlocks the Step-Grid and locks the constants you can reuse later.</p>
+        <p>You can leave and return at any time; verified values are saved automatically.</p>
+    </div>
+</details>
 
 <!-- ── Sub-part breadcrumb ── -->
 {% with parts=problem.parts.all %}
@@ -548,7 +557,7 @@
 <h3 style="color: var(--cyber-teal); margin-bottom: 12px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
     <span class="type-badge badge-reactant" style="font-size: 11px;">SUB-STEP 1A</span>
     Stabilize the Chemical Chamber (Reaction Balancing)
-    <span class="balance-status" id="balanceStatus">PENDING</span>
+    <span class="balance-status" id="balanceStatus" role="status" aria-live="polite">PENDING</span>
 </h3>
 
 <!-- Dynamic Concept Check with Reactant/Product Indicators -->

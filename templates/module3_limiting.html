@@ -174,11 +174,20 @@
     {% include '_cq_step_rail.html' %}
 
     <div class="grid-info-header">
-        <span style="color: var(--cyber-teal); font-weight: bold; font-size: 16px;">
+        <h2 style="margin:0; color: var(--cyber-teal); font-weight: bold; font-size: 16px;">
             STATION SYSTEM BALANCING // {{ problem_title }}
-        </span>
+        </h2>
         <p style="margin-top: 10px; color: var(--text-muted); line-height: 1.6;">{{ prompt }}</p>
     </div>
+
+    <details class="cq-stage-help">
+        <summary>What the Limiting stage asks for</summary>
+        <div class="cq-stage-help-body">
+            <p><strong>1.</strong> Audit each reactant's conversion link to confirm its theoretical yield.</p>
+            <p><strong>2.</strong> Compare the tracks and select the one that produces the <strong>smaller</strong> yield — that reactant is limiting.</p>
+            <p><strong>3.</strong> Commit the limiting reagent, the theoretical product mass, and any unconsumed excess.</p>
+        </div>
+    </details>
 
     <details class="edu-expander" open>
         <summary>How Limiting Reagents Work (The Sandwich Analogy)</summary>
@@ -219,14 +228,14 @@
         {% for part in processed_parts %}
         <div class="part-lane-card locked-lane {% if part.cleared %}verified-lane{% endif %}"
              id="card_{{ part.part_label }}" data-idx="{{ part.index }}" data-label="{{ part.part_label }}">
-            <div class="lane-title">
+            <h3 class="lane-title" style="margin: 0 0 12px 0;">
                 <span style="color: var(--text-muted);">
                     STEP {{ part.index|add:1 }}: SUB-PROBLEM UNIFIED PART [{{ part.part_label|upper }}]
                 </span>
-                <span class="lane-status {% if part.cleared %}status-cleared{% else %}status-waiting{% endif %}" id="status_{{ part.part_label }}">
+                <span class="lane-status {% if part.cleared %}status-cleared{% else %}status-waiting{% endif %}" id="status_{{ part.part_label }}" role="status" aria-live="polite">
                     {% if part.cleared %}VERIFIED VECTOR{% else %}AWAITING DATA LINK{% endif %}
                 </span>
-            </div>
+            </h3>
 
             <p style="font-size: 13px; color: #3c486a; margin-bottom: 12px;">{{ part.part_prompt }}</p>
 
@@ -249,11 +258,13 @@
                     <input type="number" step="0.0001"
                         class="fraction-input-cell input-cell-num"
                         id="input_{{ part.part_label }}_{{ forloop.counter0 }}_num"
+                        aria-label="Part {{ part.part_label|upper }} step {{ forloop.counter }} numerator — {{ unit.num_unit }}"
                         placeholder="{{ unit.num_unit }}">
                     <div class="fraction-bar"></div>
                     <input type="number" step="0.0001"
                         class="fraction-input-cell input-cell-den"
                         id="input_{{ part.part_label }}_{{ forloop.counter0 }}_den"
+                        aria-label="Part {{ part.part_label|upper }} step {{ forloop.counter }} denominator — {{ unit.den_unit }}"
                         placeholder="{{ unit.den_unit }}">
                 </div>
                 {% endfor %}
@@ -271,10 +282,10 @@
 
     <!-- ── NEW STEP: side-by-side yield comparison ── -->
     <div class="part-lane-card locked-lane" id="comparisonCard" style="border-top: 2px dashed var(--border);">
-        <div class="lane-title">
+        <h3 class="lane-title" style="margin: 0 0 12px 0;">
             <span style="color: var(--constant-gold); font-weight: bold;">YIELD ANALYSIS: SIDE-BY-SIDE COMPARISON</span>
-            <span class="lane-status status-waiting" id="comparisonStatus">LOCKED</span>
-        </div>
+            <span class="lane-status status-waiting" id="comparisonStatus" role="status" aria-live="polite">LOCKED</span>
+        </h3>
 
         <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 15px;">
             Both conversion lanes are verified. Click the track that produced the
@@ -288,10 +299,10 @@
     </div>
 
     <div class="part-lane-card locked-lane" id="deductionCard" style="border-top: 2px dashed var(--border);">
-        <div class="lane-title">
+        <h3 class="lane-title" style="margin: 0 0 12px 0;">
             <span style="color: var(--coral-red); font-weight: bold;">FINAL ANALYSIS: STRATEGIC REAGENT BOUNDARY</span>
-            <span class="lane-status status-waiting" id="deductionStatus">LOCKED</span>
-        </div>
+            <span class="lane-status status-waiting" id="deductionStatus" role="status" aria-live="polite">LOCKED</span>
+        </h3>
 
         <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 15px;">
             Identify the true limiting factor, commit the theoretical product mass, and compute
@@ -300,7 +311,7 @@
 
         <div style="display: flex; flex-wrap: wrap; gap: 20px; align-items: flex-end; background: var(--bg-dark); padding: 18px; border-radius: 6px;">
             <div>
-                <label style="display: block; font-size: 11px; font-weight: bold; color: var(--text-muted); margin-bottom: 6px;">
+                <label for="selectLimiting" style="display: block; font-size: 11px; font-weight: bold; color: var(--text-muted); margin-bottom: 6px;">
                     LIMITING REAGENT FORMULA
                 </label>
                 <select id="selectLimiting" class="deduction-input" style="min-width: 160px;">
@@ -312,7 +323,7 @@
             </div>
 
             <div>
-                <label style="display: block; font-size: 11px; font-weight: bold; color: var(--text-muted); margin-bottom: 6px;">
+                <label for="inputYield" style="display: block; font-size: 11px; font-weight: bold; color: var(--text-muted); margin-bottom: 6px;">
                     THEORETICAL PRODUCT YIELD (g {{ target_formula|formula_subscript|safe }})
                 </label>
                 <input type="number" step="0.0001" id="inputYield" placeholder="Total Yield Amount"
@@ -742,6 +753,7 @@
                         ${formula} LEFT OVER (g)
                     </label>
                     <input type="number" step="0.0001" id="excess_${formula}"
+                           aria-label="Unconsumed excess mass for ${formula} in grams"
                            placeholder="Unconsumed mass" class="deduction-input" data-formula="${formula}">
                 </div>
             `);
