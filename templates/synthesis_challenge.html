@@ -457,7 +457,17 @@
 <div class="builder-card">
     <div class="builder-head">
         <h3 class="builder-title" style="margin:0;">MOLAR MASS BUILDER — BUILD OR SEARCH ANY COMPOUND</h3>
-        <button class="builder-clear" type="button" onclick="clearBuilder()">Clear</button>
+        <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+            <button type="button" class="cq-dock-trigger"
+                    data-cq-dock-toggle="atomic-databank"
+                    data-cq-dock-float-label="📌 Pin the databank beside my work"
+                    data-cq-dock-pin-label="📌 Return the databank inline"
+                    aria-controls="periodicTableContainer"
+                    aria-expanded="false">
+                <span data-cq-dock-toggle-label>📌 Pin the databank beside my work</span>
+            </button>
+            <button class="builder-clear" type="button" onclick="clearBuilder()">Clear</button>
+        </div>
     </div>
     <p class="builder-help">
         Type an element symbol (e.g. <strong>Fe</strong>) to add atoms, or type a full formula

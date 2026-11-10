@@ -7,6 +7,7 @@ Single source of truth for cross-module UI primitives:
   · modal dialogs (focus trap, Esc, focus restore)
   · inline field validation + error summary
   · contextual hint panel
+  · dockable reference panels (pin inline / left / right, persisted)
   · safe localStorage wrapper
 
 Included from base.html in <head> so page scripts can rely on window.CQ
@@ -506,6 +507,157 @@ without ordering concerns. Everything is namespaced under CQ.*
     .cq-stage-help-body p { margin: 0 0 8px 0; }
     .cq-stage-help-body p:last-child { margin-bottom: 0; }
 
+    /* ── Dockable reference panels ─────────────────────────────────────── */
+    .cq-dockable { position: relative; }
+
+    .cq-dock-launch {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        flex-wrap: wrap;
+        margin: 0 0 16px 0;
+    }
+
+    .cq-dock-trigger {
+        font: inherit;
+        font-size: 12px;
+        font-weight: 700;
+        background: var(--surface-header, #F5F6FA);
+        color: var(--text-light, #2a344c);
+        border: 1px solid var(--border, #DADEE9);
+        border-radius: 5px;
+        padding: 7px 12px;
+        cursor: pointer;
+        line-height: 1.3;
+    }
+
+    .cq-dock-trigger:hover {
+        border-color: var(--cyber-teal, #0F7080);
+        color: var(--cyber-teal, #0F7080);
+    }
+
+    .cq-dock-trigger[aria-expanded="true"] {
+        background: var(--cyber-teal, #0F7080);
+        border-color: var(--cyber-teal, #0F7080);
+        color: #FFFFFF;
+    }
+
+    .cq-dock-toolbar {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        flex-wrap: wrap;
+        margin-bottom: 10px;
+        padding: 6px 8px;
+        background: var(--surface-header, #F5F6FA);
+        border: 1px solid var(--border, #DADEE9);
+        border-radius: 6px;
+    }
+
+    .cq-dock-toolbar-label {
+        font-size: 10px;
+        font-weight: 700;
+        letter-spacing: 1px;
+        text-transform: uppercase;
+        color: var(--text-muted, #5F6880);
+        margin-right: 2px;
+    }
+
+    .cq-dock-btn {
+        font: inherit;
+        font-size: 11px;
+        font-weight: 700;
+        line-height: 1.2;
+        padding: 4px 9px;
+        border-radius: 4px;
+        border: 1px solid var(--border, #DADEE9);
+        background: var(--bg-slate, #FFFFFF);
+        color: var(--text-light, #2a344c);
+        cursor: pointer;
+    }
+
+    .cq-dock-btn:hover {
+        border-color: var(--cyber-teal, #0F7080);
+        color: var(--cyber-teal, #0F7080);
+    }
+
+    .cq-dock-btn[aria-pressed="true"] {
+        background: var(--cyber-teal, #0F7080);
+        border-color: var(--cyber-teal, #0F7080);
+        color: #FFFFFF;
+    }
+
+    .cq-dock-spacer { flex: 1 1 auto; }
+
+    /* Pinned state: a fixed reference column that survives scrolling. */
+    .cq-dockable.cq-dock--left,
+    .cq-dockable.cq-dock--right {
+        position: fixed;
+        top: 84px;
+        bottom: 20px;
+        width: 400px;
+        max-width: calc(100vw - 24px);
+        margin: 0 !important;
+        padding: 14px;
+        overflow: auto;
+        overscroll-behavior: contain;
+        background: var(--bg-slate, #FFFFFF);
+        border: 1px solid var(--border, #DADEE9);
+        border-radius: 8px;
+        box-shadow: 0 12px 36px rgba(42, 52, 76, 0.22);
+        z-index: 7500;
+    }
+
+    .cq-dockable.cq-dock--left  { left: 16px; }
+    .cq-dockable.cq-dock--right { right: 16px; }
+
+    /* Keep placement controls reachable while the reference scrolls. */
+    .cq-dockable.cq-dock--left .cq-dock-toolbar,
+    .cq-dockable.cq-dock--right .cq-dock-toolbar {
+        position: sticky;
+        top: -14px;
+        z-index: 4;
+        margin: -14px -14px 10px;
+        border-radius: 0;
+        border-left: 0;
+        border-right: 0;
+        border-top: 0;
+    }
+
+    .cq-dockable.cq-dock--collapsed > :not(.cq-dock-toolbar) {
+        display: none !important;
+    }
+
+    .cq-dockable.cq-dock--collapsed {
+        bottom: auto;
+        max-height: none;
+        overflow: visible;
+    }
+
+    .cq-dockable.cq-dock--collapsed .cq-dock-toolbar { margin-bottom: 0; }
+
+    /* Reserve room on wide screens so a pinned panel never covers the work. */
+    @media (min-width: 1180px) {
+        html.cq-dock-left-open main  { padding-left: 424px; }
+        html.cq-dock-right-open main { padding-right: 424px; }
+    }
+
+    /* Narrow screens: the pinned panel becomes a bottom sheet. */
+    @media (max-width: 1179px) {
+        .cq-dockable.cq-dock--left,
+        .cq-dockable.cq-dock--right {
+            top: auto;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            width: 100%;
+            max-width: 100%;
+            max-height: 68vh;
+            border-radius: 10px 10px 0 0;
+        }
+        .cq-dockable.cq-dock--collapsed { max-height: none; }
+    }
+
     @media (max-width: 640px) {
         .cq-rail-item { flex: 1 1 100%; }
     }
@@ -915,6 +1067,286 @@ window.CQ = (function () {
         return true;
     }
 
+    /* ── Dockable reference panels ─────────────────────────────────────── */
+    var dockedPanel = null;
+
+    function dockKey(id) { return 'cq.dock.' + id; }
+
+    function dockState(panel) {
+        var id = panel.getAttribute('data-cq-dock');
+        var saved = storeGet(dockKey(id), null);
+        if (!saved || typeof saved !== 'object') {
+            saved = {
+                mode: panel.getAttribute('data-cq-dock-default') || 'inline',
+                collapsed: false
+            };
+        }
+        if (['inline', 'left', 'right'].indexOf(saved.mode) < 0) {
+            saved.mode = 'inline';
+        }
+        saved.collapsed = !!saved.collapsed;
+        return saved;
+    }
+
+    function dockSave(panel, state) {
+        storeSet(dockKey(panel.getAttribute('data-cq-dock')), state);
+    }
+
+    var dockOrigins = {};
+
+    function dockDetach(panel, id) {
+        if (!dockOrigins[id]) {
+            dockOrigins[id] = {
+                parent: panel.parentElement,
+                next: panel.nextSibling
+            };
+        }
+        if (panel.parentElement !== doc.body) {
+            doc.body.appendChild(panel);
+        }
+    }
+
+    function dockRevealAncestors(panel) {
+        var node = panel.parentElement;
+        while (node && node !== doc.body) {
+            if (node.tagName === 'DETAILS') node.open = true;
+            node = node.parentElement;
+        }
+    }
+
+    function dockReattach(panel, id) {
+        var origin = dockOrigins[id];
+        if (!origin || !origin.parent) return;
+        if (origin.next && origin.next.parentElement === origin.parent) {
+            origin.parent.insertBefore(panel, origin.next);
+        } else {
+            origin.parent.appendChild(panel);
+        }
+        delete dockOrigins[id];
+        dockRevealAncestors(panel);
+    }
+
+    function dockUpdateTriggers(panel, mode) {
+        var id = panel.getAttribute('data-cq-dock');
+        var panelFloat = panel.getAttribute('data-cq-dock-float-label');
+        var panelPin = panel.getAttribute('data-cq-dock-pin-label');
+        Array.prototype.forEach.call(
+            doc.querySelectorAll('[data-cq-dock-toggle="' + id + '"]'),
+            function (trigger) {
+                var floatLabel = trigger.getAttribute('data-cq-dock-float-label') ||
+                    panelFloat || 'Dock beside my work';
+                var pinLabel = trigger.getAttribute('data-cq-dock-pin-label') ||
+                    panelPin || 'Return panel inline';
+                trigger.setAttribute('aria-expanded', String(mode !== 'inline'));
+                var label = trigger.querySelector('[data-cq-dock-toggle-label]');
+                if (label) {
+                    label.textContent = mode === 'inline' ? floatLabel : pinLabel;
+                }
+            }
+        );
+    }
+
+    function applyDock(panel, state, options) {
+        if (!panel) return;
+        options = options || {};
+        var mode = state.mode || 'inline';
+        var collapsed = !!state.collapsed && mode !== 'inline';
+
+        if (mode !== 'inline' && dockedPanel && dockedPanel !== panel) {
+            var previous = dockedPanel;
+            dockedPanel = null;
+            var previousState = { mode: 'inline', collapsed: false };
+            dockSave(previous, previousState);
+            applyDock(previous, previousState, { silent: true });
+        }
+
+        panel.classList.toggle('cq-dock--inline', mode === 'inline');
+        panel.classList.toggle('cq-dock--left', mode === 'left');
+        panel.classList.toggle('cq-dock--right', mode === 'right');
+        panel.classList.toggle('cq-dock--collapsed', collapsed);
+        panel.setAttribute('data-cq-dock-mode', mode);
+
+        var panelId = panel.getAttribute('data-cq-dock');
+        if (mode === 'inline') {
+            dockReattach(panel, panelId);
+        } else {
+            dockDetach(panel, panelId);
+        }
+
+        var root = doc.documentElement;
+        root.classList.toggle('cq-dock-left-open', mode === 'left');
+        root.classList.toggle('cq-dock-right-open', mode === 'right');
+
+        if (mode === 'inline') {
+            if (dockedPanel === panel) dockedPanel = null;
+        } else {
+            dockedPanel = panel;
+        }
+
+        Array.prototype.forEach.call(
+            panel.querySelectorAll('[data-cq-dock-mode-btn]'),
+            function (btn) {
+                btn.setAttribute('aria-pressed',
+                    String(btn.getAttribute('data-cq-dock-mode-btn') === mode));
+            }
+        );
+
+        var collapseBtn = panel.querySelector('[data-cq-dock-collapse]');
+        if (collapseBtn) {
+            collapseBtn.hidden = mode === 'inline';
+            collapseBtn.setAttribute('aria-expanded', String(!collapsed));
+            collapseBtn.textContent = collapsed ? 'Expand' : 'Collapse';
+        }
+
+        dockUpdateTriggers(panel, mode);
+
+        if (!options.silent) {
+            var name = panel.getAttribute('data-cq-dock-label') || 'Reference panel';
+            announce(name + ' ' + (
+                mode === 'inline' ? 'returned inline.' :
+                collapsed ? 'collapsed on the ' + mode + ' side.' :
+                'docked to the ' + mode + ' side.'
+            ));
+        }
+    }
+
+    function setDockMode(panel, mode) {
+        if (!panel) return;
+        if (['inline', 'left', 'right'].indexOf(mode) < 0) return;
+        var state = dockState(panel);
+        state.mode = mode;
+        if (mode === 'inline') state.collapsed = false;
+        dockSave(panel, state);
+        applyDock(panel, state);
+    }
+
+    function setDockCollapsed(panel, collapsed) {
+        if (!panel) return;
+        var state = dockState(panel);
+        if (state.mode === 'inline') return;
+        state.collapsed = !!collapsed;
+        dockSave(panel, state);
+        applyDock(panel, state);
+    }
+
+    function buildDockToolbar(panel) {
+        if (!panel || panel.querySelector('.cq-dock-toolbar')) return;
+
+        var toolbar = doc.createElement('div');
+        toolbar.className = 'cq-dock-toolbar';
+        toolbar.setAttribute('role', 'group');
+        toolbar.setAttribute('aria-label', 'Panel placement');
+
+        var label = doc.createElement('span');
+        label.className = 'cq-dock-toolbar-label';
+        label.textContent = 'Pin';
+        toolbar.appendChild(label);
+
+        [
+            { mode: 'inline', text: 'Inline' },
+            { mode: 'left', text: 'Left' },
+            { mode: 'right', text: 'Right' }
+        ].forEach(function (item) {
+            var btn = doc.createElement('button');
+            btn.type = 'button';
+            btn.className = 'cq-dock-btn';
+            btn.textContent = item.text;
+            btn.setAttribute('data-cq-dock-mode-btn', item.mode);
+            btn.setAttribute('aria-pressed', 'false');
+            btn.addEventListener('click', function () {
+                setDockMode(panel, item.mode);
+            });
+            toolbar.appendChild(btn);
+        });
+
+        var spacer = doc.createElement('span');
+        spacer.className = 'cq-dock-spacer';
+        toolbar.appendChild(spacer);
+
+        var collapse = doc.createElement('button');
+        collapse.type = 'button';
+        collapse.className = 'cq-dock-btn';
+        collapse.setAttribute('data-cq-dock-collapse', '');
+        collapse.setAttribute('aria-expanded', 'true');
+        collapse.textContent = 'Collapse';
+        collapse.hidden = true;
+        collapse.addEventListener('click', function () {
+            var state = dockState(panel);
+            setDockCollapsed(panel, !state.collapsed);
+        });
+        toolbar.appendChild(collapse);
+
+        panel.insertBefore(toolbar, panel.firstChild);
+
+        panel.addEventListener('keydown', function (event) {
+            if (event.key !== 'Escape') return;
+            var tag = (event.target.tagName || '').toLowerCase();
+            if (tag === 'input' || tag === 'select' || tag === 'textarea') return;
+            var state = dockState(panel);
+            if (state.mode === 'inline') return;
+            event.preventDefault();
+            setDockMode(panel, 'inline');
+        });
+    }
+
+    function dockInit() {
+        Array.prototype.forEach.call(
+            doc.querySelectorAll('[data-cq-dock]'),
+            function (panel) {
+                buildDockToolbar(panel);
+                applyDock(panel, dockState(panel), { silent: true });
+            }
+        );
+    }
+
+    function dockToggle(id) {
+        var panel = doc.querySelector('[data-cq-dock="' + String(id) + '"]');
+        if (!panel) return false;
+        var state = dockState(panel);
+        setDockMode(panel, state.mode === 'inline' ? 'right' : 'inline');
+        return true;
+    }
+
+    function dock(target, options) {
+        var panel = typeof target === 'string'
+            ? doc.querySelector('[data-cq-dock="' + target + '"]')
+            : target;
+        if (!panel) return null;
+        if (options && options.label) {
+            panel.setAttribute('data-cq-dock-label', options.label);
+        }
+        buildDockToolbar(panel);
+        applyDock(panel, dockState(panel), { silent: true });
+        return {
+            setMode: function (mode) { setDockMode(panel, mode); },
+            toggle: function () {
+                return dockToggle(panel.getAttribute('data-cq-dock'));
+            },
+            reset: function () {
+                storeRemove(dockKey(panel.getAttribute('data-cq-dock')));
+                applyDock(panel, { mode: 'inline', collapsed: false });
+            }
+        };
+    }
+
+    doc.addEventListener('click', function (event) {
+        var node = event.target;
+        while (node && node !== doc) {
+            if (node.getAttribute && node.getAttribute('data-cq-dock-toggle')) {
+                event.preventDefault();
+                dockToggle(node.getAttribute('data-cq-dock-toggle'));
+                return;
+            }
+            node = node.parentElement;
+        }
+    });
+
+    if (doc.readyState === 'loading') {
+        doc.addEventListener('DOMContentLoaded', dockInit);
+    } else {
+        dockInit();
+    }
+
     return {
         toast: toast,
         announce: announce,
@@ -929,6 +1361,8 @@ window.CQ = (function () {
         railStage: railStage,
         dismiss: dismiss,
         dismissed: dismissed,
+        dock: dock,
+        dockToggle: dockToggle,
         store: { get: storeGet, set: storeSet, remove: storeRemove }
     };
 })();

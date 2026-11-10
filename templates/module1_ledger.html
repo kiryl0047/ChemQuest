@@ -452,8 +452,14 @@
         transition: border-color 0.15s, transform 0.12s;
         user-select: none;
         overflow: visible;
+        font: inherit;
+        color: inherit;
+        text-align: center;
+        -webkit-appearance: none;
+        appearance: none;
     }
     .pt-el:hover    { transform: scale(1.25); z-index: 50; border-color: #2a344c !important; }
+    .pt-el:focus-visible { transform: scale(1.25); z-index: 50; border-color: #2a344c !important; }
     .pt-el:active   { transform: scale(1.05); }
     .pt-el.pt-empty { background: transparent; border-color: transparent; pointer-events: none; }
     .pt-el.pt-label { cursor: default; pointer-events: none; display: flex; align-items: center;
@@ -482,7 +488,8 @@
         text-align: center;
         box-shadow: 0 2px 8px rgba(42,52,76, 0.15);
     }
-    .pt-el:hover .pt-tip { opacity: 1; }
+    .pt-el:hover .pt-tip,
+    .pt-el:focus-visible .pt-tip { opacity: 1; }
     .pt-tip-name  { color: var(--cyber-teal); font-weight: bold; display: block; margin-bottom: 2px; }
     .pt-tip-mass  { color: var(--constant-gold); }
     .pt-tip-cat   { color: var(--text-muted); font-size: 10px; display: block; margin-top: 2px; }
@@ -533,6 +540,20 @@
         <p>You can leave and return at any time; verified values are saved automatically.</p>
     </div>
 </details>
+
+<div class="cq-dock-launch">
+    <button type="button" class="cq-dock-trigger"
+            data-cq-dock-toggle="atomic-databank"
+            data-cq-dock-float-label="📌 Dock the atomic databank beside my work"
+            data-cq-dock-pin-label="📌 Return the atomic databank inline"
+            aria-controls="periodicTableContainer"
+            aria-expanded="false">
+        <span data-cq-dock-toggle-label>📌 Dock the atomic databank beside my work</span>
+    </button>
+    <span style="font-size:12px; color:var(--text-muted);">
+        Pin it left or right and it stays visible while you enter coefficients and masses.
+    </span>
+</div>
 
 <!-- ── Sub-part breadcrumb ── -->
 {% with parts=problem.parts.all %}
@@ -781,23 +802,26 @@
     </div>
 
     <!-- Atomic Databank — Full Periodic Table -->
-    <div class="periodic-popover" id="periodicTableContainer">
-        <span style="font-size: 11px; color: var(--text-muted); display: block; margin-bottom: 10px;
-                     font-weight: bold; letter-spacing: 1px;">ATOMIC DATABANK REFERENCE — CLICK ANY ELEMENT TO COPY MASS</span>
+    <div class="periodic-popover cq-dockable" id="periodicTableContainer"
+         role="region" aria-labelledby="ptPanelTitle"
+         data-cq-dock="atomic-databank"
+         data-cq-dock-label="Atomic databank">
+        <span id="ptPanelTitle" style="font-size: 11px; color: var(--text-muted); display: block; margin-bottom: 10px;
+                     font-weight: bold; letter-spacing: 1px;">ATOMIC DATABANK REFERENCE — SELECT ANY ELEMENT TO ADD ITS MASS</span>
         
-        <div id="ptToastMsg" style="font-size:12px; color:var(--combo-green); font-weight:bold; min-height:16px; margin-bottom:8px;">&nbsp;</div>
+        <div id="ptToastMsg" role="status" aria-live="polite" style="font-size:12px; color:var(--combo-green); font-weight:bold; min-height:16px; margin-bottom:8px;">&nbsp;</div>
 
         <!-- Legend -->
-        <div id="ptLegend" style="display:flex; flex-wrap:wrap; gap:8px; margin-bottom:12px;"></div>
+        <div id="ptLegend" aria-label="Element category legend" style="display:flex; flex-wrap:wrap; gap:8px; margin-bottom:12px;"></div>
 
         <!-- Main grid -->
         <div class="pt-scroll" style="overflow-x:auto; margin-bottom:6px;">
-            <div id="ptGrid" style="display:grid; grid-template-columns:repeat(18,minmax(30px,1fr)); gap:2px;"></div>
+            <div id="ptGrid" role="group" aria-label="Periodic table of elements" style="display:grid; grid-template-columns:repeat(18,minmax(30px,1fr)); gap:2px;"></div>
         </div>
 
         <!-- Footnote rows (lanthanides + actinides) -->
         <div class="pt-scroll" style="overflow-x:auto; margin-bottom:6px;">
-            <div id="ptFootnote" style="display:grid; grid-template-columns:repeat(18,minmax(30px,1fr)); gap:2px;"></div>
+            <div id="ptFootnote" role="group" aria-label="Lanthanide and actinide series" style="display:grid; grid-template-columns:repeat(18,minmax(30px,1fr)); gap:2px;"></div>
         </div>
     </div>
 </div>
@@ -1484,23 +1508,31 @@ function diagnoseMassError(formula, entered) {
     }
 
     function makeEl(data) {
-        const div = document.createElement('div');
-        if (!data) { div.className = 'pt-el pt-empty'; return div; }
+        if (!data) {
+            const empty = document.createElement('div');
+            empty.className = 'pt-el pt-empty';
+            empty.setAttribute('aria-hidden', 'true');
+            return empty;
+        }
         const [num, sym, name, mass, cat] = data;
         const color = CATS[cat]?.color || '#64748B';
-        div.className = 'pt-el';
-        div.style.cssText = `border-color:${color}40; background:${color}12;`;
-        div.innerHTML = `
-            <span class="pt-num">${num}</span>
-            <span class="pt-sym" style="color:${color}">${sym}</span>
-            <span class="pt-mass">${mass.toFixed(2)}</span>
-            <div class="pt-tip">
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'pt-el';
+        btn.style.cssText = `border-color:${color}40; background:${color}12;`;
+        btn.setAttribute('aria-label',
+            `${name}, element ${sym}, atomic number ${num}, molar mass ${mass} grams per mole. Activate to add this mass to the current formula.`);
+        btn.innerHTML = `
+            <span class="pt-num" aria-hidden="true">${num}</span>
+            <span class="pt-sym" aria-hidden="true" style="color:${color}">${sym}</span>
+            <span class="pt-mass" aria-hidden="true">${mass.toFixed(2)}</span>
+            <span class="pt-tip" aria-hidden="true">
                 <span class="pt-tip-name">${sym} — ${name}</span>
                 <span class="pt-tip-mass">${mass} g/mol</span>
                 <span class="pt-tip-cat">${CATS[cat]?.label || cat}</span>
-            </div>`;
-        div.addEventListener('mousedown', e => e.preventDefault());
-        div.addEventListener('click', () => {
+            </span>`;
+        btn.addEventListener('mousedown', e => e.preventDefault());
+        btn.addEventListener('click', () => {
             if (currentMassFormula) {
                 accumulateToScratchpad(currentMassFormula, sym, mass);
                 const input = document.getElementById(`mass_${currentMassFormula}`);
@@ -1511,11 +1543,11 @@ function diagnoseMassError(formula, entered) {
                 }
             }
             navigator.clipboard?.writeText(String(mass)).catch(() => {});
-            ptToast(`${sym}: ${mass} g/mol copied`);
-            div.classList.add('pt-hl');
-            setTimeout(() => div.classList.remove('pt-hl'), 800);
+            ptToast(`${sym}: ${mass} g/mol added to the current formula`);
+            btn.classList.add('pt-hl');
+            setTimeout(() => btn.classList.remove('pt-hl'), 800);
         });
-        return div;
+        return btn;
     }
 
     const legendEl = document.getElementById('ptLegend');
@@ -1539,6 +1571,7 @@ function diagnoseMassError(formula, entered) {
                 if (rIdx === 5 && cIdx === 2) {
                     const d = document.createElement('div');
                     d.className = 'pt-el pt-label';
+                    d.setAttribute('aria-hidden', 'true');
                     d.style.cssText = `background:${CATS.lanthanide.color}18; border-color:${CATS.lanthanide.color}50; color:${CATS.lanthanide.color};`;
                     d.innerHTML = '57–71<br>↓';
                     ptGrid.appendChild(d); return;
@@ -1546,6 +1579,7 @@ function diagnoseMassError(formula, entered) {
                 if (rIdx === 6 && cIdx === 2) {
                     const d = document.createElement('div');
                     d.className = 'pt-el pt-label';
+                    d.setAttribute('aria-hidden', 'true');
                     d.style.cssText = `background:${CATS.actinide.color}18; border-color:${CATS.actinide.color}50; color:${CATS.actinide.color};`;
                     d.innerHTML = '89–103<br>↓';
                     ptGrid.appendChild(d); return;
@@ -1562,10 +1596,12 @@ function diagnoseMassError(formula, entered) {
         for (let i = 0; i < 3; i++) {
             const sp = document.createElement('div');
             sp.className = 'pt-el pt-empty';
+            sp.setAttribute('aria-hidden', 'true');
             ftGrid.appendChild(sp);
         }
         const lbl = document.createElement('div');
         lbl.className = 'pt-el pt-label';
+        lbl.setAttribute('aria-hidden', 'true');
         lbl.style.cssText = `background:${color}18; border-color:${color}50; color:${color}; font-size:8px;`;
         lbl.textContent = label;
         ftGrid.appendChild(lbl);
@@ -1574,6 +1610,7 @@ function diagnoseMassError(formula, entered) {
         for (let i = filled; i < 18; i++) {
             const sp = document.createElement('div');
             sp.className = 'pt-el pt-empty';
+            sp.setAttribute('aria-hidden', 'true');
             ftGrid.appendChild(sp);
         }
     }

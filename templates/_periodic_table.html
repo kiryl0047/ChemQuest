@@ -12,6 +12,9 @@ It renders the same databank used in Module 1 and exposes:
 
 Consumers can listen like:
     window.addEventListener('pt:select', e => { const { sym, mass } = e.detail; });
+
+The panel opts into the shared dock controller via data-cq-dock, so pages can
+pin it inline, left, or right without losing their place.
 {% endcomment %}
 <style>
     /* ── Periodic Databank ── */
@@ -111,7 +114,10 @@ Consumers can listen like:
     .pt-legend-dot  { width:8px; height:8px; border-radius:2px; flex-shrink:0; opacity:0.85; }
 </style>
 
-<div class="periodic-popover" id="periodicTableContainer" role="region" aria-labelledby="ptPanelTitle">
+<div class="periodic-popover cq-dockable" id="periodicTableContainer"
+     role="region" aria-labelledby="ptPanelTitle"
+     data-cq-dock="atomic-databank"
+     data-cq-dock-label="Atomic databank">
     <div class="pt-panel-head">
         <h3 class="pt-panel-title" id="ptPanelTitle" style="margin:0;">ATOMIC DATABANK REFERENCE — SELECT ANY ELEMENT TO ADD IT TO YOUR BUILDER</h3>
         <span id="ptToastMsg" role="status" aria-live="polite">&nbsp;</span>

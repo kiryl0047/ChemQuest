@@ -1133,6 +1133,61 @@ class AccessibilityAndOnboardingTests(BaseFixture):
         self.assertContains(resp, 'accuracy trend from')
 
 
+class DockablePanelTests(BaseFixture):
+    """Reference panels can be pinned beside the work and remember placement."""
+
+    def _seed_synthesis(self):
+        for i in range(1, 6):
+            pid = f'D{i}'
+            problem = StoichiometryProblem.objects.create(
+                problem_id=pid, title=f'T{pid}', prompt='x',
+                reactants_str='2:H2,1:O2', products_str='2:H2O',
+                correct_coefficients='2,1,2')
+            ProblemPart.objects.create(
+                problem=problem, part_label='a', part_prompt='x',
+                given_substance_id='H2', given_quantity=Decimal('10'),
+                given_unit='g', target_substance_id='H2O', target_unit='g',
+                conversion_type='g_to_g',
+                correct_answer=Decimal('89.0000'))
+            ProblemProgress.objects.create(
+                user=self.user, problem_id=pid,
+                balancing_cleared=True, molar_mass_cleared=True,
+                checkpoint_cleared=True, exit_checkpoint_cleared=True)
+
+    def test_ledger_databank_is_dockable(self):
+        client = self.login()
+        resp = client.get(reverse('preparation_ledger', args=['P_TST']))
+        self.assertEqual(resp.status_code, 200)
+        self.assertContains(resp, 'id="periodicTableContainer"')
+        self.assertContains(resp, 'class="periodic-popover cq-dockable"')
+        self.assertContains(resp, 'data-cq-dock="atomic-databank"')
+        self.assertContains(resp, 'data-cq-dock-toggle="atomic-databank"')
+        self.assertContains(resp, 'aria-controls="periodicTableContainer"')
+        self.assertContains(resp, "toolbar.className = 'cq-dock-toolbar'")
+        # The ledger's databank must be keyboard-operable too.
+        self.assertContains(resp, "createElement('button')")
+        self.assertContains(resp, "btn.setAttribute('aria-label'")
+        self.assertContains(resp, 'id="ptToastMsg" role="status" aria-live="polite"')
+
+    def test_synthesis_databank_is_dockable(self):
+        self._seed_synthesis()
+        client = self.login()
+        resp = client.get(reverse('synthesis_challenge'))
+        self.assertEqual(resp.status_code, 200)
+        self.assertContains(resp, 'data-cq-dock="atomic-databank"')
+        self.assertContains(resp, 'data-cq-dock-toggle="atomic-databank"')
+        self.assertContains(resp, 'data-cq-dock-float-label')
+        self.assertContains(resp, "toolbar.className = 'cq-dock-toolbar'")
+
+    def test_shared_kit_ships_dock_controller(self):
+        client = self.login()
+        resp = client.get(reverse('problem_lobby'))
+        self.assertContains(resp, 'function dockInit')
+        self.assertContains(resp, 'function applyDock')
+        self.assertContains(resp, 'dock: dock,')
+        self.assertContains(resp, 'cq.dock.')
+
+
 class RegistrationTests(TestCase):
 
     def test_register_page_loads(self):
