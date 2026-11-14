@@ -1,7 +1,12 @@
 from decimal import Decimal
 from datetime import timedelta
+from io import StringIO
+import json
+import tempfile
+from pathlib import Path
 
 from django.contrib.auth.models import User
+from django.core.management import call_command
 from django.test import TestCase, Client
 from django.urls import reverse
 from django.utils import timezone
@@ -1186,6 +1191,83 @@ class DockablePanelTests(BaseFixture):
         self.assertContains(resp, 'function applyDock')
         self.assertContains(resp, 'dock: dock,')
         self.assertContains(resp, 'cq.dock.')
+
+
+class ResultsReportTests(BaseFixture):
+    """The read-only results report backs the Results and Validation section."""
+
+    def _json(self):
+        out = StringIO()
+        call_command('results_report', format='json', stdout=out)
+        return json.loads(out.getvalue())
+
+    def test_markdown_report_has_sections_and_no_pii(self):
+        out = StringIO()
+        call_command('results_report', format='markdown', stdout=out)
+        text = out.getvalue()
+        for heading in [
+            '# ChemQuest — Results and Validation',
+            '## 2. Headline results',
+            '## 4. Validation checks',
+            '## 7. Problem-level results',
+            '## 8. Accuracy',
+        ]:
+            self.assertIn(heading, text)
+        self.assertIn('P_TST', text)
+        self.assertNotIn('student1', text)
+        self.assertNotIn('student2', text)
+
+    def test_json_report_aggregates_activity(self):
+        ProblemProgress.objects.create(
+            user=self.user, problem_id='P_TST',
+            balancing_cleared=True, molar_mass_cleared=True)
+        StudentTelemetryLog.objects.create(
+            user=self.user, problem_id='P_TST', part_label='a',
+            sub_step='lane', module_phase=2, is_correct=True, attempts_count=2)
+
+        data = self._json()
+
+        self.assertEqual(data['inventory'][0]['count'], 2)
+        self.assertEqual(data['engagement']['m1_complete_accounts'], 1)
+        self.assertEqual(data['accuracy']['verified'], 1)
+        self.assertEqual(data['accuracy']['failed'], 2)
+        self.assertEqual(data['accuracy']['overall'], 33.3)
+        problem = next(
+            row for row in data['problem_results'] if row['problem_id'] == 'P_TST')
+        self.assertEqual(problem['m1_complete'], 1)
+        self.assertEqual(problem['logs'], 1)
+        self.assertEqual(problem['accuracy'], 33.3)
+
+    def test_orphan_progress_fails_reference_check(self):
+        ProblemProgress.objects.create(
+            user=self.user, problem_id='MISSING', balancing_cleared=True)
+        data = self._json()
+        check = next(
+            row for row in data['validations'] if row['id'] == 'progress.references')
+        self.assertEqual(check['status'], 'FAIL')
+        self.assertIn('1 progress', check['observed'])
+
+    def test_generated_problem_leakage_fails_isolation_check(self):
+        generated = StoichiometryProblem.objects.create(
+            problem_id='SYN_TEST', title='Generated', prompt='x',
+            reactants_str='2:H2,1:O2', products_str='2:H2O',
+            correct_coefficients='2,1,2', is_generated=True)
+        ProblemProgress.objects.create(
+            user=self.user, problem_id=generated.problem_id,
+            balancing_cleared=True)
+
+        data = self._json()
+        check = next(
+            row for row in data['validations'] if row['id'] == 'synthesis.isolation')
+        self.assertEqual(check['status'], 'FAIL')
+
+    def test_both_formats_write_files(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            target = Path(tmp) / 'snapshot'
+            call_command(
+                'results_report', format='both', output=str(target), stdout=StringIO())
+            self.assertTrue((Path(tmp) / 'snapshot.md').exists())
+            self.assertTrue((Path(tmp) / 'snapshot.json').exists())
 
 
 class RegistrationTests(TestCase):
